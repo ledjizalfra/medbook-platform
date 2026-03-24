@@ -1,0 +1,15 @@
+info:
+  name: Config-Sever Refesh config
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{base_url_config_server}}/actuator/refresh"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

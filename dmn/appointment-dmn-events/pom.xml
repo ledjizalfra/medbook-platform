@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>it.pegaso.projectwork.medbook</groupId>
+        <artifactId>medbook-platform</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>appointment-dmn-events</artifactId>
+    <packaging>jar</packaging>
+    <name>MedBook - Appointment DMN Events</name>
+    <description>
+        Libreria degli eventi Kafka pubblicati da appointment-dmn.
+        Contiene le classi degli eventi condivisi con i consumer (es. notification-dmn).
+        Da importare nei DMN che consumano eventi di appointment-dmn.
+    </description>
+
+    <dependencies>
+
+        <!-- Jackson — serializzazione JSON degli eventi Kafka -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-json</artifactId>
+        </dependency>
+
+    </dependencies>
+
+</project>

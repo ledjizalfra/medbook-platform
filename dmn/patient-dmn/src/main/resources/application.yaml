@@ -1,0 +1,18 @@
+# =============================================================================
+# MedBook Platform - patient-dmn
+# Configurazione di bootstrap — caricata prima del config-server
+# =============================================================================
+
+spring:
+  application:
+    # Nome usato per recuperare la configurazione dal config-server
+    # Il config-server cercherà patient-dmn.yml nel config-repo
+    name: patient-dmn
+  profiles:
+    active: dev
+
+  config:
+    import:
+      # Recupera la configurazione dal config-server
+      # Se il config-server non è raggiungibile il servizio non si avvia
+      - "configserver:http://localhost:8071"

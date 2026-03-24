@@ -1,0 +1,12 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Keycloak di produzione
+          issuer-uri: https://keycloak.medbook.it/realms/medbook
+
+# config per abilitare il livello logging INFO
+logging:
+  level:
+    it.pegaso.projectwork.medbook: INFO

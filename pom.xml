@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+
+    <!-- ================================================================ -->
+    <!-- MedBook Platform - Root Parent POM                               -->
+    <!-- All modules inherit from this POM                                -->
+    <!-- ================================================================ -->
+    <groupId>it.pegaso.projectwork.medbook</groupId>
+    <artifactId>medbook-platform</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>MedBook Platform</name>
+    <description>
+        Appointment Booking Platform for Private Polyclinic Networks
+    </description>
+
+
+    <!-- ================================================================ -->
+    <!-- Spring Boot Parent                                               -->
+    <!-- ================================================================ -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.11</version>
+        <relativePath/>
+    </parent>
+
+
+    <!-- ================================================================ -->
+    <!-- Modules                                                          -->
+    <!-- ================================================================ -->
+    <modules>
+        <module>commons/medbook-commons</module>
+
+        <!-- DMN modules -->
+        <module>dmn/patient-dmn</module>
+        <module>dmn/patient-dmn-client</module>
+        <module>dmn/doctor-dmn</module>
+        <module>dmn/doctor-dmn-client</module>
+        <module>dmn/clinic-dmn</module>
+        <module>dmn/clinic-dmn-client</module>
+        <module>dmn/appointment-dmn</module>
+        <module>dmn/appointment-dmn-events</module>
+        <module>dmn/notification-dmn</module>
+
+        <!-- Edge modules -->
+        <module>edge/api-gateway</module>
+        <module>edge/medbook-bff</module>
+
+        <!-- Infrastructure modules -->
+        <module>infra/eureka-server</module>
+        <module>infra/config-server</module>
+    </modules>
+
+
+    <!-- ================================================================ -->
+    <!-- Properties                                                       -->
+    <!-- ================================================================ -->
+    <properties>
+        <!-- Java version -->
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Spring Cloud version -->
+        <spring-cloud.version>2025.0.1</spring-cloud.version>
+
+        <!-- Dependencies versions -->
+        <mapstruct.version>1.6.3</mapstruct.version>
+        <lombok.version>1.18.36</lombok.version>
+        <flyway.version>11.3.4</flyway.version>
+        <springdoc.version>2.8.4</springdoc.version>
+        <jollyday.version>0.35.0</jollyday.version>
+        <shedlock.version>6.3.0</shedlock.version>
+
+        <!-- Security fix — CVE Jackson Core async parser -->
+        <jackson-core.version>2.19.0</jackson-core.version>
+
+        <openapi.generator.plugin.version>7.4.0</openapi.generator.plugin.version>
+    </properties>
+
+
+    <!-- ================================================================ -->
+    <!-- Dependency Management                                            -->
+    <!-- Versions defined here — no version needed in child POMs          -->
+    <!-- ================================================================ -->
+    <dependencyManagement>
+        <dependencies>
+
+            <!-- ================================================================ -->
+            <!-- Security fix — CVE Jackson Core async parser DoS vulnerability   -->
+            <!-- Force upgrade to patched version across all modules              -->
+            <!-- ================================================================ -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson-core.version}</version>
+            </dependency>
+
+            <!-- Spring Cloud BOM -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- medbook-commons — shared library -->
+            <dependency>
+                <groupId>it.pegaso.projectwork.medbook</groupId>
+                <artifactId>medbook-commons</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- MapStruct — entity/DTO mapper -->
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+
+            <!-- Lombok — boilerplate code generator -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- Flyway — database migration -->
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-core</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-database-postgresql</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+
+            <!-- SpringDoc OpenAPI — Swagger UI -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+
+            <!-- Jollyday — Italian public holidays -->
+            <dependency>
+                <groupId>de.focus-shift</groupId>
+                <artifactId>jollyday-jaxb</artifactId>
+                <version>${jollyday.version}</version>
+            </dependency>
+
+            <!-- ShedLock — distributed lock for @Scheduled jobs -->
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-spring</artifactId>
+                <version>${shedlock.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-provider-jdbc-template</artifactId>
+                <version>${shedlock.version}</version>
+            </dependency>
+
+            <!-- Jackson Databind Nullable — richiesto da OpenAPI Generator per PATCH -->
+            <dependency>
+                <groupId>org.openapitools</groupId>
+                <artifactId>jackson-databind-nullable</artifactId>
+                <version>0.2.6</version>
+            </dependency>
+
+            <!-- Swagger Annotations — richiesto da OpenAPI Generator -->
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>2.2.20</version>
+            </dependency>
+
+            <!-- Client modules -->
+            <dependency>
+                <groupId>it.pegaso.projectwork.medbook</groupId>
+                <artifactId>patient-dmn-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>it.pegaso.projectwork.medbook</groupId>
+                <artifactId>doctor-dmn-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>it.pegaso.projectwork.medbook</groupId>
+                <artifactId>clinic-dmn-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Events module -->
+            <dependency>
+                <groupId>it.pegaso.projectwork.medbook</groupId>
+                <artifactId>appointment-dmn-events</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+
+    <!-- ================================================================ -->
+    <!-- Common dependencies inherited by ALL modules                    -->
+    <!-- ================================================================ -->
+    <dependencies>
+
+        <!-- Lombok — available in all modules -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Spring Boot Test — available in all modules -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <!-- ================================================================ -->
+    <!-- Build plugins                                                    -->
+    <!-- ================================================================ -->
+    <build>
+        <pluginManagement>
+            <plugins>
+
+                <!-- Spring Boot Maven plugin -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <excludes>
+                            <exclude>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                            </exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+
+                <!-- Maven Compiler plugin — Lombok + MapStruct -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <source>21</source>
+                        <target>21</target>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                            <path>
+                                <groupId>org.mapstruct</groupId>
+                                <artifactId>mapstruct-processor</artifactId>
+                                <version>${mapstruct.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+
+                <!-- OpenAPI Generator — genera il codice dalle spec YAML -->
+                <plugin>
+                    <groupId>org.openapitools</groupId>
+                    <artifactId>openapi-generator-maven-plugin</artifactId>
+                    <version>${openapi.generator.plugin.version}</version>
+                </plugin>
+
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>

@@ -1,0 +1,5 @@
+it.pegaso.projectwork.medbook.commons.security.config.MedBookSecurityConfig
+it.pegaso.projectwork.medbook.commons.entity.config.MedBookJpaAuditingConfig
+it.pegaso.projectwork.medbook.commons.logging.aop.config.MedBookLoggingAspectConfig
+it.pegaso.projectwork.medbook.commons.properties.MedBookCommonsProperties
+it.pegaso.projectwork.medbook.commons.errors.MedBookExceptionHandler

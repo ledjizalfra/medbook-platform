@@ -1,0 +1,60 @@
+# =============================================================================
+# MedBook Platform - Config Server
+# Centralized configuration management backed by a local Git repository
+# =============================================================================
+
+spring:
+  application:
+    name: config-server
+
+  profiles:
+    active: native
+
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: file:///D:/DOCUMENTI%20PERSONALI/UNIVERSITA/PEGASO/Project-Work/GitHub/medbook-platform/infra/config-repo
+        #git:
+          # Path to the local config repository
+          # Contains YAML configuration files for all DMNs
+          #uri: file:///${user.dir}/infra/config-repo
+
+          # Default branch to use
+          #default-label: main
+
+          # Clone on startup to fail fast if repo is not accessible
+          #clone-on-start: true
+
+server:
+  port: 8071
+
+# =============================================================================
+# Eureka Client — config-server registers itself on Eureka
+# =============================================================================
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8070/eureka/
+  instance:
+    prefer-ip-address: true
+
+# =============================================================================
+# Spring Boot Actuator
+# =============================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, refresh
+  endpoint:
+    health:
+      show-details: always
+
+# =============================================================================
+# Logging
+# =============================================================================
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.config: DEBUG

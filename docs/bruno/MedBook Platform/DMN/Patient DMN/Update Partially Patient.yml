@@ -1,0 +1,49 @@
+info:
+  name: Update Partially Patient
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{base_url_patient}}/api/v1/patients/:patientId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: patientId
+      value: PAT-1
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "firstName": "Carlo",
+        "lastName": "Esposito",
+        "dateOfBirth": "2000-01-25",
+        "email": "carlo.esposito2@email.it",
+        "phone": "+393381234567",
+        "address": "Via bologna 3",
+        "city": "Torino",
+        "postalCode": "10145",
+        "province": "TO"
+      }
+
+
+
+
+
+
+
+      /*
+
+
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

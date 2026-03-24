@@ -1,0 +1,124 @@
+info:
+  name: Create New Patient
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{base_url_patient}}/api/v1/patients"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  body:
+    type: json
+    data: |-
+      {
+        "firstName": "Sofia",
+        "lastName": "Esposito",
+        "dateOfBirth": "2000-01-25",
+        "fiscalCode": "SPSSFO00A65H501W",
+        "gender": "FEMALE",
+        "email": "sofia.esposito@email.it",
+        "phone": "+393381234567",
+        "address": "Via Firenze 3",
+        "city": "Firenze",
+        "postalCode": "50100",
+        "province": "FI"
+      }
+
+
+
+
+
+
+
+      /*{
+        "firstName": "Mario",
+        "lastName": "Rossi",
+        "dateOfBirth": "1990-01-15",
+        "fiscalCode": "RSSMRA90A15H501Z",
+        "gender": "MALE",
+        "email": "mario.rossi@email.it",
+        "phone": "+393331234567"
+      }
+
+      {
+        "firstName": "Giulia",
+        "lastName": "Bianchi",
+        "dateOfBirth": "1985-06-20",
+        "fiscalCode": "BNCGLI85H60F205X",
+        "gender": "FEMALE",
+        "email": "giulia.bianchi@email.it",
+        "phone": "+393341234567",
+        "address": "Via Napoli 5",
+        "city": "Milano",
+        "postalCode": "20100",
+        "province": "MI"
+      }
+
+      {
+        "firstName": "Luca",
+        "lastName": "Verdi",
+        "dateOfBirth": "1978-03-15",
+        "fiscalCode": "VRDLCU78C15H501Z",
+        "gender": "MALE",
+        "email": "luca.verdi@email.it",
+        "phone": "+393351234567",
+        "city": "Roma",
+        "postalCode": "00100",
+        "province": "RM"
+      }
+
+      {
+        "firstName": "Anna",
+        "lastName": "Russo",
+        "dateOfBirth": "1992-11-08",
+        "fiscalCode": "RSSANNA92S48H501Y",
+        "gender": "FEMALE",
+        "email": "anna.russo@email.it",
+        "phone": "+393361234567",
+        "address": "Corso Vittorio Emanuele 22",
+        "city": "Napoli",
+        "postalCode": "80121",
+        "province": "NA"
+      }
+
+      {
+        "firstName": "Marco",
+        "lastName": "Ferrari",
+        "dateOfBirth": "1965-09-30",
+        "fiscalCode": "FRRMRC65P30F205Z",
+        "gender": "MALE",
+        "email": "marco.ferrari@email.it",
+        "phone": "+393371234567",
+        "address": "Via Torino 8",
+        "city": "Torino",
+        "postalCode": "10100",
+        "province": "TO"
+      }
+
+
+      {
+        "firstName": "Sofia",
+        "lastName": "Esposito",
+        "dateOfBirth": "2000-01-25",
+        "fiscalCode": "SPSSFO00A65H501W",
+        "gender": "FEMALE",
+        "email": "sofia.esposito@email.it",
+        "phone": "+393381234567",
+        "address": "Via Firenze 3",
+        "city": "Firenze",
+        "postalCode": "50100",
+        "province": "FI"
+      }
+
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

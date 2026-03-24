@@ -1,0 +1,7 @@
+it\pegaso\projectwork\medbook\appointment\event\AppointmentBookedEvent.class
+it\pegaso\projectwork\medbook\appointment\event\AvailabilityChangedEvent.class
+it\pegaso\projectwork\medbook\appointment\event\ChangeTypeEnum.class
+it\pegaso\projectwork\medbook\appointment\event\AppointmentCancelledEvent.class
+it\pegaso\projectwork\medbook\appointment\event\AvailabilityChangedEvent$AvailabilityChangedEventBuilder.class
+it\pegaso\projectwork\medbook\appointment\event\AppointmentBookedEvent$AppointmentBookedEventBuilder.class
+it\pegaso\projectwork\medbook\appointment\event\AppointmentCancelledEvent$AppointmentCancelledEventBuilder.class
