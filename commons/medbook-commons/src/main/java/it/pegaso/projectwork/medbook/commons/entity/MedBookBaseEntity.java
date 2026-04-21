@@ -10,6 +10,7 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -25,7 +26,8 @@ import java.time.LocalDateTime;
 @SQLRestriction("deleted = false")
 public abstract class MedBookBaseEntity implements Serializable {
 
-
+    @Serial
+    private final static long serialVersionUID = 1L;
 
     // Chiave primaria tecnica - generata automaticamente dal database
     @Id
@@ -41,6 +43,7 @@ public abstract class MedBookBaseEntity implements Serializable {
     // Data e ora dell'ultimo aggiornamento - aggiornata automaticamente
     @LastModifiedDate
     @Column(name = "UPDATED_AT")
+    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime updatedAt;
 
     // Identificativo utente JWT che ha creato il record
@@ -59,6 +62,7 @@ public abstract class MedBookBaseEntity implements Serializable {
 
     // Timestamp della cancellazione logica
     @Column(name = "DELETED_AT")
+    @Temporal(TemporalType.TIMESTAMP)
     private LocalDateTime deletedAt;
 
     // Identificativo utente che ha eseguito la cancellazione logica

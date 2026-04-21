@@ -1,0 +1,26 @@
+@if (control?.invalid && (control?.dirty || control?.touched)) {
+  @if (control?.errors?.['required'])             { <mat-error>Campo obbligatorio</mat-error> }
+  @if (control?.errors?.['minlength'])            { <mat-error>Minimo {{ control?.errors?.['minlength']?.requiredLength }} caratteri</mat-error> }
+  @if (control?.errors?.['emailInvalid'])         { <mat-error>Formato email non valido</mat-error> }
+  @if (control?.errors?.['telefonoNonValido'])    { <mat-error>Inserire solo cifre (senza prefisso paese)</mat-error> }
+  @if (control?.errors?.['telefonoLunghezza'])    { <mat-error>Il numero deve avere 9 o 10 cifre</mat-error> }
+  @if (control?.errors?.['codiceFiscaleInvalid']) { <mat-error>Formato codice fiscale non valido</mat-error> }
+  @if (control?.errors?.['passwordTroppoCorta'])   { <mat-error>Minimo 8 caratteri</mat-error> }
+  @if (control?.errors?.['passwordSenzaMaiuscola']){ <mat-error>Deve contenere almeno una lettera maiuscola</mat-error> }
+  @if (control?.errors?.['passwordSenzaNumero'])   { <mat-error>Deve contenere almeno un numero</mat-error> }
+  @if (control?.errors?.['passwordSenzaSpeciale']) { <mat-error>Deve contenere almeno un carattere speciale (@#$%^&*!?._-)</mat-error> }
+  @if (control?.errors?.['dataFutura'])           { <mat-error>La data non può essere nel futuro</mat-error> }
+  @if (control?.errors?.['duplicateEmail'])       { <mat-error>Questa email è già registrata</mat-error> }
+}
+@if (form?.errors?.['passwordNonCoincidono'] && control?.touched) {
+  <mat-error>Le password non coincidono</mat-error>
+}
+@if (form?.errors?.['cfNonConcordante'] && control?.touched) {
+  <mat-error>Il codice fiscale non corrisponde ai dati anagrafici</mat-error>
+}
+@if (form?.errors?.['smsRichiedeTelefono']) {
+  <mat-error>Per attivare SMS devi inserire un numero di telefono</mat-error>
+}
+@if (form?.errors?.['nessunCanaleAttivo']) {
+  <mat-error>Devi selezionare almeno un canale di notifica</mat-error>
+}

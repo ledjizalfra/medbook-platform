@@ -1,17 +1,17 @@
 openapi: 3.0.3
 
 # =============================================================================
-# MedBook Platform — Patient API
+# MedBook Platform - Patient API
 # Microservizio di dominio per la gestione anagrafica dei pazienti
 # =============================================================================
 
 info:
-  title: MedBook — Patient API
+  title: MedBook - Patient API
   description: |
     ## Patient API
     Gestisce il ciclo di vita completo del paziente sulla piattaforma MedBook.
 
-    ### Funzionalità principali
+    ### Funzionalita principali
     - Registrazione nuovi pazienti
     - Recupero e aggiornamento dati anagrafici
     - Eliminazione logica (soft delete)
@@ -22,10 +22,12 @@ info:
     - L'ID tecnico interno non viene mai esposto nelle API
     - Si utilizza la **Business Key** (es. `PAT-1`) come identificatore pubblico
     - Il soft delete non elimina fisicamente il record dal database
-    - Le risposte di errore seguono sempre il formato **ErrorResponse**
+    - Le risposte di successo sono sempre incapsulate in **MedBookApiResponse** o **MedBookApiVoidResponse**
+    - Le risposte di errore seguono sempre il formato **MedBookApiErrorResponse**
   version: 1.0.0
   contact:
     name: MedBook Team
+    email: djizalfra@gmail.com
 
 servers:
   - url: http://localhost:8090
@@ -54,6 +56,8 @@ paths:
         Registra un nuovo paziente sulla piattaforma MedBook.
         Genera automaticamente la business key nel formato PAT-{seq}.
         Email e codice fiscale devono essere univoci nel sistema.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
       requestBody:
         required: true
         content:
@@ -62,23 +66,23 @@ paths:
               $ref: '#/components/schemas/CreatePatientRequest'
       responses:
         '201':
-          description: Paziente creato con successo — restituisce solo la business key generata
+          description: Paziente creato con successo - data contiene CreatePatientOutput con la business key generata
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreatePatientResponse'
+                $ref: '#/components/schemas/MedBookApiResponse'
         '400':
           description: Dati della richiesta non validi
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
         '409':
-          description: Email o codice fiscale già esistente nel sistema
+          description: Email o codice fiscale gia esistente nel sistema
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
 
     # -------------------------------------------------------------------------
     # Lista paginata dei pazienti
@@ -90,80 +94,40 @@ paths:
       summary: Recupera tutti i pazienti con paginazione
       description: |
         Restituisce la lista paginata dei pazienti con i campi principali.
-        Supporta filtri per stato, cognome, città ed email.
+        Supporta filtri per stato, cognome, citta ed email.
         Supporta ordinamento tramite il parametro sort.
       parameters:
-        # Parametri di paginazione Spring standard
-        - name: page
-          in: query
-          description: Numero di pagina (0-based)
-          schema:
-            type: integer
-            default: 0
-            minimum: 0
-        - name: size
-          in: query
-          description: Numero di elementi per pagina
-          schema:
-            type: integer
-            default: 20
-            minimum: 1
-            maximum: 100
-        - name: sort
-          in: query
-          description: Ordinamento nel formato campo,direzione (es. lastName,asc)
-          schema:
-            type: string
-            example: lastName,asc
-
+        - $ref: '#/components/parameters/MedBookContextParam'
+        # Parametri di paginazione
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
         # Parametri di filtro
-        - name: status
-          in: query
-          description: Filtra per stato del paziente
-          required: false
-          schema:
-            $ref: '#/components/schemas/PatientStatusApiEnum'
-        - name: lastName
-          in: query
-          description: Filtra per cognome (ricerca parziale case-insensitive)
-          required: false
-          schema:
-            type: string
-            example: Rossi
-        - name: city
-          in: query
-          description: Filtra per città di residenza (case-insensitive)
-          required: false
-          schema:
-            type: string
-            example: Napoli
-        - name: email
-          in: query
-          description: Filtra per indirizzo email (ricerca parziale case-insensitive)
-          required: false
-          schema:
-            type: string
-            example: mario.rossi
-        - name: fiscalCode
-          in: query
-          description: Filtra per codice fiscale (corrispondenza esatta)
-          required: false
-          schema:
-            type: string
-            example: RSSMRA90A15H501Z
-
+        - $ref: '#/components/parameters/PatientStatusFilterParam'
+        - $ref: '#/components/parameters/LastNameFilterParam'
+        - $ref: '#/components/parameters/CityFilterParam'
+        - $ref: '#/components/parameters/EmailFilterParam'
+        - $ref: '#/components/parameters/FirstNameFilterParam'
+        - $ref: '#/components/parameters/FiscalCodeFilterParam'
+        - $ref: '#/components/parameters/PhoneFilterParam'
+        - $ref: '#/components/parameters/GenderFilterParam'
+        - $ref: '#/components/parameters/ProvinceFilterParam'
+        - $ref: '#/components/parameters/CreatedFromFilterParam'
+        - $ref: '#/components/parameters/CreatedToFilterParam'
+        - $ref: '#/components/parameters/UpdatedFromFilterParam'
+        - $ref: '#/components/parameters/UpdatedToFilterParam'
       responses:
         '200':
-          description: Lista pazienti recuperata con successo
+          description: Lista pazienti recuperata con successo - data contiene PatientListOutput
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PatientsSummaryResponse'
+                $ref: '#/components/schemas/MedBookApiResponse'
 
   /api/v1/patients/{patientId}:
 
     # -------------------------------------------------------------------------
-    # Recupero paziente per business key — tutti i campi
+    # Recupero paziente per business key - tutti i campi
     # -------------------------------------------------------------------------
     get:
       tags:
@@ -174,20 +138,21 @@ paths:
         Restituisce i dati completi di un paziente identificato dalla business key.
         La business key ha il formato PAT-{seq} (es. PAT-1, PAT-42).
       parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
         - $ref: '#/components/parameters/PatientIdParam'
       responses:
         '200':
-          description: Paziente trovato
+          description: Paziente trovato - data contiene PatientDetailOutput
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PatientDetailResponse'
+                $ref: '#/components/schemas/MedBookApiResponse'
         '404':
           description: Paziente non trovato
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
 
     # -------------------------------------------------------------------------
     # Aggiornamento parziale paziente (PATCH)
@@ -202,6 +167,7 @@ paths:
         I campi non inclusi nel body restano invariati.
         La business key, il codice fiscale e il genere non possono essere modificati.
       parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
         - $ref: '#/components/parameters/PatientIdParam'
       requestBody:
         required: true
@@ -210,20 +176,24 @@ paths:
             schema:
               $ref: '#/components/schemas/UpdatePatientRequest'
       responses:
-        '204':
+        '200':
           description: Paziente aggiornato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
         '400':
           description: Dati della richiesta non validi
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
         '404':
           description: Paziente non trovato
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
 
     # -------------------------------------------------------------------------
     # Eliminazione logica paziente (soft delete)
@@ -234,20 +204,25 @@ paths:
       operationId: deletePatient
       summary: Elimina logicamente un paziente
       description: |
-        Esegue un soft delete del paziente — il record non viene eliminato
+        Esegue un soft delete del paziente - il record non viene eliminato
         fisicamente dal database ma viene marcato come cancellato (DELETED = true).
-        Il paziente non sarà più visibile nelle ricerche.
+        Il paziente non sara piu visibile nelle ricerche.
       parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
         - $ref: '#/components/parameters/PatientIdParam'
       responses:
-        '204':
+        '200':
           description: Paziente eliminato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
         '404':
           description: Paziente non trovato
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
 
   /api/v1/patients/{patientId}/restore:
 
@@ -261,26 +236,31 @@ paths:
       summary: Ripristina un paziente eliminato logicamente
       description: |
         Ripristina un paziente precedentemente eliminato logicamente.
-        Il record viene riattivato impostando DELETED = false e STATUS = ACTIVE.
-        I dati originali restano intatti — nessuna informazione viene persa.
-        Solo ROLE_ADMIN può eseguire questa operazione.
+        Il record viene riattivato impostando DELETED = false e STATUS = ATTIVO.
+        I dati originali restano intatti - nessuna informazione viene persa.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
       parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
         - $ref: '#/components/parameters/PatientIdParam'
       responses:
-        '204':
+        '200':
           description: Paziente ripristinato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
         '404':
           description: Paziente non trovato
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
         '409':
-          description: Il paziente non è cancellato — impossibile ripristinare
+          description: Il paziente non e cancellato - impossibile ripristinare
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
 
 # =============================================================================
 # COMPONENTS
@@ -292,7 +272,23 @@ components:
   # ---------------------------------------------------------------------------
   parameters:
 
-    # Parametro business key paziente — riutilizzato in GET, PATCH, DELETE
+    # -------------------------------------------------------------------------
+    # Contesto applicativo - iniettato automaticamente da MedBookContextInterceptor
+    # tramite MedBookContextHandlerMethodArgumentResolver (BeanPostProcessor position 0)
+    # -------------------------------------------------------------------------
+    MedBookContextParam:
+      name: X-MedBook-Context
+      in: header
+      required: false
+      description: |
+        Contesto applicativo della richiesta - iniettato da MedBookContextInterceptor.
+        Non viene letto dall'header HTTP: il resolver preleva MedBookContextHolder.get().
+      schema:
+        $ref: '#/components/schemas/MedBookContext'
+
+    # -------------------------------------------------------------------------
+    # Business key paziente - riutilizzato in GET, PATCH, DELETE
+    # -------------------------------------------------------------------------
     PatientIdParam:
       name: patientId
       in: path
@@ -302,14 +298,165 @@ components:
         type: string
         example: PAT-1
 
+    # -------------------------------------------------------------------------
+    # Paginazione - parametri standard Spring Pageable
+    # -------------------------------------------------------------------------
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Numero di pagina (0-based)
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      description: Numero di elementi per pagina
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      description: Ordinamento nel formato campo,direzione (es. lastName,asc)
+      schema:
+        type: string
+        example: lastName,asc
+
+    # -------------------------------------------------------------------------
+    # Filtri - lista pazienti
+    # -------------------------------------------------------------------------
+    PatientStatusFilterParam:
+      name: status
+      in: query
+      required: false
+      description: Filtra per stato del paziente
+      schema:
+        $ref: '#/components/schemas/PatientStatusApiEnum'
+
+    LastNameFilterParam:
+      name: lastName
+      in: query
+      required: false
+      description: Filtra per cognome (ricerca parziale case-insensitive)
+      schema:
+        type: string
+        example: Rossi
+
+    CityFilterParam:
+      name: city
+      in: query
+      required: false
+      description: Filtra per citta di residenza (case-insensitive)
+      schema:
+        type: string
+        example: Napoli
+
+    EmailFilterParam:
+      name: email
+      in: query
+      required: false
+      description: Filtra per indirizzo email (ricerca parziale case-insensitive)
+      schema:
+        type: string
+        example: mario.rossi
+
+    FirstNameFilterParam:
+      name: firstName
+      in: query
+      required: false
+      description: Filtra per nome (ricerca parziale case-insensitive)
+      schema:
+        type: string
+        example: Mario
+
+    FiscalCodeFilterParam:
+      name: fiscalCode
+      in: query
+      required: false
+      description: Filtra per codice fiscale (corrispondenza esatta)
+      schema:
+        type: string
+        example: RSSMRA90A15H501Z
+
+    PhoneFilterParam:
+      name: phone
+      in: query
+      required: false
+      description: Filtra per numero di telefono (ricerca parziale)
+      schema:
+        type: string
+        example: "+39333"
+
+    GenderFilterParam:
+      name: gender
+      in: query
+      required: false
+      description: Filtra per genere del paziente
+      schema:
+        type: string
+        example: MASCHILE
+
+    ProvinceFilterParam:
+      name: province
+      in: query
+      required: false
+      description: Filtra per provincia (ricerca parziale case-insensitive)
+      schema:
+        type: string
+        example: TORINO
+
+    CreatedFromFilterParam:
+      name: createdFrom
+      in: query
+      required: false
+      description: Filtra per data creazione - da (inclusa)
+      schema:
+        type: string
+        format: date
+
+    CreatedToFilterParam:
+      name: createdTo
+      in: query
+      required: false
+      description: Filtra per data creazione - a (inclusa)
+      schema:
+        type: string
+        format: date
+
+    UpdatedFromFilterParam:
+      name: updatedFrom
+      in: query
+      required: false
+      description: Filtra per data ultimo aggiornamento - da (inclusa)
+      schema:
+        type: string
+        format: date
+
+    UpdatedToFilterParam:
+      name: updatedTo
+      in: query
+      required: false
+      description: Filtra per data ultimo aggiornamento - a (inclusa)
+      schema:
+        type: string
+        format: date
+
   # ---------------------------------------------------------------------------
   # SCHEMAS
   # ---------------------------------------------------------------------------
   schemas:
 
     # -------------------------------------------------------------------------
-    # REQUEST — Creazione nuovo paziente
-    # Tutti i campi obbligatori sono richiesti
+    # REQUEST - Creazione nuovo paziente
     # -------------------------------------------------------------------------
     CreatePatientRequest:
       type: object
@@ -318,84 +465,90 @@ components:
         - firstName
         - lastName
         - dateOfBirth
-        - fiscalCode
         - gender
         - email
-        - phone
+        - consensoPrivacy
       properties:
-
-        # Dati anagrafici obbligatori
         firstName:
           type: string
           maxLength: 100
           description: Nome del paziente
           example: Mario
-
         lastName:
           type: string
           maxLength: 100
           description: Cognome del paziente
           example: Rossi
-
         dateOfBirth:
           type: string
           format: date
           description: Data di nascita nel formato ISO 8601 (YYYY-MM-DD)
           example: "1990-01-15"
-
         fiscalCode:
           type: string
           minLength: 16
           maxLength: 16
-          description: Codice fiscale italiano — esattamente 16 caratteri — non modificabile dopo la creazione
+          description: Codice fiscale italiano - esattamente 16 caratteri - non modificabile dopo la creazione
           example: RSSMRA90A15H501Z
-
         gender:
           $ref: '#/components/schemas/GenderApiEnum'
-
-        # Dati di contatto obbligatori
         email:
           type: string
           format: email
           maxLength: 150
-          description: Indirizzo email del paziente — deve essere univoco nel sistema
+          description: Indirizzo email del paziente - deve essere univoco nel sistema
           example: mario.rossi@email.it
-
         phone:
           type: string
           maxLength: 20
           description: Numero di telefono del paziente
           example: "+393331234567"
-
-        # Campi indirizzo facoltativi — possono essere completati successivamente
         address:
           type: string
           maxLength: 200
-          description: Via e numero civico — facoltativo alla registrazione
+          description: Via e numero civico - facoltativo alla registrazione
           example: Via Roma 12
-
         city:
           type: string
           maxLength: 100
-          description: Città di residenza — facoltativo alla registrazione
+          description: Citta di residenza - facoltativo alla registrazione
           example: Napoli
-
         postalCode:
           type: string
           maxLength: 10
-          description: Codice postale italiano (CAP) — facoltativo
+          description: Codice postale italiano (CAP) - facoltativo
           example: "80100"
-
         province:
           type: string
-          maxLength: 5
-          description: Codice provincia italiano (2 caratteri) — facoltativo
-          example: NA
+          maxLength: 100
+          description: Nome provincia per esteso (es. TORINO, MILANO)
+          example: TORINO
+        consensoPrivacy:
+          type: boolean
+          description: Consenso obbligatorio alla privacy policy e termini di utilizzo
+        consensoCommerciale:
+          type: boolean
+          description: Consenso facoltativo a comunicazioni commerciali
+          default: false
+        consensoProfilazione:
+          type: boolean
+          description: Consenso facoltativo alla profilazione
+          default: false
+        comuneNascita:
+          type: string
+          maxLength: 100
+          description: Comune di nascita (o stato estero per nati fuori Italia) - necessario per validazione CF
+        provinciaNascita:
+          type: string
+          maxLength: 100
+          description: Provincia di nascita (o 'EE' per nati all'estero)
+        regioneNascita:
+          type: string
+          maxLength: 100
+          description: Regione di nascita (o stato estero)
 
     # -------------------------------------------------------------------------
-    # REQUEST — Aggiornamento parziale paziente (PATCH)
-    # Tutti i campi sono opzionali — solo i campi inviati vengono aggiornati
-    # fiscalCode e gender non sono modificabili
+    # REQUEST - Aggiornamento parziale paziente (PATCH)
     # -------------------------------------------------------------------------
     UpdatePatientRequest:
       type: object
@@ -407,74 +560,80 @@ components:
       properties:
         patientId:
           type: string
-          description: chiave business del patient
-          example: PAT-
-
-        # Dati anagrafici modificabili
+          description: Chiave business del paziente
+          example: PAT-1
         firstName:
           type: string
           maxLength: 100
           description: Nome del paziente
           example: Mario
-
         lastName:
           type: string
           maxLength: 100
           description: Cognome del paziente
           example: Rossi
-
         dateOfBirth:
           type: string
           format: date
           description: Data di nascita nel formato ISO 8601 (YYYY-MM-DD)
           example: "1990-01-15"
-
-        # Dati di contatto modificabili
         email:
           type: string
           format: email
           maxLength: 150
-          description: Indirizzo email del paziente — deve essere univoco nel sistema
+          description: Indirizzo email del paziente - deve essere univoco nel sistema
           example: mario.rossi@email.it
-
         phone:
           type: string
           maxLength: 20
           description: Numero di telefono del paziente
           example: "+393331234567"
-
-        # Campi indirizzo modificabili
         address:
           type: string
           maxLength: 200
           description: Via e numero civico
           example: Via Roma 12
-
         city:
           type: string
           maxLength: 100
-          description: Città di residenza
+          description: Citta di residenza
           example: Napoli
-
         postalCode:
           type: string
           maxLength: 10
           description: Codice postale italiano (CAP)
           example: "80100"
-
         province:
           type: string
-          maxLength: 5
-          description: Codice provincia italiano (2 caratteri)
-          example: NA
+          maxLength: 100
+          description: Nome provincia per esteso (es. TORINO, MILANO)
+          example: TORINO
+        consensoCommerciale:
+          type: boolean
+          description: Consenso facoltativo a comunicazioni commerciali
+        consensoProfilazione:
+          type: boolean
+          description: Consenso facoltativo alla profilazione
+        comuneNascita:
+          type: string
+          maxLength: 100
+          description: Comune di nascita (o stato estero per nati fuori Italia)
+        provinciaNascita:
+          type: string
+          maxLength: 100
+          description: Provincia di nascita (o 'EE' per nati all'estero)
+        regioneNascita:
+          type: string
+          maxLength: 100
+          description: Regione di nascita (o stato estero)
 
     # -------------------------------------------------------------------------
-    # RESPONSE — Creazione paziente
+    # OUTPUT - Creazione paziente
     # Restituisce solo la business key generata dal sistema
     # -------------------------------------------------------------------------
-    CreatePatientResponse:
+    CreatePatientOutput:
       type: object
-      description: Risposta alla creazione del paziente — contiene solo la business key generata
+      description: Output della creazione del paziente - contiene solo la business key generata
       properties:
         patientId:
           type: string
@@ -482,88 +641,92 @@ components:
           example: PAT-1
 
     # -------------------------------------------------------------------------
-    # RESPONSE — Dettaglio paziente (GET by id)
-    # Restituisce tutti i campi del paziente inclusi quelli di audit
+    # OUTPUT - Dettaglio paziente (GET by id)
     # -------------------------------------------------------------------------
-    PatientDetailResponse:
+    PatientDetailOutput:
       type: object
-      description: Dati completi del paziente — restituiti da GET /patients/{patientId}
+      description: Dati completi del paziente - restituiti da GET /patients/{patientId}
       properties:
-
-        # Business key — identificatore pubblico esposto nelle API
         patientId:
           type: string
           description: Business key nel formato PAT-{seq}
           example: PAT-1
-
-        # Dati anagrafici
         firstName:
           type: string
           example: Mario
-
         lastName:
           type: string
           example: Rossi
-
         dateOfBirth:
           type: string
           format: date
           example: "1990-01-15"
-
         fiscalCode:
           type: string
           example: RSSMRA90A15H501Z
-
         gender:
           $ref: '#/components/schemas/GenderApiEnum'
-
-        # Dati di contatto
         email:
           type: string
           example: mario.rossi@email.it
-
         phone:
           type: string
           example: "+393331234567"
-
-        # Campi indirizzo
         address:
           type: string
           example: Via Roma 12
-
         city:
           type: string
           example: Napoli
-
         postalCode:
           type: string
           example: "80100"
-
         province:
           type: string
-          example: NA
-
+          maxLength: 100
+          description: Nome provincia per esteso (es. TORINO, MILANO)
+          example: TORINO
+        consensoPrivacy:
+          type: boolean
+          description: Consenso obbligatorio alla privacy policy
+        consensoCommerciale:
+          type: boolean
+          description: Consenso facoltativo a comunicazioni commerciali
+        consensoProfilazione:
+          type: boolean
+          description: Consenso facoltativo alla profilazione
+        comuneNascita:
+          type: string
+          description: Comune di nascita (o stato estero per nati fuori Italia)
+        provinciaNascita:
+          type: string
+          description: Provincia di nascita (o 'EE' per nati all'estero)
+        regioneNascita:
+          type: string
+          description: Regione di nascita (o stato estero)
         status:
           $ref: '#/components/schemas/PatientStatusApiEnum'
-
-        # Campi di audit — popolati automaticamente dal sistema
         createdAt:
           type: string
           format: date-time
           description: Timestamp di creazione del record
-
         updatedAt:
           type: string
           format: date-time
           description: Timestamp dell'ultimo aggiornamento
+        createdBy:
+          type: string
+          description: Utente che ha creato il record
+        updatedBy:
+          type: string
+          description: Ultimo utente che ha modificato il record
 
     # -------------------------------------------------------------------------
-    # RESPONSE — Elemento singolo nella lista pazienti
-    # Contiene solo i campi principali per le liste paginate
+    # OUTPUT - Elemento singolo nella lista pazienti
     # -------------------------------------------------------------------------
-    PatientItemSummaryResponse:
+    PatientItemSummaryOutput:
       type: object
-      description: Dati sintetici del paziente — utilizzato nella lista paginata
+      description: Dati sintetici del paziente - utilizzato nella lista paginata
       properties:
         patientId:
           type: string
@@ -582,159 +745,45 @@ components:
           $ref: '#/components/schemas/PatientStatusApiEnum'
 
     # -------------------------------------------------------------------------
-    # RESPONSE — Lista paginata dei pazienti
-    # Composta da una lista di PatientItemSummaryResponse
-    # e dai metadati di paginazione MedBookPageResponse
+    # OUTPUT - Lista paginata dei pazienti
+    # Il controller estrae patients e page e li inserisce in MedBookApiResponse.data
+    # e MedBookApiResponse.page
     # -------------------------------------------------------------------------
-    PatientsSummaryResponse:
+    PatientListOutput:
       type: object
-      description: Risposta paginata della lista pazienti
+      description: DTO interno del service per la lista paginata dei pazienti
       properties:
-
-        # Lista degli elementi nella pagina corrente
         patients:
           type: array
           items:
-            $ref: '#/components/schemas/PatientItemSummaryResponse'
+            $ref: '#/components/schemas/PatientDetailOutput'
           description: Lista dei pazienti nella pagina corrente
-
-        # Metadati di paginazione — formato standard MedBook
         page:
           $ref: '#/components/schemas/MedBookPageResponse'
 
     # -------------------------------------------------------------------------
-    # METADATI DI PAGINAZIONE — Formato standard per tutti i DMN
-    # Riutilizzato da tutti i DMN come campo "page" nelle response paginate
-    # -------------------------------------------------------------------------
-    MedBookPageResponse:
-      type: object
-      description: |
-        Metadati di paginazione standard della piattaforma MedBook.
-        Riutilizzato da tutti i DMN come campo "page" nelle response paginate.
-      properties:
-        totalElements:
-          type: integer
-          format: int64
-          description: Numero totale di elementi in tutte le pagine
-          example: 150
-        totalPages:
-          type: integer
-          description: Numero totale di pagine
-          example: 8
-        size:
-          type: integer
-          description: Numero di elementi per pagina
-          example: 20
-        number:
-          type: integer
-          description: Numero della pagina corrente (0-based)
-          example: 0
-        first:
-          type: boolean
-          description: True se è la prima pagina
-          example: true
-        last:
-          type: boolean
-          description: True se è l'ultima pagina
-          example: false
-        empty:
-          type: boolean
-          description: True se la pagina non contiene elementi
-          example: false
-
-    # -------------------------------------------------------------------------
-    # ENUMS
-    # -------------------------------------------------------------------------
-
-    # Genere del paziente
-    GenderApiEnum:
-      type: string
-      enum:
-        - MALE
-        - FEMALE
-      description: Genere del paziente
-
-    # Stato del ciclo di vita del paziente
-    PatientStatusApiEnum:
-      type: string
-      enum:
-        - ACTIVE
-        - INACTIVE
-      description: |
-        Stato del ciclo di vita del paziente:
-        - ACTIVE: il paziente può prenotare appuntamenti
-        - INACTIVE: account disattivato
-
-    # -------------------------------------------------------------------------
-    # RISPOSTA DI ERRORE — Formato uniforme per tutti gli errori API
-    # Allineato con ErrorResponseDto della libreria medbook-commons
-    # -------------------------------------------------------------------------
-    ErrorResponse:
-      type: object
-      description: Formato standard delle risposte di errore della piattaforma MedBook
-      properties:
-
-        # Codice HTTP della risposta
-        httpStatus:
-          type: integer
-          description: Codice HTTP della risposta di errore
-          example: 404
-
-        # Codice errore applicativo leggibile
-        errorCode:
-          type: string
-          description: Codice errore applicativo — corrisponde a ErrorCode enum in medbook-commons
-          example: RESOURCE_NOT_FOUND
-
-        # Messaggio singolo o lista di errori di validazione
-        message:
-          description: |
-            Messaggio descrittivo dell'errore.
-            Può essere una stringa singola o una lista di stringhe
-            in caso di errori di validazione multipli.
-          oneOf:
-            - type: string
-              example: Paziente non trovato con patientId PAT-999
-            - type: array
-              items:
-                type: string
-              example:
-                - "firstName: il campo non può essere vuoto"
-                - "email: formato email non valido"
-
-        # Path dell'endpoint
-        path:
-          type: string
-          description: Path dell'endpoint che ha generato l'errore
-          example: /api/v1/patients/PAT-999
-
-        # Timestamp dell'errore
-        timestamp:
-          type: string
-          format: date-time
-          description: Timestamp dell'errore nel formato ISO 8601
-
-    # -------------------------------------------------------------------------
-    # FILTRO — Parametri di ricerca per la lista pazienti
-    # Usato internamente nel codice Java per raggruppare i parametri di filtro
-    # Non è un body request — i campi sono query parameters nella API
+    # FILTRO - Parametri di ricerca per la lista pazienti
     # -------------------------------------------------------------------------
     GetAllPatientsFilter:
       type: object
       description: |
         Oggetto di filtro per la ricerca dei pazienti.
-        Tutti i campi sono opzionali — se non specificati non viene applicato il filtro.
+        Tutti i campi sono opzionali - se non specificati non viene applicato il filtro.
         Usato internamente nel service e repository per raggruppare i parametri.
       properties:
         status:
           $ref: '#/components/schemas/PatientStatusApiEnum'
+        firstName:
+          type: string
+          description: Ricerca parziale case-insensitive sul nome
+          example: Mario
         lastName:
           type: string
           description: Ricerca parziale case-insensitive sul cognome
           example: Rossi
         city:
           type: string
-          description: Ricerca case-insensitive sulla città
+          description: Ricerca case-insensitive sulla citta
           example: Napoli
         email:
           type: string
@@ -744,3 +793,209 @@ components:
           type: string
           description: Corrispondenza esatta sul codice fiscale
           example: RSSMRA90A15H501Z
+        phone:
+          type: string
+          description: Ricerca parziale sul numero di telefono
+          example: "+39333"
+        gender:
+          type: string
+          description: Filtro per genere del paziente (MASCHILE/FEMMINILE)
+          example: MASCHILE
+        province:
+          type: string
+          description: Ricerca parziale case-insensitive sulla provincia
+          example: TORINO
+        createdFrom:
+          type: string
+          format: date
+          description: Filtra per data creazione - da (inclusa)
+        createdTo:
+          type: string
+          format: date
+          description: Filtra per data creazione - a (inclusa)
+        updatedFrom:
+          type: string
+          format: date
+          description: Filtra per data ultimo aggiornamento - da (inclusa)
+        updatedTo:
+          type: string
+          format: date
+          description: Filtra per data ultimo aggiornamento - a (inclusa)
+
+    # =========================================================================
+    # TIPI CONDIVISI - Definiti in medbook-commons e importati via importMappings.
+    # Le definizioni qui sotto servono solo per la risoluzione dei $ref e per
+    # la documentazione Swagger UI. Non vengono rigenerati nel MS patient-dmn.
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # ENVELOPE BASE - Campi comuni a tutte le response (success ed error)
+    # Classe generata da medbook-commons: it.pegaso.projectwork.medbook.commons.api.model.MedBookApiVoidResponse
+    # -------------------------------------------------------------------------
+    MedBookApiVoidResponse:
+      type: object
+      description: |
+        Risposta base per gli endpoint che non restituiscono payload (PATCH, DELETE).
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        httpStatus:
+          type: integer
+          description: Codice HTTP della risposta
+          example: 200
+        success:
+          type: boolean
+          description: True se l'operazione e andata a buon fine
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp di generazione della risposta
+        traceId:
+          type: string
+          description: ID del trace distribuito - correla i log end-to-end
+          example: 6f4d2a1b3c8e9f0a
+
+    # -------------------------------------------------------------------------
+    # ENVELOPE SUCCESS - Estende MedBookApiVoidResponse aggiungendo data e page
+    # Classe generata da medbook-commons: it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse
+    # -------------------------------------------------------------------------
+    MedBookApiResponse:
+      type: object
+      description: |
+        Risposta di successo con payload.
+        data contiene l'oggetto o la lista restituita dall'endpoint.
+        page e presente solo nelle risposte paginate.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        httpStatus:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        data:
+          description: Payload della risposta - oggetto singolo o lista
+        page:
+          $ref: '#/components/schemas/MedBookPageResponse'
+
+    # -------------------------------------------------------------------------
+    # PAGINAZIONE - Metadati standard per le risposte paginate
+    # Classe generata da medbook-commons: it.pegaso.projectwork.medbook.commons.api.model.MedBookPageResponse
+    # -------------------------------------------------------------------------
+    MedBookPageResponse:
+      type: object
+      description: |
+        Metadati di paginazione standard della piattaforma MedBook.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+        size:
+          type: integer
+          example: 20
+        number:
+          type: integer
+          description: Numero della pagina corrente (0-based)
+          example: 0
+        first:
+          type: boolean
+          example: true
+        last:
+          type: boolean
+          example: false
+        empty:
+          type: boolean
+          example: false
+
+    # -------------------------------------------------------------------------
+    # CONTESTO RICHIESTA - Informazioni di sicurezza e tracciabilita per ogni API
+    # Classe generata da medbook-commons: it.pegaso.projectwork.medbook.commons.api.model.MedBookContext
+    # -------------------------------------------------------------------------
+    MedBookContext:
+      type: object
+      description: |
+        Contesto della richiesta HTTP - contiene le informazioni di sicurezza e tracciabilita.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        username:
+          type: string
+          example: mario.rossi@email.it
+        roles:
+          type: array
+          items:
+            type: string
+        requestTimestamp:
+          type: string
+          format: date-time
+
+    # -------------------------------------------------------------------------
+    # ENVELOPE ERROR - Formato uniforme per tutti gli errori API
+    # Classe generata da medbook-commons: it.pegaso.projectwork.medbook.commons.api.model.MedBookApiErrorResponse
+    # -------------------------------------------------------------------------
+    MedBookApiErrorResponse:
+      type: object
+      description: |
+        Formato standard delle risposte di errore della piattaforma MedBook.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        httpStatus:
+          type: integer
+          description: Codice HTTP della risposta di errore
+          example: 404
+        success:
+          type: boolean
+          example: false
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        errorCode:
+          type: string
+          description: Codice errore applicativo
+          example: RESOURCE_NOT_FOUND
+        message:
+          description: |
+            Messaggio descrittivo dell'errore.
+            Puo essere una stringa singola o una lista di stringhe
+            in caso di errori di validazione multipli.
+        path:
+          type: string
+          description: Path dell'endpoint che ha generato l'errore
+          example: /api/v1/patients/PAT-999
+
+    # -------------------------------------------------------------------------
+    # ENUMS
+    # -------------------------------------------------------------------------
+
+    GenderApiEnum:
+      type: string
+      enum:
+        - MASCHILE
+        - FEMMINILE
+      description: Genere del paziente
+
+    PatientStatusApiEnum:
+      type: string
+      enum:
+        - ATTIVO
+        - DISATTIVO
+      description: |
+        Stato del ciclo di vita del paziente:
+        - ATTIVO: il paziente puo prenotare appuntamenti
+        - DISATTIVO: account disattivato

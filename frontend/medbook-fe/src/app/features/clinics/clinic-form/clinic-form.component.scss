@@ -1,0 +1,127 @@
+// ============================================================
+// Form sede clinica a step
+// ============================================================
+
+.clinic-form-container {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px 60px;
+}
+
+.clinic-form-card {
+  width: 100%;
+  max-width: 780px;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+  padding: 20px 28px 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+.card-header-title {
+  margin: 8px 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1b5e20;
+}
+
+.card-body { padding: 24px 28px 28px; }
+
+// --- Stepper: label step ben leggibili ---
+:host ::ng-deep {
+  .mat-step-header .mat-step-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  .mat-step-header .mat-step-label.mat-step-label-active {
+    color: #1565c0;
+  }
+  .mat-step-header .mat-step-label.mat-step-label-selected {
+    color: #1565c0;
+    font-weight: 700;
+  }
+}
+
+// --- Riepilogo errori ---
+.validation-summary {
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background-color: #fce4ec;
+  border-left: 4px solid #c62828;
+  color: #b71c1c;
+  font-size: 0.85rem;
+  line-height: 1.5;
+
+  mat-icon { color: #c62828; flex-shrink: 0; margin-top: 2px; }
+  strong { display: block; margin-bottom: 6px; }
+  ul { margin: 0; padding-left: 18px; }
+  li { margin-bottom: 2px; }
+}
+
+// --- Indicazioni step ---
+.step-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background-color: #e3f2fd;
+  color: #1565c0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+
+  mat-icon { flex-shrink: 0; margin-top: 1px; }
+}
+
+// --- Navigazione step ---
+.step-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+// --- Bottone disabilitato ben visibile ---
+button[disabled] {
+  opacity: 0.5 !important;
+  background-color: #bdbdbd !important;
+  color: #757575 !important;
+  cursor: not-allowed;
+}
+
+// --- Tabella riepilogo ---
+.summary-table {
+  margin-bottom: 8px;
+}
+
+.summary-row {
+  display: flex;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+
+  &:last-child { border-bottom: none; }
+}
+
+.summary-label {
+  flex: 0 0 140px;
+  font-weight: 600;
+  color: #424242;
+  font-size: 0.9rem;
+}
+
+.summary-value {
+  flex: 1;
+  color: #616161;
+  font-size: 0.9rem;
+}

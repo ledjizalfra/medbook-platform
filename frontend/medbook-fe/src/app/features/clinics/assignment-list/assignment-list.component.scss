@@ -1,0 +1,19 @@
+:host ::ng-deep .mb-page { max-width: 1200px; }
+
+.action-card { margin-bottom: 24px; }
+
+.inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 500px;
+
+  h3 { margin: 0 0 8px; }
+  mat-form-field { width: 100%; }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

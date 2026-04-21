@@ -1,0 +1,43 @@
+/* Griglia CSS per il layout dei campi del form.
+ * --cols e --span sono impostati inline dal template. */
+.mb-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), 1fr);
+  gap: 8px 16px;
+  margin-bottom: 4px;
+}
+
+.mb-cell {
+  grid-column: span var(--span, 1);
+  min-width: 0;
+}
+
+.mb-field {
+  width: 100%;
+}
+
+/* Checkbox group — riga orizzontale */
+.mb-cb-group {
+  margin-bottom: 8px;
+}
+
+.mb-cb-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mb-cb-label {
+  font-size: var(--medbook-error-font, 0.72rem);
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.mb-cb-icon {
+  font-size: 0.9rem;
+  height: 0.9rem;
+  width: 0.9rem;
+  vertical-align: middle;
+  margin-right: 2px;
+}

@@ -1,0 +1,46 @@
+# =============================================================================
+# MedBook Platform — medbook-bff
+# =============================================================================
+
+server:
+  port: 8081
+
+medbook:
+  security:
+    # Endpoint pubblici — accessibili senza token JWT (area pubblica del sito)
+    public-get-endpoints:
+      - /bff/v1/clinics
+      - /bff/v1/specializations
+    # Registrazione pubblica paziente: non richiede token JWT
+    public-post-endpoints:
+      - /bff/v1/patients
+
+bff:
+  slot-duration-minutes: 30
+  slot-search:
+    # Orizzonte massimo di ricerca disponibilità in giorni
+    max-horizon-days: 60
+
+  # Keycloak Admin Client — usato per creare utenti durante la registrazione paziente.
+  # Il client medbook-admin-client deve avere il ruolo 'manage-users' sul realm medbook.
+  keycloak-admin:
+    server-url: ${KEYCLOAK_ADMIN_URL:https://keycloak.medbook.it}
+    realm: medbook
+    client-id: medbook-admin-client
+    # Segreto iniettato via variabile d'ambiente — nessun default in produzione
+    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+
+---
+# =============================================================================
+# medbook-bff — Profilo DEV
+# =============================================================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+bff:
+  keycloak-admin:
+    server-url: http://localhost:8082
+    # Default locale per sviluppo — in produzione impostare KEYCLOAK_ADMIN_CLIENT_SECRET
+    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:FHvwxEQKdcciSAt90fWE7FJUtEuOUObi}

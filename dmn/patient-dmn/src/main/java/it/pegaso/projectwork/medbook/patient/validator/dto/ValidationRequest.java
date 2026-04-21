@@ -10,5 +10,6 @@ public class ValidationRequest {
     private String patientId;
     private String fiscalCode;
     private String email;
+    private Boolean consensoPrivacy;
     private ValidationRequestTypeEnum validationRequestType;
 }

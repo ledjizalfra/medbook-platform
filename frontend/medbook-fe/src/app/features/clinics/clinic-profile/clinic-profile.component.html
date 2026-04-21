@@ -1,0 +1,39 @@
+<app-medbook-page title="Profilo Sede">
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+  } @else if (clinic()) {
+    <div class="profile-grid">
+      <mat-card>
+        <mat-card-header>
+          <mat-icon mat-card-avatar>business</mat-icon>
+          <mat-card-title>{{ clinic()!['name'] }}</mat-card-title>
+          <mat-card-subtitle>{{ clinic()!['clinicId'] }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="info-row">
+            <mat-icon>email</mat-icon>
+            <span>{{ clinic()!['email'] }}</span>
+          </div>
+          <div class="info-row">
+            <mat-icon>phone</mat-icon>
+            <span>{{ clinic()!['phone'] }}</span>
+          </div>
+          <div class="info-row">
+            <mat-icon>location_on</mat-icon>
+            <span>{{ clinic()!['address'] }}, {{ clinic()!['postalCode'] }} {{ clinic()!['city'] }} ({{ clinic()!['province'] }})</span>
+          </div>
+          <div class="info-row">
+            <mat-icon>verified</mat-icon>
+            <span>Termini di Servizio: {{ clinic()!['termsAccepted'] ? 'Accettati' : 'Non accettati' }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  } @else {
+    <p>Nessuna sede associata al tuo account.</p>
+  }
+
+</app-medbook-page>

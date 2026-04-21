@@ -1,0 +1,46 @@
+// Stili per la pagina di login
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--mat-sys-surface-variant);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+}
+
+.logo-icon {
+  font-size: 2rem;
+  height: 2rem;
+  width: 2rem;
+  margin-right: 8px;
+  color: var(--mat-sys-primary);
+}
+
+mat-card-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.welcome-text {
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+  margin-top: 16px;
+}
+
+.login-actions {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 0;
+
+  button {
+    width: 100%;
+    padding: 8px;
+  }
+}

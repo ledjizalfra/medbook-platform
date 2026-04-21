@@ -1,0 +1,17 @@
+@for (item of consents; track item.key) {
+  <mat-card class="consent-card">
+    <mat-card-content class="consent-row">
+      <div class="consent-info">
+        <span class="consent-label">{{ item.label }}</span>
+        @if (item.acceptedAt) {
+          <span class="consent-date">Accettato il {{ item.acceptedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+        }
+      </div>
+      <mat-slide-toggle
+        [checked]="item.value"
+        [disabled]="item.readonly ?? false"
+        (change)="onToggle(item, $event.checked)">
+      </mat-slide-toggle>
+    </mat-card-content>
+  </mat-card>
+}

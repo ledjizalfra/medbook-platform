@@ -1,0 +1,38 @@
+<app-public-navbar />
+
+<div class="page-wrapper">
+
+  <div class="page-header">
+    <h1>Specializzazioni disponibili</h1>
+    <p>Una rete di specialisti nelle principali discipline mediche.</p>
+  </div>
+
+  @if (loading()) {
+    <div class="spinner-wrap">
+      <mat-spinner diameter="40" />
+    </div>
+  } @else if (specializations().length === 0) {
+    <p class="empty-msg">Nessuna specializzazione disponibile al momento.</p>
+  } @else {
+    <div class="services-grid">
+      @for (spec of specializations(); track spec) {
+        <mat-card class="service-card" (click)="goToSpec(spec)">
+          <mat-card-content>
+            <mat-icon class="service-icon">{{ getIcon(spec) }}</mat-icon>
+            <h3>{{ getField(spec, 'name') }}</h3>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+
+  <div class="bottom-cta">
+    <p>Non trovi quello che cerchi?</p>
+    <button mat-flat-button class="btn-contact" routerLink="/contatti">
+      Contattaci
+    </button>
+  </div>
+
+</div>
+
+<app-public-footer />

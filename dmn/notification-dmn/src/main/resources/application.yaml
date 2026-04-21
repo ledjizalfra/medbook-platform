@@ -1,0 +1,14 @@
+# =============================================================================
+# MedBook Platform — notification-dmn
+# Configurazione di bootstrap — caricata prima del config-server
+# =============================================================================
+
+spring:
+  application:
+    name: notification-dmn
+  profiles:
+    active: dev
+
+  config:
+    import:
+      - "configserver:${CONFIG_SERVER_URL:http://localhost:8071}"

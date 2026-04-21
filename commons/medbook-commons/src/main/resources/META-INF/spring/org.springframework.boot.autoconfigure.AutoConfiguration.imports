@@ -3,3 +3,8 @@ it.pegaso.projectwork.medbook.commons.entity.config.MedBookJpaAuditingConfig
 it.pegaso.projectwork.medbook.commons.logging.aop.config.MedBookLoggingAspectConfig
 it.pegaso.projectwork.medbook.commons.properties.MedBookCommonsProperties
 it.pegaso.projectwork.medbook.commons.errors.MedBookExceptionHandler
+it.pegaso.projectwork.medbook.commons.errors.MedBookJpaExceptionHandler
+it.pegaso.projectwork.medbook.commons.api.web.MedBookWebMvcConfig
+it.pegaso.projectwork.medbook.commons.api.web.MedBookResponseBodyAdvice
+it.pegaso.projectwork.medbook.commons.cache.config.MedBookCacheConfig
+it.pegaso.projectwork.medbook.commons.formatter.MedBookFormatterAutoConfig

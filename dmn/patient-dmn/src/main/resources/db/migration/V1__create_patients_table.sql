@@ -6,7 +6,7 @@
 --              sulla piattaforma MedBook.
 --              I campi indirizzo sono facoltativi alla registrazione
 --              e possono essere completati successivamente dal paziente.
--- Autore:
+-- Autore: djizalfra@gmail.com
 -- Versione: 1.0.0
 -- =============================================================================
 

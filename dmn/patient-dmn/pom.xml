@@ -138,6 +138,10 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <skip>false</skip>
+                    <mainClass>it.pegaso.projectwork.medbook.patient.PatientDmnApplication</mainClass>
+                </configuration>
             </plugin>
 
             <!-- Genera le interfacce API e i DTO dalla spec OpenAPI -->
@@ -165,6 +169,15 @@
                             <modelPackage>
                                 it.pegaso.projectwork.medbook.patient.server.model
                             </modelPackage>
+                            <!-- MedBookErrorResponse è già generato da medbook-commons:
+                                 non rigenerare una copia locale, usa quella di commons -->
+                            <importMappings>
+                                <importMapping>MedBookApiErrorResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiErrorResponse</importMapping>
+                                <importMapping>MedBookApiVoidResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiVoidResponse</importMapping>
+                                <importMapping>MedBookApiResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse</importMapping>
+                                <importMapping>MedBookPageResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookPageResponse</importMapping>
+                                <importMapping>MedBookContext=it.pegaso.projectwork.medbook.commons.api.model.MedBookContext</importMapping>
+                            </importMappings>
                             <configOptions>
                                 <!-- Genera solo l'interfaccia — non l'implementazione -->
                                 <interfaceOnly>true</interfaceOnly>
@@ -182,6 +195,9 @@
                                 <useSpringBoot3>true</useSpringBoot3>
                                 <!-- Genera LocalDateTime invece di OffsetDateTime -->
                                 <dateLibrary>java8-localdatetime</dateLibrary>
+                                <!-- Mantiene l'ordine dei parametri come nello spec (non promuove i required/path first)
+                                     necessario per avere MedBookContext sempre primo -->
+                                <sortParamsByRequiredFlag>false</sortParamsByRequiredFlag>
                             </configOptions>
                             <!-- Non sovrascrivere i file generati ad ogni build -->
                             <skipValidateSpec>false</skipValidateSpec>

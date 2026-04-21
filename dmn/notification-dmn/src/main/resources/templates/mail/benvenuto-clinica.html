@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>MedBook - Clinica Registrata</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background-color: #1a73e8; color: #ffffff; padding: 24px 32px; }
+        .header h1 { margin: 0; font-size: 22px; }
+        .body { padding: 32px; }
+        .body p { margin: 0 0 12px; line-height: 1.6; }
+        .info-box { background-color: #f0f4ff; border-left: 4px solid #1a73e8; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
+        .footer { background-color: #f8f8f8; padding: 16px 32px; font-size: 12px; color: #888888; text-align: center; border-top: 1px solid #eeeeee; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>Sede Registrata su MedBook</h1>
+    </div>
+
+    <div class="body">
+        <p>Gentile <strong th:text="${clinicName}">Nome Clinica</strong>,</p>
+        <p>la sua sede e stata registrata con successo sulla piattaforma <strong>MedBook</strong>.</p>
+
+        <div class="info-box">
+            <p>La sede e ora attiva e pronta per ricevere assegnazioni di medici e appuntamenti.</p>
+        </div>
+
+        <p>Attraverso la piattaforma potra:</p>
+        <ul>
+            <li>Visualizzare i medici assegnati alla sede</li>
+            <li>Consultare gli appuntamenti programmati</li>
+            <li>Gestire i dati della sede</li>
+        </ul>
+
+        <p>Per qualsiasi necessita, contatti l'amministratore di sistema.</p>
+    </div>
+
+    <div class="footer">
+        <p>MedBook Platform — Sistema automatico di notifiche. Non rispondere a questa email.</p>
+    </div>
+
+</div>
+</body>
+</html>

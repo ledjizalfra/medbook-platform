@@ -1,0 +1,286 @@
+<app-auth-header />
+
+<div class="register-container">
+  <div class="register-card">
+
+    <div class="card-hero">
+      <div class="card-hero-icon"><app-medbook-logo [size]="56"></app-medbook-logo></div>
+      <h1 class="card-hero-title">Crea il tuo account</h1>
+      <p class="card-hero-subtitle">Registrati su MedBook e prenota le tue visite online</p>
+    </div>
+
+    <div class="card-body">
+
+      <!-- Riepilogo errori dello step corrente -->
+      @if (stepErrors().length > 0) {
+        <div class="validation-summary" role="alert">
+          <mat-icon>error_outline</mat-icon>
+          <div>
+            <strong>Correggi i seguenti errori per procedere:</strong>
+            <ul>
+              @for (err of stepErrors(); track err) {
+                <li>{{ err }}</li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+
+      <mat-stepper linear #stepper (selectionChange)="onStepChange()">
+
+        <!-- ============================================================ -->
+        <!-- STEP 1: Anagrafica e Codice Fiscale                         -->
+        <!-- ============================================================ -->
+        <mat-step [stepControl]="step1" label="Anagrafica">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            Inserisci i tuoi dati anagrafici e il codice fiscale. Tutti i campi contrassegnati sono obbligatori.
+          </div>
+
+          <form [formGroup]="step1">
+            <div class="mb-grid" style="--cols: 2">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Nome *</mat-label>
+                <input matInput formControlName="firstName" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Cognome *</mat-label>
+                <input matInput formControlName="lastName" />
+              </mat-form-field>
+            </div>
+
+            <div class="mb-grid" style="--cols: 2">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Data di nascita *</mat-label>
+                <input matInput [matDatepicker]="dpBirth" formControlName="dateOfBirth" placeholder="gg/mm/aaaa" />
+                <mat-datepicker-toggle matIconSuffix [for]="dpBirth" />
+                <mat-datepicker #dpBirth />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Genere *</mat-label>
+                <mat-select formControlName="gender">
+                  <mat-option value="MASCHILE">Maschile</mat-option>
+                  <mat-option value="FEMMINILE">Femminile</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <p class="section-label">Luogo di nascita</p>
+            <mat-checkbox [checked]="natoEstero()" (change)="onNatoEsteroChange($event.checked)" class="nato-estero-toggle">
+              Nato/a all'estero
+            </mat-checkbox>
+
+            @if (!natoEstero()) {
+              <div class="mb-grid" style="--cols: 3">
+                <app-searchable-select label="Regione *" cssClass="mb-field"
+                  [options]="regioniNascitaOpts()" [control]="$any(step1.get('regioneNascita'))"
+                  (selectionChange)="onRegioneNascitaChange($event)" />
+                <app-searchable-select label="Provincia *" cssClass="mb-field"
+                  [options]="provinceNascitaOpts()" [control]="$any(step1.get('provinciaNascita'))"
+                  (selectionChange)="onProvinciaNascitaChange($event)" />
+                <app-searchable-select label="Comune *" cssClass="mb-field"
+                  [options]="comuniNascitaOpts()" [control]="$any(step1.get('comuneNascita'))" />
+              </div>
+            } @else {
+              <div class="mb-grid" style="--cols: 2">
+                <app-searchable-select label="Stato estero *" cssClass="mb-field"
+                  [options]="paesiOpts()" [control]="$any(step1.get('regioneNascita'))" />
+                <mat-form-field appearance="outline" class="mb-field">
+                  <mat-label>Citta estera di nascita *</mat-label>
+                  <input matInput formControlName="comuneNascita" placeholder="Es: Parigi" />
+                </mat-form-field>
+              </div>
+            }
+
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Codice Fiscale *</mat-label>
+              <input matInput formControlName="fiscalCode" maxlength="16" style="text-transform: uppercase" />
+            </mat-form-field>
+          </form>
+
+          <div class="step-actions">
+            <span></span>
+            <button mat-flat-button color="primary" (click)="validateStep(step1) && stepper.next()">
+              Avanti <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </mat-step>
+
+        <!-- ============================================================ -->
+        <!-- STEP 2: Residenza                                           -->
+        <!-- ============================================================ -->
+        <mat-step [stepControl]="step2" label="Residenza">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            Inserisci il tuo indirizzo di residenza. La provincia determina automaticamente la lista dei comuni.
+          </div>
+
+          <form [formGroup]="step2">
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Indirizzo *</mat-label>
+              <input matInput formControlName="address" />
+            </mat-form-field>
+
+            <div class="mb-grid" style="--cols: 3">
+              <app-searchable-select label="Provincia *" cssClass="mb-field"
+                [options]="provinceOpts()" [control]="$any(step2.get('province'))"
+                (selectionChange)="onProvinciaChange($event)" />
+              <app-searchable-select label="Citta *" cssClass="mb-field"
+                [options]="comuniOpts()" [control]="$any(step2.get('city'))"
+                (selectionChange)="onComuneChange($event)" />
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>CAP *</mat-label>
+                <input matInput formControlName="postalCode" maxlength="5" />
+              </mat-form-field>
+            </div>
+          </form>
+
+          <div class="step-actions">
+            <button mat-stroked-button (click)="stepper.previous()">
+              <mat-icon>arrow_back</mat-icon> Indietro
+            </button>
+            <button mat-flat-button color="primary" (click)="validateStep(step2) && stepper.next()">
+              Avanti <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </mat-step>
+
+        <!-- ============================================================ -->
+        <!-- STEP 3: Contatti e notifiche                                -->
+        <!-- ============================================================ -->
+        <mat-step [stepControl]="step3" label="Contatti">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            L'email sara il tuo nome utente per accedere. Il telefono e facoltativo ma necessario per ricevere SMS.
+          </div>
+
+          <form [formGroup]="step3">
+            <div class="mb-grid" style="--cols: 2">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Email *</mat-label>
+                <mat-icon matPrefix>email</mat-icon>
+                <input matInput type="email" formControlName="email" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Telefono</mat-label>
+                <mat-icon matPrefix>phone</mat-icon>
+                <input matInput type="tel" formControlName="phone" placeholder="333 123 4567" />
+              </mat-form-field>
+            </div>
+
+            <p class="section-label">Canali di notifica</p>
+            <div class="notification-channels" formGroupName="notificationChannels">
+              <mat-checkbox formControlName="email">
+                <mat-icon class="inline-icon">email</mat-icon> Email
+              </mat-checkbox>
+              <mat-checkbox formControlName="sms" [disabled]="smsDisabled">
+                <mat-icon class="inline-icon">sms</mat-icon> SMS
+              </mat-checkbox>
+              @if (smsDisabled) {
+                <span class="channel-hint">Inserisci il telefono per abilitare gli SMS</span>
+              }
+            </div>
+          </form>
+
+          <div class="step-actions">
+            <button mat-stroked-button (click)="stepper.previous()">
+              <mat-icon>arrow_back</mat-icon> Indietro
+            </button>
+            <button mat-flat-button color="primary" (click)="validateStep(step3) && stepper.next()">
+              Avanti <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </mat-step>
+
+        <!-- ============================================================ -->
+        <!-- STEP 4: Credenziali                                         -->
+        <!-- ============================================================ -->
+        <mat-step [stepControl]="step4" label="Credenziali">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            Scegli una password sicura. Deve soddisfare tutti i requisiti elencati sotto.
+          </div>
+
+          <form [formGroup]="step4">
+            <div class="password-requirements">
+              <p>La password deve contenere:</p>
+              <ul>
+                <li [class.valid]="(step4.get('password')?.value ?? '').length >= 8">Almeno 8 caratteri</li>
+                <li [class.valid]="/[A-Z]/.test(step4.get('password')?.value ?? '')">Almeno una lettera maiuscola</li>
+                <li [class.valid]="/[0-9]/.test(step4.get('password')?.value ?? '')">Almeno un numero</li>
+                <li [class.valid]="/[@#$%^&*!?._\-]/.test(step4.get('password')?.value ?? '')">Almeno un carattere speciale: {{ PASSWORD_SPECIAL_CHARS }}</li>
+              </ul>
+            </div>
+
+            <div class="mb-grid" style="--cols: 2">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Password *</mat-label>
+                <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password" />
+                <button mat-icon-button matSuffix type="button" (click)="showPassword.set(!showPassword())">
+                  <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                </button>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Conferma password *</mat-label>
+                <input matInput [type]="showConfirmPassword() ? 'text' : 'password'" formControlName="confirmPassword" />
+                <button mat-icon-button matSuffix type="button" (click)="showConfirmPassword.set(!showConfirmPassword())">
+                  <mat-icon>{{ showConfirmPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                </button>
+              </mat-form-field>
+            </div>
+          </form>
+
+          <div class="step-actions">
+            <button mat-stroked-button (click)="stepper.previous()">
+              <mat-icon>arrow_back</mat-icon> Indietro
+            </button>
+            <button mat-flat-button color="primary" (click)="validateStep(step4) && stepper.next()">
+              Avanti <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </mat-step>
+
+        <!-- ============================================================ -->
+        <!-- STEP 5: Consensi → Submit                                   -->
+        <!-- ============================================================ -->
+        <mat-step [stepControl]="step5" label="Consensi">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            Per completare la registrazione devi accettare la Privacy Policy e i Termini di utilizzo.
+          </div>
+
+          <form [formGroup]="step5">
+            <div class="consent-group">
+              <mat-checkbox formControlName="consensoObbligatorio">
+                Ho letto e accetto la
+                <a routerLink="/privacy-policy" target="_blank">Privacy Policy</a> e i
+                <a routerLink="/termini-utilizzo" target="_blank">Termini di utilizzo</a>. *
+              </mat-checkbox>
+              <mat-checkbox formControlName="consensoCommerciale">
+                Acconsento a ricevere comunicazioni commerciali (facoltativo)
+              </mat-checkbox>
+              <mat-checkbox formControlName="consensoProfilazione">
+                Acconsento alla profilazione dei miei dati (facoltativo)
+              </mat-checkbox>
+            </div>
+          </form>
+
+          <div class="step-actions">
+            <button mat-stroked-button (click)="stepper.previous()">
+              <mat-icon>arrow_back</mat-icon> Indietro
+            </button>
+            <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="loading()">
+              @if (loading()) { <mat-spinner diameter="20" /> }
+              {{ loading() ? 'Registrazione...' : 'Registrati' }}
+            </button>
+          </div>
+        </mat-step>
+
+      </mat-stepper>
+
+      <p class="login-hint">
+        Hai gia un account? <a routerLink="/login">Accedi</a>
+      </p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,32 @@
+<header class="public-navbar">
+  <div class="navbar-inner">
+
+    <!-- Logo -->
+    <a routerLink="/" class="brand">
+      <app-medbook-logo [size]="36"></app-medbook-logo>
+      <span class="brand-name">MedBook <strong>Platform</strong></span>
+    </a>
+
+    <!-- Link di navigazione -->
+    <nav class="nav-links">
+      <a routerLink="/come-funziona" routerLinkActive="active">Come funziona</a>
+      <a routerLink="/servizi"       routerLinkActive="active">Servizi</a>
+      <a routerLink="/chi-siamo"          routerLinkActive="active">Chi siamo</a>
+      <a routerLink="/registra-clinica" routerLinkActive="active">Per le cliniche</a>
+      <a routerLink="/contatti"         routerLinkActive="active">Contatti</a>
+    </nav>
+
+    <!-- Azioni utente — se loggato mostra link alla dashboard, altrimenti login/registrazione -->
+    <div class="nav-actions">
+      @if (kc.isLoggedIn()) {
+        <button mat-flat-button [routerLink]="kc.getRoleDashboardRoute()">
+          Area Riservata
+        </button>
+      } @else {
+        <button mat-stroked-button (click)="kc.login()">Accedi</button>
+        <button mat-flat-button routerLink="/register">Registrati</button>
+      }
+    </div>
+
+  </div>
+</header>

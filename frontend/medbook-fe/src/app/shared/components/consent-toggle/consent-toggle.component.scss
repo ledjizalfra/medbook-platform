@@ -1,0 +1,25 @@
+.consent-card {
+  margin-bottom: 1rem;
+}
+
+.consent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.consent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.consent-label {
+  font-weight: 500;
+}
+
+.consent-date {
+  font-size: 0.8rem;
+  color: rgba(0, 0, 0, 0.54);
+}

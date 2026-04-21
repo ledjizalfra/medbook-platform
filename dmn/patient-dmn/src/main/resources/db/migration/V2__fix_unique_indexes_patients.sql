@@ -3,7 +3,7 @@
 -- Migrazione: V2__fix_unique_indexes_patients.sql
 -- Descrizione: Sostituisce gli indici univoci con indici parziali
 --              per supportare la ri-registrazione dopo soft delete.
--- Autore:
+-- Autore: djizalfra@gmail.com
 -- Versione: 1.0.0
 -- =============================================================================
 

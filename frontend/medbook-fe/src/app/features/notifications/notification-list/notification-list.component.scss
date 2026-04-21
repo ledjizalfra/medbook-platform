@@ -1,0 +1,48 @@
+/* Stili notification-list — max-width override per lista */
+:host ::ng-deep .mb-page {
+  max-width: 1200px;
+}
+
+.preferences-card {
+  margin-bottom: 24px;
+}
+
+.preferences-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.preferences-title {
+  font-size: 1rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.saving-spinner {
+  margin-left: 4px;
+}
+
+.preferences-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.preferences-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  span {
+    flex: 1;
+  }
+}

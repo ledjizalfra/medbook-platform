@@ -1,0 +1,85 @@
+.scheduler {
+  padding: 1rem;
+}
+
+.scheduler-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scheduler-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  min-width: 200px;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.view-controls {
+  display: flex;
+  gap: 0.25rem;
+
+  .active {
+    background: rgba(0, 0, 0, 0.08);
+  }
+}
+
+.scheduler-body {
+  min-height: 200px;
+}
+
+.no-slots {
+  text-align: center;
+  color: rgba(0, 0, 0, 0.54);
+  padding: 2rem;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+
+.slot {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.slot-time {
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.slot-label {
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-libero         { background: #e3f2fd; color: #1565c0; border-left: 3px solid #1565c0; }
+.slot-prenotato      { background: #fff3e0; color: #e65100; border-left: 3px solid #e65100; }
+.slot-in-corso       { background: #f3e5f5; color: #6a1b9a; border-left: 3px solid #6a1b9a; }
+.slot-completato     { background: #e8f5e9; color: #2e7d32; border-left: 3px solid #2e7d32; }
+.slot-cancellato     { background: #fce4ec; color: #c62828; border-left: 3px solid #c62828; }
+.slot-non-presentato { background: #efebe9; color: #4e342e; border-left: 3px solid #4e342e; }

@@ -1,0 +1,25 @@
+<mat-form-field [appearance]="appearance" [class]="cssClass">
+  <mat-label>{{ label }}</mat-label>
+  <mat-select [formControl]="control"
+              (selectionChange)="onSelectionChange($event.value)"
+              (opened)="onPanelOpen()"
+              (closed)="onPanelClose()">
+
+    <!-- Barra di ricerca sticky in cima al pannello -->
+    <div class="ss-search-bar">
+      <mat-icon class="ss-icon">search</mat-icon>
+      <input #searchInput class="ss-input"
+             [placeholder]="'Cerca ' + label.toLowerCase() + '...'"
+             (keydown)="$event.stopPropagation()"
+             (input)="onSearch($event)"
+             autocomplete="off" />
+    </div>
+
+    @for (opt of filteredOptions(); track opt.value) {
+      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+    }
+    @if (filteredOptions().length === 0) {
+      <mat-option disabled class="ss-no-results">Nessun risultato</mat-option>
+    }
+  </mat-select>
+</mat-form-field>

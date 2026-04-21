@@ -1,0 +1,132 @@
+<app-medbook-page title="Notifiche" [loading]="loading()">
+
+  <!-- ===== PREFERENZE DI NOTIFICA (solo PATIENT/DOCTOR) ===== -->
+  @if (showPreferences) {
+  <mat-card class="preferences-card">
+    <mat-card-content>
+      <div class="preferences-header">
+        <mat-icon>tune</mat-icon>
+        <span class="preferences-title">Preferenze notifiche</span>
+        @if (savingPreferences()) {
+          <mat-spinner diameter="20" class="saving-spinner" />
+        }
+        @if (!isEditingPrefs()) {
+          <button mat-stroked-button (click)="startEdit()">
+            <mat-icon>edit</mat-icon>
+            Modifica
+          </button>
+        }
+      </div>
+      <mat-divider />
+      <div class="preferences-toggles">
+        <div class="toggle-row">
+          <mat-icon>email</mat-icon>
+          <span>Notifiche via Email</span>
+          <mat-slide-toggle
+            [checked]="emailEnabled()"
+            [disabled]="!isEditingPrefs()"
+            (change)="emailEnabled.set($event.checked)">
+          </mat-slide-toggle>
+        </div>
+        <div class="toggle-row">
+          <mat-icon>sms</mat-icon>
+          <span>Notifiche via SMS</span>
+          <mat-slide-toggle
+            [checked]="smsEnabled()"
+            [disabled]="!isEditingPrefs()"
+            (change)="smsEnabled.set($event.checked)">
+          </mat-slide-toggle>
+        </div>
+      </div>
+      @if (isEditingPrefs()) {
+        <div class="preferences-actions">
+          <button mat-flat-button color="primary" (click)="savePreferences()" [disabled]="savingPreferences()">
+            <mat-icon>save</mat-icon>
+            Salva
+          </button>
+          <button mat-button (click)="cancelEdit()" [disabled]="savingPreferences()">
+            <mat-icon>close</mat-icon>
+            Annulla
+          </button>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+  }
+
+  <!-- ===== FILTRI NOTIFICHE ===== -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <form [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+        <app-medbook-form [form]="filterForm" [groups]="filterGroups">
+
+          <ng-template medbookFormSlot="filtri">
+            <div class="mb-grid" style="--cols: 5">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Canale</mat-label>
+                <mat-select formControlName="channel">
+                  <mat-option value="">Tutti</mat-option>
+                  <mat-option value="EMAIL">Email</mat-option>
+                  <mat-option value="SMS">SMS</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Tipo</mat-label>
+                <mat-select formControlName="type">
+                  <mat-option value="">Tutti</mat-option>
+                  <mat-option value="CONFERMA_PRENOTAZIONE">Conferma prenotazione</mat-option>
+                  <mat-option value="CANCELLAZIONE">Cancellazione</mat-option>
+                  <mat-option value="PROMEMORIA">Promemoria</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Stato</mat-label>
+                <mat-select formControlName="status">
+                  <mat-option value="">Tutti</mat-option>
+                  <mat-option value="IN_ATTESA">In attesa</mat-option>
+                  <mat-option value="INVIATA">Inviata</mat-option>
+                  <mat-option value="FALLITA">Fallita</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Data da</mat-label>
+                <input matInput [matDatepicker]="pickerFrom" formControlName="dateFrom" placeholder="gg/mm/aaaa" />
+                <mat-datepicker-toggle matIconSuffix [for]="pickerFrom" />
+                <mat-datepicker #pickerFrom />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Data a</mat-label>
+                <input matInput [matDatepicker]="pickerTo" formControlName="dateTo" placeholder="gg/mm/aaaa" />
+                <mat-datepicker-toggle matIconSuffix [for]="pickerTo" />
+                <mat-datepicker #pickerTo />
+              </mat-form-field>
+            </div>
+            <div class="mb-filter-actions">
+              <button mat-flat-button color="primary" type="submit">
+                <mat-icon>filter_list</mat-icon> Cerca
+              </button>
+              <button mat-stroked-button type="button" (click)="resetFilters()">
+                <mat-icon>clear</mat-icon> Azzera
+              </button>
+            </div>
+          </ng-template>
+
+        </app-medbook-form>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ===== LISTA NOTIFICHE ===== -->
+  <app-medbook-table
+    [columns]="columns"
+    [actions]="tableActions"
+    [data]="notifications()"
+    [pagination]="{ pageIndex: pageIndex(), pageSize: pageSize(), totalElements: totalElements(), pageSizeOptions: [10, 25, 50] }"
+    emptyMessage="Nessuna notifica trovata"
+    emptyIcon="notifications_off"
+    (pageChange)="onPageChange($event)" />
+</app-medbook-page>

@@ -1,0 +1,13 @@
+@if (!isPublicPage() && kc.isLoggedIn()) {
+  <!-- Layout area autenticata: navbar fissa + sidebar + contenuto -->
+  <app-navbar />
+  <div class="layout">
+    <app-sidebar />
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+} @else {
+  <!-- Layout pubblico e di accesso: public-navbar/footer inclusi in ogni componente -->
+  <router-outlet />
+}

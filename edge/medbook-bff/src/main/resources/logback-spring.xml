@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Importa le configurazioni base di Spring Boot (livelli default, ecc.) -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Nome del servizio letto dalle properties Spring -->
+    <springProperty scope="context" name="APP_NAME"
+                    source="spring.application.name"
+                    defaultValue="medbook"/>
+
+    <!-- ================================================================
+         PROFILO DEV - Formato leggibile in console
+         ================================================================ -->
+    <springProfile name="dev">
+
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <!--
+                    Formato:
+                    2026-04-07 06:44:30.285 [INFO ] [appointment-dmn] [restartedMain] [traceId] logger : messaggio
+                -->
+                <pattern>
+                    %d{yyyy-MM-dd HH:mm:ss.SSS} [%5level] [${APP_NAME}] [%15.15t] [%X{traceId:-no-trace}] %logger{40} : %msg%n
+                </pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <!-- Livelli specifici per ridurre il rumore in sviluppo -->
+        <logger name="org.springframework"              level="WARN"/>
+        <logger name="org.hibernate"                    level="WARN"/>
+        <logger name="com.netflix.eureka"               level="WARN"/>
+        <logger name="com.netflix.discovery"            level="WARN"/>
+        <logger name="org.apache.kafka"                 level="WARN"/>
+
+        <!-- Codice applicativo a DEBUG in sviluppo -->
+        <logger name="it.pegaso.projectwork.medbook"    level="DEBUG"/>
+
+    </springProfile>
+
+    <!-- ================================================================
+         PROFILO PROD - JSON strutturato per ELK / Kibana
+         ================================================================ -->
+    <springProfile name="prod">
+
+        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <!-- Campi custom aggiunti ad ogni riga di log JSON -->
+                <customFields>{"service":"${APP_NAME}"}</customFields>
+
+                <!-- Formato timestamp ISO 8601 con timezone -->
+                <timestampPattern>yyyy-MM-dd'T'HH:mm:ss.SSSXXX</timestampPattern>
+
+                <!-- Include automaticamente traceId e spanId di Micrometer/Zipkin -->
+                <includeMdcKeyName>traceId</includeMdcKeyName>
+                <includeMdcKeyName>spanId</includeMdcKeyName>
+
+                <!-- Esclude campi ridondanti -->
+                <excludeMdcKeyName>X-B3-TraceId</excludeMdcKeyName>
+                <excludeMdcKeyName>X-B3-SpanId</excludeMdcKeyName>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </root>
+
+        <!-- In produzione solo WARNING per i framework -->
+        <logger name="org.springframework"              level="WARN"/>
+        <logger name="org.hibernate"                    level="WARN"/>
+
+        <!-- Codice applicativo a INFO in produzione -->
+        <logger name="it.pegaso.projectwork.medbook"    level="INFO"/>
+
+    </springProfile>
+
+</configuration>

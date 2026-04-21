@@ -32,3 +32,6 @@ Thumbs.db
 
 # Node modules (se usato nel frontend)
 node_modules/
+
+# Documentazione locale (diagrammi, report, spec dev — non versionata)
+docs/

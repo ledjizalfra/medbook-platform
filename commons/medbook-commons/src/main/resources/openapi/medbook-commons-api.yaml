@@ -1,0 +1,155 @@
+openapi: 3.0.3
+
+# =============================================================================
+# MedBook Commons — Shared Models
+# Definizioni condivise tra tutti i DMN della piattaforma MedBook.
+# Genera SOLO modelli Java (nessuna API/controller).
+# =============================================================================
+
+info:
+  title: MedBook Commons — Shared Models
+  version: 1.0.0
+  contact:
+    name: MedBook Team
+    email: djizalfra@gmail.com
+
+paths: {}
+
+components:
+  schemas:
+
+    # -------------------------------------------------------------------------
+    # BASE — Campi comuni a TUTTE le response (success ed error)
+    # -------------------------------------------------------------------------
+    MedBookApiVoidResponse:
+      type: object
+      description: |
+        Risposta base per gli endpoint che non restituiscono payload (DELETE, PATCH).
+        Estesa da MedBookApiResponse e MedBookApiErrorResponse.
+      discriminator:
+        propertyName: responseType
+        mapping:
+          MedBookApiResponse: '#/components/schemas/MedBookApiResponse'
+          MedBookApiErrorResponse: '#/components/schemas/MedBookApiErrorResponse'
+      properties:
+        responseType:
+          type: string
+          description: Discriminator per la gerarchia Java — non serializzato in JSON
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonIgnore'
+        httpStatus:
+          type: integer
+          description: Codice HTTP della risposta
+          example: 200
+        success:
+          type: boolean
+          description: True se l'operazione è andata a buon fine
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp di generazione della risposta
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")'
+        traceId:
+          type: string
+          description: ID del trace distribuito Zipkin — correla i log end-to-end
+          example: 6f4d2a1b3c8e9f0a
+
+    # -------------------------------------------------------------------------
+    # SUCCESS CON PAYLOAD — Estende MedBookApiVoidResponse aggiungendo data e page
+    # -------------------------------------------------------------------------
+    MedBookApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/MedBookApiVoidResponse'
+        - type: object
+          description: |
+            Risposta di successo con payload.
+            data contiene l'oggetto o la lista restituita dall'endpoint.
+            page è presente solo nelle risposte paginate.
+          properties:
+            data:
+              description: Payload della risposta — oggetto singolo o lista
+            page:
+              $ref: '#/components/schemas/MedBookPageResponse'
+
+    # -------------------------------------------------------------------------
+    # ERROR — Estende MedBookApiVoidResponse aggiungendo i campi di errore
+    # -------------------------------------------------------------------------
+    MedBookApiErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/MedBookApiVoidResponse'
+        - type: object
+          description: Formato standard delle risposte di errore della piattaforma MedBook
+          properties:
+            errorCode:
+              type: string
+              description: Codice errore applicativo
+              example: RESOURCE_NOT_FOUND
+            message:
+              description: |
+                Messaggio descrittivo dell'errore.
+                Può essere una stringa singola o una lista di stringhe
+                in caso di errori di validazione multipli.
+            path:
+              type: string
+              description: Path dell'endpoint che ha generato l'errore
+              example: /api/v1/patients/PAT-999
+
+    # -------------------------------------------------------------------------
+    # CONTESTO RICHIESTA — Informazioni di sicurezza e tracciabilità per ogni API
+    # -------------------------------------------------------------------------
+    MedBookContext:
+      type: object
+      description: |
+        Contesto della richiesta HTTP — contiene le informazioni di sicurezza e tracciabilità
+        estratte dal JWT e dall'MDC. Iniettato automaticamente in ogni metodo API
+        tramite MedBookContextHandlerMethodArgumentResolver.
+      properties:
+        traceId:
+          type: string
+          description: ID del trace distribuito Zipkin — correla i log end-to-end
+          example: 6f4d2a1b3c8e9f0a
+        username:
+          type: string
+          description: Username dell'utente autenticato estratto dal JWT
+          example: mario.rossi@email.it
+        roles:
+          type: array
+          items:
+            type: string
+          description: Lista dei ruoli dell'utente autenticato
+          example: [ROLE_PATIENT, ROLE_ADMIN]
+        requestTimestamp:
+          type: string
+          format: date-time
+          description: Timestamp di inizio della richiesta HTTP
+
+    # -------------------------------------------------------------------------
+    # PAGINAZIONE — Metadati standard per le risposte paginate
+    # -------------------------------------------------------------------------
+    MedBookPageResponse:
+      type: object
+      description: Metadati di paginazione standard della piattaforma MedBook
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+        size:
+          type: integer
+          example: 20
+        number:
+          type: integer
+          description: Numero della pagina corrente (0-based)
+          example: 0
+        first:
+          type: boolean
+          example: true
+        last:
+          type: boolean
+          example: false
+        empty:
+          type: boolean
+          example: false

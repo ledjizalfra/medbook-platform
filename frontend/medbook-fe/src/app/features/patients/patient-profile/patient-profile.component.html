@@ -1,0 +1,122 @@
+<app-medbook-page title="Il mio profilo" [loading]="loading()">
+
+  <!-- ═══ VISTA SOLA LETTURA ═══ -->
+  @if (profileData() && !isEditing()) {
+    <mat-card class="profile-card">
+      <mat-card-content>
+        <div class="profile-header">
+          <div class="avatar-circle"><mat-icon class="avatar-icon">person</mat-icon></div>
+          <div class="profile-header-info">
+            <span class="profile-fullname">{{ fullName }}</span>
+            <span class="profile-id">{{ field('patientId') }}</span>
+          </div>
+          <button mat-stroked-button color="primary" class="edit-btn" (click)="startEdit()">
+            <mat-icon>edit</mat-icon> Modifica
+          </button>
+        </div>
+
+        <mat-divider class="section-divider" />
+
+        <div class="section-title">Anagrafica</div>
+        <div class="info-grid">
+          <div class="info-item"><span class="info-label">Nome</span><span class="info-value">{{ field('firstName') }}</span></div>
+          <div class="info-item"><span class="info-label">Cognome</span><span class="info-value">{{ field('lastName') }}</span></div>
+          <div class="info-item"><span class="info-label">Data di nascita</span><span class="info-value">{{ profileData()?.['dateOfBirth'] ? ($any(profileData()?.['dateOfBirth']) | date:'dd/MM/yyyy') : '--' }}</span></div>
+          <div class="info-item"><span class="info-label">Sesso</span><span class="info-value">{{ formatGender(profileData()?.['gender']?.toString()) }}</span></div>
+          @if (field('comuneNascita') !== '--' || field('regioneNascita') !== '--') {
+            <div class="info-item"><span class="info-label">Luogo di nascita</span><span class="info-value">{{ field('comuneNascita') }} ({{ field('provinciaNascita') }})</span></div>
+            <div class="info-item"><span class="info-label">Regione / Stato</span><span class="info-value">{{ field('regioneNascita') }}</span></div>
+          }
+          <div class="info-item full-span"><span class="info-label">Codice Fiscale</span><span class="info-value mono">{{ field('fiscalCode') }}</span></div>
+        </div>
+
+        <mat-divider class="section-divider" />
+        <div class="section-title">Contatti</div>
+        <div class="info-grid">
+          <div class="info-item"><span class="info-label"><mat-icon class="inline-icon">email</mat-icon> Email</span><span class="info-value">{{ field('email') }}</span></div>
+          <div class="info-item"><span class="info-label"><mat-icon class="inline-icon">phone</mat-icon> Telefono</span><span class="info-value">{{ field('phone') }}</span></div>
+        </div>
+
+        <mat-divider class="section-divider" />
+        <div class="section-title">Residenza</div>
+        <div class="info-grid">
+          <div class="info-item full-span"><span class="info-label">Indirizzo</span><span class="info-value">{{ field('address') }}</span></div>
+          <div class="info-item"><span class="info-label">Città</span><span class="info-value">{{ field('city') }}</span></div>
+          <div class="info-item"><span class="info-label">CAP</span><span class="info-value">{{ field('postalCode') }}</span></div>
+          <div class="info-item"><span class="info-label">Provincia</span><span class="info-value">{{ field('province') }}</span></div>
+        </div>
+
+        <mat-divider class="section-divider" />
+        <div class="section-title">Consensi</div>
+        <div class="info-grid">
+          <div class="info-item"><span class="info-label">Privacy Policy</span><span class="info-value">{{ profileData()?.['consensoPrivacy'] ? 'Accettato' : 'Non accettato' }}</span></div>
+          <div class="info-item"><span class="info-label">Comunicazioni commerciali</span><span class="info-value">{{ profileData()?.['consensoCommerciale'] ? 'Accettato' : 'Non accettato' }}</span></div>
+          <div class="info-item"><span class="info-label">Profilazione</span><span class="info-value">{{ profileData()?.['consensoProfilazione'] ? 'Accettato' : 'Non accettato' }}</span></div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- ═══ MODALITÀ MODIFICA (MedBookForm) ═══ -->
+  @if (!loading() && isEditing()) {
+    <mat-card class="profile-card">
+      <mat-card-content>
+        <div class="edit-header">
+          <mat-icon color="primary">edit</mat-icon>
+          <span class="edit-title">Modifica profilo</span>
+          @if (saving()) { <mat-spinner diameter="20" class="saving-spinner" /> }
+        </div>
+
+        <mat-divider class="section-divider" />
+
+        <form [formGroup]="editForm" (ngSubmit)="onSubmit()">
+          <app-medbook-form [form]="editForm" [groups]="editGroups" (cellEvent)="onCellEvent($event)">
+
+            <!-- Slot: residenza (cascata geo reattiva) -->
+            <ng-template medbookFormSlot="residenza">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Indirizzo</mat-label>
+                <input matInput formControlName="address" />
+              </mat-form-field>
+
+              <div class="mb-grid" style="--cols: 2">
+                <app-searchable-select label="Regione" cssClass="mb-field"
+                  [options]="regioniOpts()" [control]="$any(editForm.get('regione'))"
+                  (selectionChange)="onCellEvent({ key: 'regione', value: $event })" />
+                <app-searchable-select label="Provincia" cssClass="mb-field"
+                  [options]="provinceOpts()" [control]="$any(editForm.get('province'))"
+                  (selectionChange)="onCellEvent({ key: 'province', value: $event })" />
+              </div>
+
+              <div class="mb-grid" style="--cols: 2">
+                <app-searchable-select label="Città" cssClass="mb-field"
+                  [options]="comuniOpts()" [control]="$any(editForm.get('city'))"
+                  (selectionChange)="onCellEvent({ key: 'city', value: $event })" />
+                <mat-form-field appearance="outline" class="mb-field">
+                  <mat-label>CAP</mat-label>
+                  <input matInput formControlName="postalCode" maxlength="5" />
+                </mat-form-field>
+              </div>
+            </ng-template>
+
+          </app-medbook-form>
+
+          <div class="readonly-notice">
+            <mat-icon>info_outline</mat-icon>
+            <span>I dati anagrafici sono collegati al codice fiscale e non possono essere modificati autonomamente.</span>
+          </div>
+
+          <div class="form-actions">
+            <button mat-button type="button" (click)="cancelEdit()" [disabled]="saving()">Annulla</button>
+            <button mat-flat-button color="primary" type="submit"
+                    [disabled]="editForm.invalid || editForm.pristine || saving()">
+              <mat-icon>save</mat-icon>
+              {{ saving() ? 'Salvataggio...' : 'Salva modifiche' }}
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+</app-medbook-page>

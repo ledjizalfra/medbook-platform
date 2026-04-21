@@ -1,0 +1,793 @@
+openapi: 3.0.3
+
+# =============================================================================
+# MedBook Platform - Notification API
+# Microservizio di dominio per la gestione delle notifiche inviate ai pazienti.
+# Le notifiche sono generate automaticamente da eventi Kafka prodotti
+# da appointment-dmn e rappresentano un registro di audit immutabile.
+# =============================================================================
+
+info:
+  title: MedBook - Notification API
+  description: |
+    ## Notification API
+    Gestisce il registro delle comunicazioni inviate ai pazienti
+    della piattaforma MedBook.
+
+    ### Risorse esposte
+    - **Notifications** - registro audit delle notifiche inviate (`NOT-{seq}`)
+
+    ### Convenzioni
+    - Tutti gli endpoint richiedono autenticazione JWT
+    - L'ID tecnico interno non viene mai esposto nelle API
+    - Si utilizza la **Business Key** come identificatore pubblico
+    - Le notifiche sono generate automaticamente - nessun endpoint di creazione manuale
+    - Le risposte di successo sono sempre incapsulate in **MedBookApiResponse**
+    - Le risposte di errore seguono sempre il formato **MedBookApiErrorResponse**
+    - `MedBookContext` e sempre il primo parametro di ogni operazione
+
+    ### Generazione notifiche
+    Le notifiche vengono create automaticamente al consumo degli eventi Kafka:
+    - `medbook.appointment.booked.topic` - genera PRENOTAZIONE_CONFERMATA
+    - `medbook.appointment.cancelled.topic` - genera PRENOTAZIONE_CANCELLATA
+
+    ### Retry policy
+    In caso di fallimento dell'invio, il sistema ritenta fino a maxAttempts volte
+    con backoff configurabile. Dopo maxAttempts tentativi STATUS = FALLITA.
+    Il reinvio manuale e possibile tramite POST /{notificationId}/retry.
+
+    ### Visibilita
+    ROLE_ADMIN vede tutte le notifiche per audit.
+    ROLE_PATIENT vede solo le proprie notifiche.
+
+  version: 1.0.0
+  contact:
+    name: MedBook Team
+    email: djizalfra@gmail.com
+
+servers:
+  - url: http://localhost:8094
+    description: Server di sviluppo locale
+
+tags:
+  - name: notifications
+    description: Consultazione del registro delle notifiche inviate ai pazienti
+  - name: notification-preferences
+    description: Gestione delle preferenze di notifica per pazienti e medici
+
+# =============================================================================
+# ENDPOINTS
+# =============================================================================
+paths:
+
+  /notification/v1/notifications:
+
+    # -------------------------------------------------------------------------
+    # Lista notifiche con filtri
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - notifications
+      operationId: getListNotifications
+      summary: Recupera le notifiche con filtri
+      description: |
+        Restituisce la lista paginata delle notifiche.
+        ROLE_PATIENT vede solo le proprie notifiche.
+        ROLE_ADMIN vede tutte le notifiche per scopi di audit.
+        Supporta filtri per appuntamento, paziente, tipo, canale, stato e date.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/NotificationAppointmentIdFilterParam'
+        - $ref: '#/components/parameters/NotificationPatientIdFilterParam'
+        - $ref: '#/components/parameters/NotificationTypeFilterParam'
+        - $ref: '#/components/parameters/NotificationChannelFilterParam'
+        - $ref: '#/components/parameters/NotificationStatusFilterParam'
+        - $ref: '#/components/parameters/DateFromFilterParam'
+        - $ref: '#/components/parameters/DateToFilterParam'
+      responses:
+        '200':
+          description: Lista notifiche recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /notification/v1/notifications/{notificationId}:
+
+    # -------------------------------------------------------------------------
+    # Recupero notifica per business key
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - notifications
+      operationId: getNotificationById
+      summary: Recupera una notifica tramite la sua business key
+      description: |
+        Restituisce i dati completi di una notifica identificata dalla business key.
+        La business key ha il formato NOT-{seq} (es. NOT-1, NOT-42).
+        ROLE_PATIENT puo accedere solo alle proprie notifiche.
+        ROLE_ADMIN puo accedere a qualsiasi notifica.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/NotificationIdParam'
+      responses:
+        '200':
+          description: Notifica trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Notifica non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /notification/v1/notifications/{notificationId}/retry:
+
+    # -------------------------------------------------------------------------
+    # Reinvio manuale - solo ROLE_ADMIN
+    # -------------------------------------------------------------------------
+    post:
+      tags:
+        - notifications
+      operationId: postRetryNotification
+      summary: Forza il reinvio di una notifica fallita
+      description: |
+        Reinvia manualmente una notifica in stato FALLITA.
+        Solo ROLE_ADMIN.
+        Azzera RETRY_COUNT, imposta STATUS = IN_ATTESA e ritenta l'invio.
+        Lancia BusinessException se la notifica non e in stato FALLITA.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/NotificationIdParam'
+      responses:
+        '200':
+          description: Notifica reinviata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Notifica non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '422':
+          description: La notifica non e in stato FALLITA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # WELCOME NOTIFICATIONS — endpoint manuali fire-and-forget
+  # ===========================================================================
+
+  /notification/v1/notifications/doctor-welcome:
+    post:
+      tags:
+        - notifications
+      operationId: sendDoctorWelcome
+      summary: Invia notifica di benvenuto al medico
+      description: |
+        Invia email e SMS di benvenuto al medico appena registrato.
+        Fire-and-forget: restituisce sempre 200 anche se l'invio fallisce.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorWelcomeRequest'
+      responses:
+        '200':
+          description: Richiesta accettata (invio best-effort)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+
+  /notification/v1/notifications/clinic-welcome:
+    post:
+      tags:
+        - notifications
+      operationId: sendClinicWelcome
+      summary: Invia notifica di benvenuto alla clinica
+      description: |
+        Invia email di benvenuto alla clinica appena registrata.
+        Fire-and-forget: restituisce sempre 200 anche se l'invio fallisce.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClinicWelcomeRequest'
+      responses:
+        '200':
+          description: Richiesta accettata (invio best-effort)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+
+  /notification/v1/preferences:
+
+    # -------------------------------------------------------------------------
+    # Upsert preferenze di notifica — crea o aggiorna
+    # -------------------------------------------------------------------------
+    post:
+      tags:
+        - notification-preferences
+      operationId: postSaveNotificationPreferences
+      summary: Salva le preferenze di notifica per un attore
+      description: |
+        Crea o aggiorna le preferenze di notifica per un paziente o un medico.
+        Se le preferenze per l'attore indicato non esistono le crea; altrimenti le aggiorna (upsert).
+        ROLE_ADMIN puo' salvare le preferenze per qualsiasi attore.
+        ROLE_PATIENT puo' salvare solo le proprie preferenze.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveNotificationPreferencesRequest'
+      responses:
+        '200':
+          description: Preferenze salvate con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '422':
+          description: Richiesta non valida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /notification/v1/preferences/{actorId}:
+
+    # -------------------------------------------------------------------------
+    # Lettura preferenze per attore
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - notification-preferences
+      operationId: getNotificationPreferencesByActorId
+      summary: Recupera le preferenze di notifica di un attore
+      description: |
+        Restituisce le preferenze di notifica per l'attore indicato.
+        ROLE_ADMIN puo' leggere le preferenze di qualsiasi attore.
+        ROLE_PATIENT puo' leggere solo le proprie preferenze.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PreferencesActorIdParam'
+        - $ref: '#/components/parameters/PreferencesActorTypeParam'
+      responses:
+        '200':
+          description: Preferenze trovate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Preferenze non trovate per l'attore indicato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+
+  # ---------------------------------------------------------------------------
+  # PARAMETRI RIUTILIZZABILI
+  # ---------------------------------------------------------------------------
+  parameters:
+
+    MedBookContextParam:
+      name: X-MedBook-Context
+      in: header
+      required: false
+      description: |
+        Contesto applicativo della richiesta - iniettato da MedBookContextInterceptor.
+        Non viene letto dall'header HTTP: il resolver preleva MedBookContextHolder.get().
+      schema:
+        $ref: '#/components/schemas/MedBookContext'
+
+    NotificationIdParam:
+      name: notificationId
+      in: path
+      required: true
+      description: Business key della notifica nel formato NOT-{seq} (es. NOT-1)
+      schema:
+        type: string
+        example: NOT-1
+
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Numero di pagina (0-based)
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      description: Numero di elementi per pagina
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      description: Ordinamento nel formato campo,direzione (es. createdAt,desc)
+      schema:
+        type: string
+        example: createdAt,desc
+
+    PreferencesActorIdParam:
+      name: actorId
+      in: path
+      required: true
+      description: Business key dell'attore (es. PAT-1 o DOC-5)
+      schema:
+        type: string
+        example: PAT-1
+
+    PreferencesActorTypeParam:
+      name: actorType
+      in: query
+      required: true
+      description: Tipo di attore proprietario delle preferenze
+      schema:
+        $ref: '#/components/schemas/NotificationActorTypeApiEnum'
+
+    NotificationAppointmentIdFilterParam:
+      name: appointmentId
+      in: query
+      required: false
+      description: Filtra per appuntamento (business key nel formato APT-{seq})
+      schema:
+        type: string
+        example: APT-1
+
+    NotificationPatientIdFilterParam:
+      name: patientId
+      in: query
+      required: false
+      description: Filtra per paziente (business key nel formato PAT-{seq})
+      schema:
+        type: string
+        example: PAT-1
+
+    NotificationTypeFilterParam:
+      name: type
+      in: query
+      required: false
+      description: Filtra per tipo di notifica
+      schema:
+        $ref: '#/components/schemas/NotificationTypeApiEnum'
+
+    NotificationChannelFilterParam:
+      name: channel
+      in: query
+      required: false
+      description: Filtra per canale di comunicazione
+      schema:
+        $ref: '#/components/schemas/NotificationChannelApiEnum'
+
+    NotificationStatusFilterParam:
+      name: status
+      in: query
+      required: false
+      description: Filtra per stato della notifica
+      schema:
+        $ref: '#/components/schemas/NotificationStatusApiEnum'
+
+    DateFromFilterParam:
+      name: dateFrom
+      in: query
+      required: false
+      description: Filtra notifiche create a partire da questa data (inclusa)
+      schema:
+        type: string
+        format: date
+
+    DateToFilterParam:
+      name: dateTo
+      in: query
+      required: false
+      description: Filtra notifiche create fino a questa data (inclusa)
+      schema:
+        type: string
+        format: date
+
+  # ---------------------------------------------------------------------------
+  # SCHEMAS
+  # ---------------------------------------------------------------------------
+  schemas:
+
+    # =========================================================================
+    # OUTPUTS - Notifications
+    # =========================================================================
+
+    NotificationDetailOutput:
+      type: object
+      description: Dati completi di una notifica
+      properties:
+        notificationId:
+          type: string
+          description: Business key nel formato NOT-{seq}
+          example: NOT-1
+        appointmentId:
+          type: string
+          description: Business key dell'appuntamento nel formato APT-{seq}
+          example: APT-1
+        patientId:
+          type: string
+          description: Business key del paziente nel formato PAT-{seq}
+          example: PAT-1
+        recipientEmail:
+          type: string
+          description: Indirizzo email del destinatario - null se canale SMS
+          example: mario.rossi@email.it
+        recipientPhone:
+          type: string
+          description: Numero di telefono del destinatario - null se canale EMAIL
+          example: "+39 333 1234567"
+        type:
+          $ref: '#/components/schemas/NotificationTypeApiEnum'
+        channel:
+          $ref: '#/components/schemas/NotificationChannelApiEnum'
+        status:
+          $ref: '#/components/schemas/NotificationStatusApiEnum'
+        payload:
+          type: string
+          description: JSON grezzo dell'evento Kafka sorgente - per audit e debug
+        sentAt:
+          type: string
+          format: date-time
+          description: Timestamp dell'invio effettivo - null fino all'invio riuscito
+        retryCount:
+          type: integer
+          description: Numero di tentativi effettuati
+          example: 0
+        errorMessage:
+          type: string
+          description: Ultimo messaggio di errore ricevuto durante il tentativo di invio
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    NotificationItemSummaryOutput:
+      type: object
+      description: Dati sintetici della notifica - utilizzato nella lista paginata
+      properties:
+        notificationId:
+          type: string
+          example: NOT-1
+        patientId:
+          type: string
+          example: PAT-1
+        appointmentId:
+          type: string
+          example: APT-1
+        type:
+          $ref: '#/components/schemas/NotificationTypeApiEnum'
+        channel:
+          $ref: '#/components/schemas/NotificationChannelApiEnum'
+        status:
+          $ref: '#/components/schemas/NotificationStatusApiEnum'
+        sentAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    NotificationListOutput:
+      type: object
+      description: DTO per la lista paginata delle notifiche
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationItemSummaryOutput'
+        page:
+          $ref: '#/components/schemas/MedBookPageResponse'
+
+    # =========================================================================
+    # TIPI CONDIVISI - Definiti in medbook-commons e importati via importMappings.
+    # Le properties qui servono al generator per riconoscere il tipo e applicare
+    # l'importMapping corretto invece di emettere Object.
+    # =========================================================================
+
+    MedBookApiVoidResponse:
+      type: object
+      description: |
+        Risposta base per gli endpoint che non restituiscono payload (PATCH, DELETE).
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        httpStatus:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+
+    MedBookApiResponse:
+      type: object
+      description: |
+        Risposta di successo con payload.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        httpStatus:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        data:
+          description: Payload della risposta - oggetto singolo o lista
+        page:
+          $ref: '#/components/schemas/MedBookPageResponse'
+
+    MedBookPageResponse:
+      type: object
+      description: |
+        Metadati di paginazione standard della piattaforma MedBook.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+        size:
+          type: integer
+          example: 20
+        number:
+          type: integer
+          example: 0
+        first:
+          type: boolean
+          example: true
+        last:
+          type: boolean
+          example: false
+        empty:
+          type: boolean
+          example: false
+
+    MedBookContext:
+      type: object
+      description: |
+        Contesto della richiesta HTTP - contiene le informazioni di sicurezza e tracciabilita.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        username:
+          type: string
+          example: mario.rossi@email.it
+        roles:
+          type: array
+          items:
+            type: string
+        requestTimestamp:
+          type: string
+          format: date-time
+
+    MedBookApiErrorResponse:
+      type: object
+      description: |
+        Formato standard delle risposte di errore della piattaforma MedBook.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        httpStatus:
+          type: integer
+          example: 404
+        success:
+          type: boolean
+          example: false
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        errorCode:
+          type: string
+          example: RESOURCE_NOT_FOUND
+        message:
+          description: |
+            Messaggio descrittivo dell'errore.
+            Puo essere una stringa singola o una lista di stringhe
+            in caso di errori di validazione multipli.
+        path:
+          type: string
+          example: /notification/v1/notifications/NOT-999
+
+    # =========================================================================
+    # NOTIFICATION PREFERENCES
+    # =========================================================================
+
+    SaveNotificationPreferencesRequest:
+      type: object
+      description: Richiesta di salvataggio (upsert) delle preferenze di notifica
+      required:
+        - actorId
+        - actorType
+        - emailEnabled
+        - smsEnabled
+      properties:
+        actorId:
+          type: string
+          description: Business key dell'attore (PAT-{seq} o DOC-{seq})
+          example: PAT-1
+        actorType:
+          $ref: '#/components/schemas/NotificationActorTypeApiEnum'
+        emailEnabled:
+          type: boolean
+          description: true se il canale EMAIL è abilitato per questo attore
+          example: true
+        smsEnabled:
+          type: boolean
+          description: true se il canale SMS è abilitato per questo attore
+          example: false
+
+    NotificationPreferencesOutput:
+      type: object
+      description: Preferenze di notifica di un attore
+      properties:
+        actorId:
+          type: string
+          example: PAT-1
+        actorType:
+          $ref: '#/components/schemas/NotificationActorTypeApiEnum'
+        emailEnabled:
+          type: boolean
+          example: true
+        smsEnabled:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # =========================================================================
+    # ENUMS
+    # =========================================================================
+
+    NotificationActorTypeApiEnum:
+      type: string
+      enum:
+        - PAZIENTE
+        - MEDICO
+      description: |
+        Tipo di attore proprietario delle preferenze di notifica:
+        - PAZIENTE: paziente della piattaforma
+        - MEDICO: medico della piattaforma
+
+    NotificationTypeApiEnum:
+      type: string
+      enum:
+        - PRENOTAZIONE_CONFERMATA
+        - PRENOTAZIONE_CANCELLATA
+      description: |
+        Tipo di notifica inviata al paziente:
+        - PRENOTAZIONE_CONFERMATA: conferma della prenotazione di un appuntamento
+        - PRENOTAZIONE_CANCELLATA: avviso di cancellazione di un appuntamento
+
+    NotificationChannelApiEnum:
+      type: string
+      enum:
+        - EMAIL
+        - SMS
+      description: |
+        Canale di comunicazione utilizzato per la notifica:
+        - EMAIL: notifica via posta elettronica
+        - SMS: notifica via messaggio SMS
+
+    NotificationStatusApiEnum:
+      type: string
+      enum:
+        - IN_ATTESA
+        - INVIATA
+        - IN_RETRY
+        - FALLITA
+      description: |
+        Stato della notifica:
+        - IN_ATTESA: in attesa di invio
+        - INVIATA: inviata con successo
+        - IN_RETRY: nuovo tentativo in corso
+        - FALLITA: fallita definitivamente dopo maxAttempts tentativi
+
+    # -------------------------------------------------------------------------
+    # REQUEST — notifiche di benvenuto
+    # -------------------------------------------------------------------------
+
+    DoctorWelcomeRequest:
+      type: object
+      description: Dati per l'invio della notifica di benvenuto al medico
+      required:
+        - doctorEmail
+      properties:
+        doctorId:
+          type: string
+          description: Business key del medico (es. DOC-1)
+          example: DOC-42
+        doctorFirstName:
+          type: string
+          example: Mario
+        doctorLastName:
+          type: string
+          example: Rossi
+        doctorEmail:
+          type: string
+          format: email
+          example: mario.rossi@email.it
+        doctorPhone:
+          type: string
+          example: "+39 333 1234567"
+
+    ClinicWelcomeRequest:
+      type: object
+      description: Dati per l'invio della notifica di benvenuto alla clinica
+      required:
+        - clinicEmail
+      properties:
+        clinicId:
+          type: string
+          description: Business key della sede (es. CLI-1)
+          example: CLI-12
+        clinicName:
+          type: string
+          example: Clinica Centrale
+        clinicEmail:
+          type: string
+          format: email
+          example: clinica@email.it

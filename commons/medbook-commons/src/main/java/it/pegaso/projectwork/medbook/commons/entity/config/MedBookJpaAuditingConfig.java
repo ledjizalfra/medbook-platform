@@ -1,18 +1,23 @@
 package it.pegaso.projectwork.medbook.commons.entity.config;
 
 import it.pegaso.projectwork.medbook.commons.entity.audit.MedBookAuditorAwareImpl;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 /**
- * Configurazione JPA Auditing.
+ * Auto-configurazione JPA Auditing.
  * Abilita il popolamento automatico dei campi di audit
  * (CREATED_AT, UPDATED_AT, CREATED_BY, UPDATED_BY) tramite Spring Data JPA.
+ *
+ * Usa @AutoConfiguration (non @Configuration) per permettere l'exclude
+ * nei servizi senza JPA (es. medbook-bff).
  */
-@Configuration
+@AutoConfiguration
+@ConditionalOnClass(name = "org.springframework.data.domain.AuditorAware")
 @EnableJpaAuditing(
         auditorAwareRef = "auditorAware"
 )

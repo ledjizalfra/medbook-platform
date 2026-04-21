@@ -1,0 +1,177 @@
+// ============================================================
+// Pagina di registrazione a step
+// ============================================================
+
+.register-container {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px 60px;
+  background: linear-gradient(135deg, #a5d6a7 0%, #b3e5fc 100%);
+}
+
+.register-card {
+  width: 100%;
+  max-width: 780px;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-hero {
+  background: linear-gradient(135deg, #a5d6a7 0%, #b3e5fc 100%);
+  padding: 28px 32px 24px;
+  text-align: center;
+  color: #1b5e20;
+}
+.card-hero-icon { display: flex; justify-content: center; margin-bottom: 10px; }
+.card-hero-title { margin: 0 0 4px; font-size: 1.5rem; font-weight: 700; }
+.card-hero-subtitle { margin: 0; font-size: 0.85rem; color: #37474f; }
+
+.card-body { padding: 24px 28px 28px; }
+
+// --- Stepper: label step ben leggibili ---
+:host ::ng-deep {
+  .mat-step-header .mat-step-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  .mat-step-header .mat-step-label.mat-step-label-active {
+    color: #1565c0;
+  }
+  .mat-step-header .mat-step-label.mat-step-label-selected {
+    color: #1565c0;
+    font-weight: 700;
+  }
+}
+
+// --- Riepilogo errori ---
+.validation-summary {
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background-color: #fce4ec;
+  border-left: 4px solid #c62828;
+  color: #b71c1c;
+  font-size: 0.85rem;
+  line-height: 1.5;
+
+  mat-icon { color: #c62828; flex-shrink: 0; margin-top: 2px; }
+  strong { display: block; margin-bottom: 6px; }
+  ul { margin: 0; padding-left: 18px; }
+  li { margin-bottom: 2px; }
+}
+
+// --- Indicazioni step ---
+.step-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background-color: #e3f2fd;
+  color: #1565c0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+
+  mat-icon { flex-shrink: 0; margin-top: 1px; }
+}
+
+// --- Navigazione step ---
+.step-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+// --- Bottone disabilitato ben visibile ---
+button[disabled] {
+  opacity: 0.5 !important;
+  background-color: #bdbdbd !important;
+  color: #757575 !important;
+  cursor: not-allowed;
+}
+
+// --- Nascita ---
+.nato-estero-toggle {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+// --- Canali notifica ---
+.notification-channels {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+
+  .inline-icon {
+    font-size: 0.9rem; height: 0.9rem; width: 0.9rem;
+    vertical-align: middle; margin-right: 2px;
+  }
+  .channel-hint {
+    font-size: 0.8rem;
+    color: var(--mat-sys-on-surface-variant);
+    font-style: italic;
+  }
+}
+
+// --- Requisiti password ---
+.password-requirements {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background-color: #fff3e0;
+  font-size: 0.85rem;
+  color: #e65100;
+
+  p { margin: 0 0 8px; font-weight: 600; }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  li {
+    margin-bottom: 4px;
+    color: #bf360c;
+    transition: color 0.2s;
+
+    &.valid {
+      color: #2e7d32;
+      &::marker { content: '✓ '; }
+    }
+  }
+}
+
+// --- Consensi ---
+.consent-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+
+  mat-checkbox {
+    font-size: 0.9rem;
+    a { color: var(--theme-primary, #1976d2); text-decoration: underline; }
+  }
+}
+
+// --- Login hint ---
+.login-hint {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #757575;
+  a { color: #7b1fa2; font-weight: 600; text-decoration: none; &:hover { text-decoration: underline; } }
+}

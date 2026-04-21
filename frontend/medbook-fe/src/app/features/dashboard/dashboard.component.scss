@@ -1,0 +1,69 @@
+// Stili per la dashboard
+.dashboard-container {
+  max-width: 1200px;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 24px;
+  color: var(--mat-sys-on-surface);
+}
+
+.welcome-card {
+  max-width: 600px;
+  margin-bottom: 24px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  min-height: 140px;
+}
+
+.stat-placeholder {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+.action-card {
+  max-width: 600px;
+}
+
+mat-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+// Nome evidenziato nel messaggio di benvenuto
+.welcome-name {
+  color: var(--theme-primary, var(--mat-sys-primary));
+  font-weight: 600;
+}
+
+// Job manuali admin
+.job-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.job-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+
+  .job-info {
+    flex: 1;
+    strong { display: block; margin-bottom: 4px; }
+    p { margin: 0; font-size: 0.85rem; color: var(--mat-sys-on-surface-variant); }
+  }
+}

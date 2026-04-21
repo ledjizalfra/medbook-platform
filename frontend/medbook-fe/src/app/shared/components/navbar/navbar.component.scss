@@ -1,0 +1,72 @@
+// Navbar — colori agganciati alle variabili CSS del tema attivo (definite in styles.scss).
+mat-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  background-color: var(--theme-bg, var(--mat-sys-surface)) !important;
+  border-bottom: 2px solid var(--theme-primary, var(--mat-sys-primary));
+  color: var(--theme-text-dark, var(--mat-sys-on-surface)) !important;
+
+  .spacer { flex: 1; }
+
+  .brand {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--theme-primary, var(--mat-sys-primary));
+    letter-spacing: -0.3px;
+  }
+
+  // Link al sito pubblico — posizionato al centro tra brand e user
+  .public-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 24px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--theme-text-mid, var(--mat-sys-on-surface-variant));
+    text-decoration: none;
+    padding: 4px 12px;
+    border-radius: 6px;
+    transition: background-color 0.15s;
+
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    &:hover { background-color: color-mix(in srgb, var(--theme-primary) 10%, transparent); }
+  }
+
+  // Base condivisa tra link e testo per il nome utente
+  .username {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--theme-text-mid, var(--mat-sys-on-surface));
+    margin-right: 8px;
+
+    .username-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--theme-primary, var(--mat-sys-primary));
+    }
+  }
+
+  // Variante link: stile anchor senza sottolineatura di default
+  .username-link {
+    text-decoration: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--theme-primary, #378ADD) 12%, transparent);
+      text-decoration: underline;
+    }
+  }
+
+  button mat-icon {
+    color: var(--theme-text-dark, var(--mat-sys-on-surface));
+  }
+}

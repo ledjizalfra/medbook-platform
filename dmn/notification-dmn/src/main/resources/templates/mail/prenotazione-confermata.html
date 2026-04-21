@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>MedBook - Prenotazione Confermata</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background-color: #1a73e8; color: #ffffff; padding: 24px 32px; }
+        .header h1 { margin: 0; font-size: 22px; }
+        .body { padding: 32px; }
+        .body p { margin: 0 0 12px; line-height: 1.6; }
+        .detail-box { background-color: #f0f4ff; border-left: 4px solid #1a73e8; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
+        .detail-box .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #dde4f5; }
+        .detail-box .row:last-child { border-bottom: none; }
+        .detail-box .label { font-weight: bold; color: #555555; min-width: 130px; }
+        .detail-box .value { color: #1a1a1a; }
+        .code-box { text-align: center; margin: 24px 0; }
+        .code-box span { background-color: #e8f0fe; color: #1a73e8; font-size: 18px; font-weight: bold; padding: 10px 24px; border-radius: 6px; letter-spacing: 1px; }
+        .footer { background-color: #f8f8f8; padding: 16px 32px; font-size: 12px; color: #888888; text-align: center; border-top: 1px solid #eeeeee; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>&#10003; Prenotazione Confermata</h1>
+    </div>
+
+    <div class="body">
+        <p>Gentile <strong th:text="${patientFirstName + ' ' + patientLastName}">Paziente</strong>,</p>
+        <p>la tua prenotazione è stata confermata con successo. Di seguito trovi il riepilogo dell'appuntamento.</p>
+
+        <div class="detail-box">
+            <div class="row">
+                <span class="label">Medico</span>
+                <span class="value" th:text="${doctorCompleteName}">Dott. Nome COGNOME</span>
+            </div>
+            <div class="row">
+                <span class="label">Clinica</span>
+                <span class="value" th:text="${clinicName}">Nome Clinica</span>
+            </div>
+            <div class="row">
+                <span class="label">Indirizzo</span>
+                <span class="value" th:text="${clinicAddress}">Via Roma 1, Milano</span>
+            </div>
+            <div class="row">
+                <span class="label">Data</span>
+                <span class="value" th:text="${slotDate}">dd/MM/yyyy</span>
+            </div>
+            <div class="row">
+                <span class="label">Orario</span>
+                <span class="value" th:text="${startTime + ' - ' + endTime}">09:00 - 09:30</span>
+            </div>
+        </div>
+
+        <div class="code-box">
+            <span th:text="'Cod. ' + ${appointmentId}">Cod. APT-1</span>
+        </div>
+
+        <p>Ti ricordiamo di presentarti <strong>15 minuti prima</strong> dell'orario previsto.</p>
+        <p>In caso di necessità di cancellazione, contatta la clinica con almeno 24 ore di anticipo.</p>
+    </div>
+
+    <div class="footer">
+        <p>MedBook Platform — Sistema automatico di notifiche. Non rispondere a questa email.</p>
+    </div>
+
+</div>
+</body>
+</html>

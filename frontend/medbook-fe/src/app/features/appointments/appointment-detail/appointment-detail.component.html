@@ -1,0 +1,74 @@
+<app-medbook-page title="Dettaglio appuntamento" [loading]="loading()" (backClick)="goBack()">
+
+  @if (appointment()) {
+    <mat-card class="detail-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>event</mat-icon>
+        <mat-card-title>Dettaglio appuntamento</mat-card-title>
+        <mat-card-subtitle>
+          <span [class]="'badge badge-' + (getField('status') || '').toString().toLowerCase()">
+            {{ getField('status') }}
+          </span>
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="label">Data</span>
+            <span class="value">{{ $any(getField('appointmentDate')) | date:'EEEE d MMMM yyyy' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Orario</span>
+            <span class="value">{{ getField('startTime') }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Medico</span>
+            <span class="value">{{ getField('doctorName') }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Specializzazione</span>
+            <span class="value">{{ getField('specialization') }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Sede</span>
+            <span class="value">{{ getField('clinicName') }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Paziente</span>
+            <span class="value">{{ getField('patientName') }}</span>
+          </div>
+          @if (getField('cancellationReason')) {
+            <div class="detail-item full-span">
+              <span class="label">Motivo cancellazione</span>
+              <span class="value">{{ getField('cancellationReason') }}</span>
+            </div>
+          }
+          @if (getField('notes')) {
+            <div class="detail-item full-span">
+              <span class="label">Note</span>
+              <span class="value">{{ getField('notes') }}</span>
+            </div>
+          }
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        @if (isPrenotato()) {
+          <button mat-flat-button color="warn" (click)="cancelAppointment()">
+            <mat-icon>cancel</mat-icon>
+            Cancella appuntamento
+          </button>
+        }
+      </mat-card-actions>
+    </mat-card>
+  }
+
+  @if (!appointment()) {
+    <div class="not-found">
+      <mat-icon>event_busy</mat-icon>
+      <p>Appuntamento non trovato.</p>
+      <button mat-flat-button color="primary" (click)="goBack()">Torna alla lista</button>
+    </div>
+  }
+</app-medbook-page>

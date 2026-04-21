@@ -25,27 +25,44 @@
 
     <dependencies>
 
+        <!-- medbook-commons - shared BaseEntity, exceptions, configs -->
         <dependency>
             <groupId>it.pegaso.projectwork.medbook</groupId>
             <artifactId>medbook-commons</artifactId>
         </dependency>
 
+        <!-- appointment-dmn-events - DTO degli eventi Kafka -->
+        <dependency>
+            <groupId>it.pegaso.projectwork.medbook</groupId>
+            <artifactId>appointment-dmn-events</artifactId>
+        </dependency>
+
+        <!-- Spring Web - REST controllers -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Spring Data JPA - repositories -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
+        <!-- Spring AOP - abilita LoggingAspect della commons -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Flyway - database migrations -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
@@ -55,59 +72,37 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
+        <!-- Eureka Client - service registration and discovery -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
 
+        <!-- Config Client - fetch config from config-server -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-config</artifactId>
         </dependency>
 
-        <!-- OpenFeign — sync calls to doctor-dmn, clinic-dmn, patient-dmn -->
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-openfeign</artifactId>
-        </dependency>
-
-        <!-- Kafka — publishes appointment events -->
-        <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
-        </dependency>
-
-        <!-- ShedLock — distributed lock for slot generation job -->
-        <dependency>
-            <groupId>net.javacrumbs.shedlock</groupId>
-            <artifactId>shedlock-spring</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.javacrumbs.shedlock</groupId>
-            <artifactId>shedlock-provider-jdbc-template</artifactId>
-        </dependency>
-
-        <!-- Jollyday — Italian public holidays for slot generation -->
-        <dependency>
-            <groupId>de.focus-shift</groupId>
-            <artifactId>jollyday-jaxb</artifactId>
-        </dependency>
-
+        <!-- SpringDoc OpenAPI - Swagger UI -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
 
+        <!-- MapStruct - entity/DTO mapper -->
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
         </dependency>
 
+        <!-- Spring Boot Actuator - health checks -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Micrometer + Zipkin - distributed tracing -->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-tracing-bridge-brave</artifactId>
@@ -117,6 +112,7 @@
             <artifactId>zipkin-reporter-brave</artifactId>
         </dependency>
 
+        <!-- Spring Security - JWT validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
@@ -126,37 +122,26 @@
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
 
+        <!-- Validation - @NotNull, @Email, @Size etc. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Eventi Kafka prodotti da questo DMN -->
+        <!-- Kafka - consuma medbook.doctor.availability.snapshot da doctor-dmn,
+                     pubblica medbook.appointment.booked e medbook.appointment.cancelled -->
         <dependency>
-            <groupId>it.pegaso.projectwork.medbook</groupId>
-            <artifactId>appointment-dmn-events</artifactId>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
         </dependency>
 
-        <!-- Client modules per le chiamate Feign -->
-        <dependency>
-            <groupId>it.pegaso.projectwork.medbook</groupId>
-            <artifactId>patient-dmn-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>it.pegaso.projectwork.medbook</groupId>
-            <artifactId>doctor-dmn-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>it.pegaso.projectwork.medbook</groupId>
-            <artifactId>clinic-dmn-client</artifactId>
-        </dependency>
-
-        <!-- Jackson Databind nullable: per gestire i campi nullable negli oggetti api generati -->
+        <!-- Jackson Databind nullable - per gestire i campi nullable negli oggetti api generati -->
         <dependency>
             <groupId>org.openapitools</groupId>
             <artifactId>jackson-databind-nullable</artifactId>
         </dependency>
 
+        <!-- Swagger annotations - per le annotazioni OpenAPI sulle interfacce generate -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations</artifactId>
@@ -169,7 +154,96 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <skip>false</skip>
+                    <mainClass>it.pegaso.projectwork.medbook.appointment.AppointmentDmnApplication</mainClass>
+                </configuration>
             </plugin>
+
+            <!-- Genera le interfacce API e i DTO dalla spec OpenAPI -->
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-appointment-api</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>
+                                ${project.basedir}/src/main/resources/openapi/appointment-api_v1.0.yaml
+                            </inputSpec>
+                            <generatorName>spring</generatorName>
+                            <apiPackage>
+                                it.pegaso.projectwork.medbook.appointment.server.api
+                            </apiPackage>
+                            <modelPackage>
+                                it.pegaso.projectwork.medbook.appointment.server.model
+                            </modelPackage>
+                            <!-- I modelli condivisi sono gia in medbook-commons:
+                                 non rigenerare copie locali nel DMN -->
+                            <importMappings>
+                                <importMapping>MedBookApiErrorResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiErrorResponse</importMapping>
+                                <importMapping>MedBookApiVoidResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiVoidResponse</importMapping>
+                                <importMapping>MedBookApiResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse</importMapping>
+                                <importMapping>MedBookPageResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookPageResponse</importMapping>
+                                <importMapping>MedBookContext=it.pegaso.projectwork.medbook.commons.api.model.MedBookContext</importMapping>
+                            </importMappings>
+                            <configOptions>
+                                <!-- Genera solo l'interfaccia - non l'implementazione -->
+                                <interfaceOnly>true</interfaceOnly>
+                                <!-- Usa Jakarta invece di Javax -->
+                                <useJakartaEe>true</useJakartaEe>
+                                <!-- Raggruppa le operazioni per tag OpenAPI -
+                                     ogni tag diventa un'interfaccia Java separata:
+                                     SlotsApi, AppointmentsApi -->
+                                <useTags>true</useTags>
+                                <!-- Abilita Bean Validation sui modelli -->
+                                <useBeanValidation>true</useBeanValidation>
+                                <!-- Non genera campi Optional<T> -
+                                     si preferisce null esplicito per semplicita -->
+                                <useOptional>false</useOptional>
+                                <!-- Genera documentazione Swagger -->
+                                <documentationProvider>springdoc</documentationProvider>
+                                <!-- Abilita le integrazioni Spring Boot 3 nel codice generato -->
+                                <useSpringBoot3>true</useSpringBoot3>
+                                <!-- Usa LocalDateTime invece di OffsetDateTime -
+                                     coerente con il resto del progetto -->
+                                <dateLibrary>java8-localdatetime</dateLibrary>
+                                <!-- Mantiene l'ordine dei parametri esattamente come definito nello spec -
+                                     necessario per avere MedBookContext sempre come primo parametro -->
+                                <sortParamsByRequiredFlag>false</sortParamsByRequiredFlag>
+                            </configOptions>
+                            <!-- Valida la spec OpenAPI prima della generazione -->
+                            <skipValidateSpec>false</skipValidateSpec>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Aggiunge le sources generate al classpath di compilazione -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>add-generated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>
+                                    ${project.build.directory}/generated-sources/openapi/src/main/java
+                                </source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
 

@@ -1,8 +1,8 @@
 package it.pegaso.projectwork.medbook.patient.helper;
 
 import it.pegaso.projectwork.medbook.commons.errors.exceptions.MedBookNotFoundException;
-import it.pegaso.projectwork.medbook.patient.config.PatientProperties;
-import it.pegaso.projectwork.medbook.patient.entity.PatientEntity;
+import it.pegaso.projectwork.medbook.patient.properties.PatientProperties;
+import it.pegaso.projectwork.medbook.patient.model.entity.PatientEntity;
 import it.pegaso.projectwork.medbook.patient.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +39,7 @@ public class PatientDomainHelper {
      * o lancia MedBookNotFoundException se non esiste proprio.
      */
     public PatientEntity retrieveByPatientIdIncludingDeletedOrThrow(String patientId) {
-        return patientRepository.getByPatientIdIncludeDeletedNative(patientId)
+        return patientRepository.getByPatientIdIncludeDeleted(patientId)
                 .orElseThrow(() -> new MedBookNotFoundException(
                         "PatientEntity", PATIENT_ID_FIELD_NAME, patientId));
     }
@@ -49,7 +49,7 @@ public class PatientDomainHelper {
      * Usato dal validator per distinguere "non trovato" da "trovato ma cancellato".
      */
     public Optional<PatientEntity> findByPatientIdIncludingDeleted(String patientId) {
-        return patientRepository.getByPatientIdIncludeDeletedNative(patientId);
+        return patientRepository.getByPatientIdIncludeDeleted(patientId);
     }
 
     /**

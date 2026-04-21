@@ -1,0 +1,28 @@
+<header class="auth-header">
+  <div class="auth-header-inner">
+
+    <!-- Sinistra: freccia indietro -->
+    <div class="header-left">
+      <button mat-icon-button class="back-btn" matTooltip="Indietro" (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+    </div>
+
+    <!-- Centro: logo cliccabile che porta alla home -->
+    <div class="header-center">
+      <button mat-button class="brand" (click)="goHome()">
+        <app-medbook-logo [size]="32"></app-medbook-logo>
+        <span class="brand-name">MedBook <strong>Platform</strong></span>
+      </button>
+    </div>
+
+    <!-- Destra: link Home testuale -->
+    <div class="header-right">
+      <button mat-button class="home-link" (click)="goHome()">
+        <mat-icon>home</mat-icon>
+        Home
+      </button>
+    </div>
+
+  </div>
+</header>

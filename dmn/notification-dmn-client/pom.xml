@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>it.pegaso.projectwork.medbook</groupId>
+        <artifactId>medbook-platform</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>notification-dmn-client</artifactId>
+    <packaging>jar</packaging>
+    <name>MedBook - Notification DMN Client</name>
+    <description>
+        Libreria client per la comunicazione con notification-dmn via OpenFeign.
+        Contiene l'interfaccia FeignClient e i DTO condivisi generati dalla spec OpenAPI.
+        Da importare nei moduli che devono chiamare notification-dmn (es. medbook-bff).
+    </description>
+
+    <dependencies>
+
+        <!-- medbook-commons - per MedBookApiResponse, MedBookApiVoidResponse, MedBookPageResponse, MedBookApiErrorResponse -->
+        <dependency>
+            <groupId>it.pegaso.projectwork.medbook</groupId>
+            <artifactId>medbook-commons</artifactId>
+        </dependency>
+
+        <!-- OpenFeign - interfaccia client -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+
+        <!-- Spring Web - per le annotazioni REST sui client generati -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Validation - per i DTO generati -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Jackson Databind nullable - per gestire i campi nullable negli oggetti api generati -->
+        <dependency>
+            <groupId>org.openapitools</groupId>
+            <artifactId>jackson-databind-nullable</artifactId>
+        </dependency>
+
+        <!-- Swagger annotations - per le annotazioni OpenAPI sui client generati -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- Genera FeignClient e DTO dalla spec OpenAPI di notification-dmn -->
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-notification-client</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Usa la stessa spec di notification-dmn - source of truth unica -->
+                            <inputSpec>
+                                ${project.basedir}/../notification-dmn/src/main/resources/openapi/notification-api_v1.0.yaml
+                            </inputSpec>
+                            <generatorName>spring</generatorName>
+                            <apiPackage>
+                                it.pegaso.projectwork.medbook.notification.client.api
+                            </apiPackage>
+                            <modelPackage>
+                                it.pegaso.projectwork.medbook.notification.client.model
+                            </modelPackage>
+                            <!-- I modelli condivisi sono gia in medbook-commons:
+                                 non rigenerare copie locali nel client -->
+                            <importMappings>
+                                <importMapping>MedBookApiErrorResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiErrorResponse</importMapping>
+                                <importMapping>MedBookApiVoidResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiVoidResponse</importMapping>
+                                <importMapping>MedBookApiResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse</importMapping>
+                                <importMapping>MedBookPageResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookPageResponse</importMapping>
+                                <importMapping>MedBookContext=it.pegaso.projectwork.medbook.commons.api.model.MedBookContext</importMapping>
+                            </importMappings>
+                            <configOptions>
+                                <!-- Genera solo l'interfaccia Java senza implementazione -->
+                                <interfaceOnly>true</interfaceOnly>
+                                <!-- Genera un FeignClient Spring Cloud -->
+                                <library>spring-cloud</library>
+                                <!-- Usa le annotazioni Jakarta EE - obbligatorio per Spring Boot 3.x -->
+                                <useJakartaEe>true</useJakartaEe>
+                                <!-- Raggruppa le operazioni per tag OpenAPI -->
+                                <useTags>true</useTags>
+                                <!-- Abilita le annotazioni Bean Validation sui DTO generati -->
+                                <useBeanValidation>true</useBeanValidation>
+                                <!-- Non genera campi Optional<T> -->
+                                <useOptional>false</useOptional>
+                                <!-- Abilita le integrazioni Spring Boot 3 nel codice generato -->
+                                <useSpringBoot3>true</useSpringBoot3>
+                                <!-- Genera le annotazioni SpringDoc/OpenAPI per la documentazione -->
+                                <documentationProvider>springdoc</documentationProvider>
+                                <!-- Usa LocalDateTime invece di OffsetDateTime -->
+                                <dateLibrary>java8-localdatetime</dateLibrary>
+                                <!-- Mantiene l'ordine dei parametri esattamente come definito nello spec -->
+                                <sortParamsByRequiredFlag>false</sortParamsByRequiredFlag>
+                            </configOptions>
+                            <!-- Valida la spec OpenAPI prima della generazione -->
+                            <skipValidateSpec>false</skipValidateSpec>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Aggiunge esplicitamente le sources generate al classpath di compilazione -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>add-generated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>
+                                    ${project.build.directory}/generated-sources/openapi/src/main/java
+                                </source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>

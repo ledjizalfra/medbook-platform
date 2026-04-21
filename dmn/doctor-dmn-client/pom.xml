@@ -24,36 +24,37 @@
 
     <dependencies>
 
-        <!-- OpenFeign — interfaccia client -->
+        <!-- medbook-commons - per MedBookApiResponse, MedBookApiVoidResponse, MedBookPageResponse, MedBookApiErrorResponse -->
+        <dependency>
+            <groupId>it.pegaso.projectwork.medbook</groupId>
+            <artifactId>medbook-commons</artifactId>
+        </dependency>
+
+        <!-- OpenFeign - interfaccia client -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
 
-        <!-- Spring Web — per le annotazioni REST sui client generati -->
+        <!-- Spring Web - per le annotazioni REST sui client generati -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Validation — per i DTO generati -->
+        <!-- Validation - per i DTO generati -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Jackson — serializzazione JSON -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-json</artifactId>
-        </dependency>
-
-        <!-- Jackson Databind nullable: per gestire i campi nullable negli oggetti api generati -->
+        <!-- Jackson Databind nullable - per gestire i campi nullable negli oggetti api generati -->
         <dependency>
             <groupId>org.openapitools</groupId>
             <artifactId>jackson-databind-nullable</artifactId>
         </dependency>
 
+        <!-- Swagger annotations - per le annotazioni OpenAPI sui client generati -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations</artifactId>
@@ -75,9 +76,7 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <!-- Salta la generazione finché lo YAML non è pronto -->
-                            <skip>true</skip>
-                            <!-- Usa la stessa spec del doctor-dmn -->
+                            <!-- Usa la stessa spec di doctor-dmn - source of truth unica -->
                             <inputSpec>
                                 ${project.basedir}/../doctor-dmn/src/main/resources/openapi/doctor-api_v1.0.yaml
                             </inputSpec>
@@ -88,25 +87,54 @@
                             <modelPackage>
                                 it.pegaso.projectwork.medbook.doctor.client.model
                             </modelPackage>
+                            <!-- I modelli condivisi sono gia in medbook-commons:
+                                 non rigenerare copie locali nel client -->
+                            <importMappings>
+                                <importMapping>MedBookApiErrorResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiErrorResponse</importMapping>
+                                <importMapping>MedBookApiVoidResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiVoidResponse</importMapping>
+                                <importMapping>MedBookApiResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse</importMapping>
+                                <importMapping>MedBookPageResponse=it.pegaso.projectwork.medbook.commons.api.model.MedBookPageResponse</importMapping>
+                                <importMapping>MedBookContext=it.pegaso.projectwork.medbook.commons.api.model.MedBookContext</importMapping>
+                            </importMappings>
                             <configOptions>
-                                <!-- Genera solo l'interfaccia -->
+                                <!-- Genera solo l'interfaccia Java senza implementazione -
+                                     il FeignClient implementera l'interfaccia a runtime -->
                                 <interfaceOnly>true</interfaceOnly>
-                                <!-- Genera FeignClient invece di RestController -->
+                                <!-- Genera un FeignClient Spring Cloud invece di un RestController -
+                                     necessario per chiamare altri DMN via HTTP dichiarativo -->
                                 <library>spring-cloud</library>
+                                <!-- Usa le annotazioni Jakarta EE (javax -> jakarta) -
+                                     obbligatorio per Spring Boot 3.x -->
                                 <useJakartaEe>true</useJakartaEe>
+                                <!-- Raggruppa le operazioni per tag OpenAPI -
+                                     ogni tag diventa un'interfaccia Java separata:
+                                     DoctorsApi, SpecializationsApi, AvailabilitiesApi -->
                                 <useTags>true</useTags>
+                                <!-- Abilita le annotazioni Bean Validation (@NotNull, @Size, ecc.)
+                                     sui campi dei DTO generati -->
                                 <useBeanValidation>true</useBeanValidation>
+                                <!-- Non genera campi Optional<T> -
+                                     si preferisce null esplicito per semplicita -->
+                                <useOptional>false</useOptional>
+                                <!-- Abilita le integrazioni Spring Boot 3 nel codice generato -->
                                 <useSpringBoot3>true</useSpringBoot3>
+                                <!-- Genera le annotazioni SpringDoc/OpenAPI per la documentazione Swagger -->
                                 <documentationProvider>springdoc</documentationProvider>
-                                <!-- Genera LocalDateTime invece di OffsetDateTime -->
+                                <!-- Usa LocalDateTime invece di OffsetDateTime -
+                                     coerente con il resto del progetto -->
                                 <dateLibrary>java8-localdatetime</dateLibrary>
+                                <!-- Mantiene l'ordine dei parametri esattamente come definito nello spec -
+                                     necessario per avere MedBookContext sempre come primo parametro -->
+                                <sortParamsByRequiredFlag>false</sortParamsByRequiredFlag>
                             </configOptions>
+                            <!-- Valida la spec OpenAPI prima della generazione -->
+                            <skipValidateSpec>false</skipValidateSpec>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
 
-            <!-- Aggiunge le sources generate al classpath di compilazione -->
+            <!-- Aggiunge esplicitamente le sources generate al classpath di compilazione -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>

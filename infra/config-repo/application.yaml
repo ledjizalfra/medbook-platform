@@ -1,20 +1,78 @@
-# Configurazione Eureka condivisa da tutti i servizi
+# =============================================================================
+# MedBook Platform — Configurazione condivisa (default produzione)
+#
+# Questo file viene caricato da TUTTI i microservizi tramite il config-server.
+# Contiene i default validi in produzione.
+# Il profilo 'dev' (application-dev.yaml) sovrascrive i valori specifici
+# per l'ambiente di sviluppo locale.
+#
+# Variabili d'ambiente configurabili:
+#   EUREKA_URL          — URL registro Eureka
+#   KEYCLOAK_ISSUER_URI — Issuer URI realm Keycloak
+#   ZIPKIN_ENDPOINT     — Endpoint Zipkin
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Service Registry — Eureka
+# ---------------------------------------------------------------------------
 eureka:
   client:
     service-url:
-      # Porta aggiornata a 8070
-      defaultZone: http://localhost:8070/eureka/
+      defaultZone: ${EUREKA_URL:http://localhost:8070/eureka/}
   instance:
     prefer-ip-address: true
 
-# Configurazione medbook-commons — condivisa da tutti i DMN
+# ---------------------------------------------------------------------------
+# Sicurezza OAuth2 — validazione JWT tramite Keycloak
+# ---------------------------------------------------------------------------
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://keycloak.medbook.it/realms/medbook}
+
+  # -------------------------------------------------------------------------
+  # OpenFeign — timeout HTTP per le chiamate inter-servizio (BFF → DMN)
+  # -------------------------------------------------------------------------
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            # Tempo massimo per stabilire la connessione TCP (ms)
+            connect-timeout: 3000
+            # Tempo massimo di attesa per la risposta dopo la connessione (ms)
+            read-timeout: 10000
+
+# ---------------------------------------------------------------------------
+# Tracing distribuito (Micrometer + Zipkin)
+# ---------------------------------------------------------------------------
+management:
+  tracing:
+    sampling:
+      probability: 0.1   # 10% in produzione — ridurre il volume di span
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+      connect-timeout: 5s
+      read-timeout: 15s
+
+# ---------------------------------------------------------------------------
+# Feature flags medbook-commons
+# ---------------------------------------------------------------------------
 medbook:
   security:
-    # Abilita la validazione JWT con Keycloak
     enabled: true
   entity-jpa-auditing:
-    # Abilita il JPA Auditing per i campi di audit
     enabled: true
   logging-aspect:
-    # Abilita il logging automatico AOP di controller e service
     enabled: true
+
+# ---------------------------------------------------------------------------
+# Logging (produzione)
+# ---------------------------------------------------------------------------
+logging:
+  level:
+    root: INFO
+    it.pegaso.projectwork.medbook: INFO

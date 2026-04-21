@@ -1,0 +1,23 @@
+# =============================================================================
+# MedBook Platform — medbook-bff
+# Configurazione di bootstrap — caricata prima del config-server
+# =============================================================================
+
+spring:
+  application:
+    name: medbook-bff
+  profiles:
+    active: dev
+
+  config:
+    import:
+      # Il servizio non si avvia se il config-server non è raggiungibile
+      - "configserver:${CONFIG_SERVER_URL:http://localhost:8071}"
+
+  autoconfigure:
+    exclude:
+      # MedBookJpaAuditingConfig richiede spring-data-jpa (AuditorAware).
+      # Il BFF è un edge service senza DB diretto — JPA non è presente.
+      # Deve stare qui (bootstrap) perché valutata prima del config-server.
+      - it.pegaso.projectwork.medbook.commons.entity.config.MedBookJpaAuditingConfig
+

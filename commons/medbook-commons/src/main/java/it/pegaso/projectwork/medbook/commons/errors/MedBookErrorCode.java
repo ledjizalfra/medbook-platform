@@ -108,6 +108,9 @@ public enum MedBookErrorCode {
     APPOINTMENT_ALREADY_COMPLETED(
             HttpStatus.UNPROCESSABLE_ENTITY,
             "L'appuntamento è già stato completato e non può essere modificato"),
+    BOOKING_CONSTRAINT_VIOLATION(
+            HttpStatus.CONFLICT,
+            "La prenotazione viola un vincolo di business"),
 
     // =========================================================================
     // DOMINIO — PATIENT

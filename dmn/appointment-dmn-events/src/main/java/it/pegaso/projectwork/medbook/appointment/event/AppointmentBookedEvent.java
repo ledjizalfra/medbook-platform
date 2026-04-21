@@ -5,9 +5,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 /**
  * Evento Kafka pubblicato da appointment-dmn quando un appuntamento
@@ -21,25 +22,35 @@ import java.time.LocalTime;
 @AllArgsConstructor
 public class AppointmentBookedEvent {
 
-    // Identificativo univoco dell'evento
-    private String eventId;
-
     // Timestamp di pubblicazione dell'evento
-    private LocalDateTime occurredAt;
+    private Instant eventTimestamp;
 
     // Dati dell'appuntamento
     private String appointmentId;
     private String patientId;
     private String doctorId;
     private String clinicId;
-    private String slotId;
 
     // Data e ora dell'appuntamento — per la notifica al paziente
-    private LocalDate appointmentDate;
-    private LocalTime appointmentTime;
+    private LocalDate slotDate;
+    private LocalTime startTime;
+    private LocalTime endTime;
 
-    // Email del paziente — per inviare la notifica senza chiamare patient-dmn
+    // Dati del paziente — propagati dal BFF, non persistiti in appointment-dmn
     private String patientEmail;
     private String patientFirstName;
     private String patientLastName;
+    private String patientPhone; // null se il paziente non ha SMS tra i canali scelti
+
+    // Dati del medico — propagati dal BFF, non persistiti in appointment-dmn
+    private String doctorFirstName;
+    private String doctorLastName;
+    private String doctorGender; // MASCHILE o FEMMINILE — usato per il titolo Dott./Dott.ssa
+
+    // Dati della clinica — propagati dal BFF, non persistiti in appointment-dmn
+    private String clinicName;
+    private String clinicAddress;
+
+    // Canali di notifica scelti dal paziente — ["EMAIL"], ["SMS"], ["EMAIL","SMS"]
+    private List<String> notificationChannels;
 }

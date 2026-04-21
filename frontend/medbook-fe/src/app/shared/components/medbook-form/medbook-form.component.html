@@ -1,0 +1,109 @@
+@for (group of groups; track group.id) {
+
+  @if (group.label) {
+    <p class="section-label">{{ group.label }}</p>
+  }
+
+  <!-- Contenuto custom proiettato dal parent -->
+  @if (group.customTemplate && getSlot(group.id); as tmpl) {
+    <ng-container *ngTemplateOutlet="tmpl" />
+  }
+
+  <!-- Griglia di celle standard -->
+  @if (!group.customTemplate && group.cells) {
+    <div class="mb-grid" [style.--cols]="group.columns ?? 2">
+      @for (cell of group.cells; track cell.key) {
+        <div class="mb-cell" [style.--span]="cell.colSpan ?? 1">
+
+          <!-- CHECKBOX singolo (senza mat-form-field) -->
+          @if (cell.type === 'checkbox') {
+            <mat-checkbox [formControl]="ctrl(cell.key)">
+              {{ cell.label }}
+            </mat-checkbox>
+          }
+
+          <!-- CHECKBOX-GROUP (senza mat-form-field) -->
+          @else if (cell.type === 'checkbox-group' && cell.formGroupName) {
+            <div class="mb-cb-group" [formGroup]="form">
+              <div [formGroupName]="cell.formGroupName" class="mb-cb-row">
+                <span class="mb-cb-label">{{ cell.label }}</span>
+                @for (cb of cell.checkboxes; track cb.key) {
+                  <mat-checkbox [formControlName]="cb.key">
+                    @if (cb.icon) {
+                      <mat-icon class="mb-cb-icon">{{ cb.icon }}</mat-icon>
+                    }
+                    {{ cb.label }}
+                  </mat-checkbox>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- SEARCHABLE-SELECT (ha il suo mat-form-field interno) -->
+          @else if (cell.type === 'searchable-select') {
+            <app-searchable-select
+              [label]="cell.label"
+              [options]="$any(cell.options ?? [])"
+              [control]="ctrl(cell.key)"
+              appearance="outline"
+              cssClass="mb-field"
+              (selectionChange)="cellEvent.emit({ key: cell.key, value: $event })" />
+          }
+
+          <!-- TUTTI GLI ALTRI TIPI (wrappati in mat-form-field) -->
+          @else {
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>{{ cell.label }}</mat-label>
+
+              @if (cell.prefixIcon) {
+                <mat-icon matPrefix>{{ cell.prefixIcon }}</mat-icon>
+              }
+
+              @if (['text','email','password','number','tel'].includes(cell.type)) {
+                <input matInput [type]="cell.type"
+                       [formControl]="ctrl(cell.key)"
+                       [readonly]="cell.readonly ?? false"
+                       [maxlength]="cell.maxlength ?? null"
+                       [placeholder]="cell.hint ?? ''" />
+              }
+
+              @if (cell.type === 'date') {
+                <input matInput [matDatepicker]="dp"
+                       [formControl]="ctrl(cell.key)"
+                       [min]="cell.minDate ?? null"
+                       [max]="cell.maxDate ?? null"
+                       placeholder="gg/mm/aaaa" />
+              }
+              @if (cell.type === 'date') {
+                <mat-datepicker-toggle matIconSuffix [for]="dp" />
+              }
+              <mat-datepicker #dp />
+
+              @if (cell.type === 'select') {
+                <mat-select [formControl]="ctrl(cell.key)">
+                  @for (opt of cell.options; track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                  }
+                </mat-select>
+              }
+
+              @if (cell.type === 'textarea') {
+                <textarea matInput [formControl]="ctrl(cell.key)"
+                          [rows]="cell.rows ?? 3"
+                          [readonly]="cell.readonly ?? false"></textarea>
+              }
+
+              @if (cell.hint && !['text','email','password','number','tel'].includes(cell.type)) {
+                <mat-hint>{{ cell.hint }}</mat-hint>
+              }
+
+              @if (showFieldErrors) {
+                <app-field-error [control]="ctrl(cell.key)" [form]="form" />
+              }
+            </mat-form-field>
+          }
+        </div>
+      }
+    </div>
+  }
+}

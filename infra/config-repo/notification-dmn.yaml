@@ -1,0 +1,107 @@
+# =============================================================================
+# MedBook Platform — notification-dmn
+# =============================================================================
+
+server:
+  port: 8094
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/med_notification_db?stringtype=unspecified
+    username: ${DB_USERNAME:medbook}
+    password: ${DB_PASSWORD:medbook}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    baseline-on-migrate: false
+
+  # SMTP — credenziali e host variano per ambiente (vedi profilo dev sotto)
+  mail:
+    host: ${SMTP_HOST:smtp.medbook.it}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "it.pegaso.projectwork.medbook.appointment.event"
+
+# Twilio — credenziali iniettate via variabili d'ambiente (nessun default: richieste in produzione)
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID}
+  auth-token: ${TWILIO_AUTH_TOKEN}
+
+medbook:
+  security:
+    public-post-endpoints:
+      - /notification/v1/preferences
+
+notification:
+  mail:
+    from: ${NOTIFICATION_MAIL_FROM:noreply@medbook.it}
+    retry:
+      max-attempts: 3
+      delay-ms: 30000
+  sms:
+    mock-enabled: false
+    from: ${TWILIO_FROM_NUMBER}
+    retry:
+      max-attempts: 3
+      delay-ms: 30000
+  kafka:
+    topic:
+      appointment-booked: medbook.appointment.booked.topic
+      appointment-cancelled: medbook.appointment.cancelled.topic
+    consumer:
+      group-id: notification-dmn-appointment-events
+
+---
+# =============================================================================
+# notification-dmn — Profilo DEV
+# =============================================================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  # Mailtrap per intercettare le email in sviluppo senza invii reali
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: ${SMTP_USERNAME:c131e6a8cc1ef6}
+    password: ${SMTP_PASSWORD:4e82f84c5fff9e}
+
+# SMS mockato in sviluppo: logga il messaggio invece di chiamare Twilio
+notification:
+  sms:
+    mock-enabled: true
+    from: "+1234567890"
+
+# Credenziali Twilio non necessarie in sviluppo (mock attivo)
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID:dev-placeholder}
+  auth-token: ${TWILIO_AUTH_TOKEN:dev-placeholder}

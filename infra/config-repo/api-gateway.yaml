@@ -1,0 +1,5 @@
+# =============================================================================
+# MedBook Platform — api-gateway
+# La configurazione CORS è gestita direttamente in application.yaml del servizio
+# tramite allowedOriginPatterns, senza dipendere dal profilo.
+# =============================================================================

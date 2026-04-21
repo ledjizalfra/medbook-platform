@@ -1,0 +1,35 @@
+.ss-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--mat-sys-surface, #fff);
+  border-bottom: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+}
+
+.ss-icon {
+  color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.54));
+  font-size: 1.1rem;
+  height: 1.1rem;
+  width: 1.1rem;
+  flex-shrink: 0;
+}
+
+.ss-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--medbook-form-field-font, 0.88rem);
+  width: 100%;
+  padding: 2px 0;
+  font-family: inherit;
+  color: var(--mat-sys-on-surface, #000);
+}
+
+.ss-no-results {
+  font-style: italic;
+  opacity: 0.5;
+}

@@ -1,0 +1,38 @@
+<mat-card class="appointment-card" (click)="viewDetail.emit(appointment.appointmentId)">
+  <mat-card-header>
+    <mat-icon mat-card-avatar>event</mat-icon>
+    <mat-card-title>{{ appointment.slotDate | date:'dd/MM/yyyy' }}</mat-card-title>
+    <mat-card-subtitle>{{ appointment.startTime }} - {{ appointment.endTime }}</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    @if (showDoctor && appointment.doctorFullName) {
+      <div class="info-row">
+        <mat-icon>medical_services</mat-icon>
+        <span>{{ appointment.doctorFullName }}</span>
+      </div>
+    }
+    @if (showPatient && appointment.patientFullName) {
+      <div class="info-row">
+        <mat-icon>person</mat-icon>
+        <span>{{ appointment.patientFullName }}</span>
+      </div>
+    }
+    @if (appointment.specialization) {
+      <div class="info-row">
+        <mat-icon>local_hospital</mat-icon>
+        <span>{{ appointment.specialization }}</span>
+      </div>
+    }
+    @if (appointment.clinicName) {
+      <div class="info-row">
+        <mat-icon>business</mat-icon>
+        <span>{{ appointment.clinicName }}</span>
+      </div>
+    }
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    <span class="status-badge" [class]="getStatusClass()">{{ getStatusLabel() }}</span>
+  </mat-card-actions>
+</mat-card>

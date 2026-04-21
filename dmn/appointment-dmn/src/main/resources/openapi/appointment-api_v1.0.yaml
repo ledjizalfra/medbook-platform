@@ -1,0 +1,828 @@
+openapi: 3.0.3
+
+# =============================================================================
+# MedBook Platform - Appointment API
+# Microservizio di dominio per la gestione delle prenotazioni di visite mediche.
+# =============================================================================
+
+info:
+  title: MedBook - Appointment API
+  description: |
+    ## Appointment API
+    Gestisce il ciclo di vita delle prenotazioni di visite mediche sulla piattaforma MedBook.
+
+    ### Risorse esposte
+    - **Appointments** - prenotazioni confermate (`APT-{seq}`)
+    - **Config** - configurazione esposta al BFF
+
+    ### Convenzioni
+    - Tutti gli endpoint richiedono autenticazione JWT
+    - L'ID tecnico interno non viene mai esposto nelle API
+    - Si utilizza la **Business Key** come identificatore pubblico
+    - Le risposte di successo sono sempre incapsulate in **MedBookApiResponse** o **MedBookApiVoidResponse**
+    - Le risposte di errore seguono sempre il formato **MedBookApiErrorResponse**
+    - `MedBookContext` è sempre il primo parametro di ogni operazione
+
+    ### Prenotazione
+    I dati di slot (data, ora inizio, ora fine) sono calcolati dal BFF in memoria e
+    inviati direttamente nella request. Un medico non può avere due appuntamenti attivi
+    nella stessa data e ora.
+
+  version: 1.0.0
+  contact:
+    name: MedBook Team
+    email: djizalfra@gmail.com
+
+servers:
+  - url: http://localhost:8093
+    description: Server di sviluppo locale
+
+tags:
+  - name: appointments
+    description: Gestione delle prenotazioni di visite mediche
+  - name: config
+    description: Configurazione esposta al BFF
+
+# =============================================================================
+# ENDPOINTS
+# =============================================================================
+paths:
+
+  # ===========================================================================
+  # APPOINTMENTS
+  # ===========================================================================
+
+  /appointment/v1/appointments:
+
+    # -------------------------------------------------------------------------
+    # Prenota un appuntamento
+    # -------------------------------------------------------------------------
+    post:
+      tags:
+        - appointments
+      operationId: postBookAppointment
+      summary: Prenota un appuntamento
+      description: |
+        Persiste un appuntamento confermato. Il BFF ha già calcolato lo slot in memoria.
+        Verifica l'unicità su (DOCTOR_ID, SLOT_DATE, START_TIME) prima della scrittura.
+        Pubblica AppointmentBookedEvent su Kafka.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookAppointmentRequest'
+      responses:
+        '201':
+          description: Appuntamento prenotato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '400':
+          description: Request non valida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Slot già prenotato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Lista appuntamenti con filtri
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - appointments
+      operationId: getListAppointments
+      summary: Lista appuntamenti con filtri combinati
+      description: |
+        Restituisce la lista paginata degli appuntamenti.
+        Tutti i parametri sono opzionali e combinabili.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/PatientIdFilterParam'
+        - $ref: '#/components/parameters/DoctorIdFilterParam'
+        - $ref: '#/components/parameters/ClinicIdFilterParam'
+        - $ref: '#/components/parameters/AppointmentStatusFilterParam'
+        - $ref: '#/components/parameters/DateFromFilterParam'
+        - $ref: '#/components/parameters/DateToFilterParam'
+      responses:
+        '200':
+          description: Lista appuntamenti recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /appointment/v1/appointments/{appointmentId}:
+
+    # -------------------------------------------------------------------------
+    # Recupero singolo appuntamento
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - appointments
+      operationId: getAppointmentById
+      summary: Recupera un appuntamento per business key
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/AppointmentIdPathParam'
+      responses:
+        '200':
+          description: Appuntamento trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Appuntamento non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /appointment/v1/appointments/{appointmentId}/cancel:
+
+    # -------------------------------------------------------------------------
+    # Cancella un appuntamento
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - appointments
+      operationId: patchCancelAppointment
+      summary: Cancella un appuntamento (PRENOTATO -> CANCELLATO)
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/AppointmentIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelAppointmentRequest'
+      responses:
+        '200':
+          description: Appuntamento cancellato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Appuntamento non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '422':
+          description: Stato non valido per la cancellazione
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /appointment/v1/appointments/{appointmentId}/restore:
+
+    # -------------------------------------------------------------------------
+    # Ripristina un appuntamento cancellato
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - appointments
+      operationId: patchRestoreAppointment
+      summary: Ripristina un appuntamento cancellato (CANCELLATO -> PRENOTATO)
+      description: |
+        Utile quando la cancellazione è avvenuta per errore.
+        Verifica che lo slot non sia stato riprenotato da un altro paziente nel frattempo.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/AppointmentIdPathParam'
+      responses:
+        '200':
+          description: Appuntamento ripristinato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Appuntamento non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '422':
+          description: Stato non valido per il ripristino
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /appointment/v1/appointments/{appointmentId}/complete:
+
+    # -------------------------------------------------------------------------
+    # Completa un appuntamento
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - appointments
+      operationId: patchCompleteAppointment
+      summary: Segna un appuntamento come completato (PRENOTATO -> COMPLETATO)
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/AppointmentIdPathParam'
+      responses:
+        '200':
+          description: Appuntamento completato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Appuntamento non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '422':
+          description: Stato non valido per il completamento
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /appointment/v1/appointments/{appointmentId}/no-show:
+
+    # -------------------------------------------------------------------------
+    # Segna come non presentato
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - appointments
+      operationId: patchNoShowAppointment
+      summary: Segna un appuntamento come non presentato (PRENOTATO -> NON_PRESENTATO)
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/AppointmentIdPathParam'
+      responses:
+        '200':
+          description: Appuntamento marcato non presentato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Appuntamento non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '422':
+          description: Stato non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # START — transizione PRENOTATO -> IN_CORSO
+  # ===========================================================================
+
+  /appointment/v1/appointments/{appointmentId}/start:
+    patch:
+      tags:
+        - Appointments
+      operationId: patchStartAppointment
+      summary: Avvia un appuntamento (PRENOTATO -> IN_CORSO)
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/AppointmentIdPathParam'
+      responses:
+        '200':
+          description: Appuntamento avviato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '409':
+          description: Transizione non consentita
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # DASHBOARD GIORNALIERA
+  # ===========================================================================
+
+  /appointment/v1/appointments/daily:
+    get:
+      tags:
+        - Appointments
+      operationId: getDailyAppointments
+      summary: Lista appuntamenti per una data specifica
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Data (default oggi)
+        - name: doctorId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: clinicId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista appuntamenti del giorno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  # ===========================================================================
+  # JOB MANUALI (ADMIN)
+  # ===========================================================================
+
+  /appointment/v1/jobs/close-day:
+    post:
+      tags:
+        - Jobs
+      operationId: postCloseDayJob
+      summary: Trigger manuale chiusura giornata
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      responses:
+        '200':
+          description: Riepilogo transizioni
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /appointment/v1/jobs/reminders:
+    post:
+      tags:
+        - Jobs
+      operationId: postRemindersJob
+      summary: Trigger manuale invio reminder
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      responses:
+        '200':
+          description: Numero reminder inviati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  # ===========================================================================
+  # CONFIG
+  # ===========================================================================
+
+  /appointment/v1/config/slot-duration:
+
+    # -------------------------------------------------------------------------
+    # Durata slot
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - config
+      operationId: getSlotDuration
+      summary: Restituisce la durata in minuti di ogni slot
+      description: |
+        Espone slotDurationMinutes al BFF così che possa calcolare correttamente
+        gli slot in memoria senza valori hardcoded.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      responses:
+        '200':
+          description: Durata slot recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+
+  # ===========================================================================
+  # PARAMETERS
+  # ===========================================================================
+  parameters:
+
+    MedBookContextParam:
+      name: X-MedBook-Context
+      in: header
+      required: false
+      description: |
+        Contesto applicativo della richiesta - iniettato da MedBookContextInterceptor.
+        Non viene letto dall'header HTTP: il resolver preleva MedBookContextHolder.get().
+      schema:
+        $ref: '#/components/schemas/MedBookContext'
+
+    AppointmentIdPathParam:
+      name: appointmentId
+      in: path
+      required: true
+      schema:
+        type: string
+
+    PatientIdFilterParam:
+      name: patientId
+      in: query
+      required: false
+      schema:
+        type: string
+
+    DoctorIdFilterParam:
+      name: doctorId
+      in: query
+      required: false
+      schema:
+        type: string
+
+    ClinicIdFilterParam:
+      name: clinicId
+      in: query
+      required: false
+      schema:
+        type: string
+
+    AppointmentStatusFilterParam:
+      name: status
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/AppointmentStatusApiEnum'
+
+    DateFromFilterParam:
+      name: dateFrom
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+
+    DateToFilterParam:
+      name: dateTo
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 0
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 20
+
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+
+  # ===========================================================================
+  # SCHEMAS
+  # ===========================================================================
+  schemas:
+
+    # --------------------------------------------------------------------------
+    # REQUEST / RESPONSE
+    # --------------------------------------------------------------------------
+
+    BookAppointmentRequest:
+      type: object
+      required:
+        - patientId
+        - doctorId
+        - clinicId
+        - slotDate
+        - startTime
+        - endTime
+        - patientEmail
+      properties:
+        patientId:
+          type: string
+          description: Business key del paziente (PAT-xx)
+        doctorId:
+          type: string
+          description: Business key del medico (DOC-xx)
+        clinicId:
+          type: string
+          description: Business key della clinica (CLN-xx)
+        slotDate:
+          type: string
+          format: date
+          description: Data dell'appuntamento
+        startTime:
+          type: string
+          description: Ora di inizio slot (HH:mm)
+          example: "09:00"
+        endTime:
+          type: string
+          description: Ora di fine slot (HH:mm)
+          example: "09:30"
+        patientEmail:
+          type: string
+          format: email
+          description: Email del paziente - propagata nell'evento Kafka per notification-dmn
+        patientFirstName:
+          type: string
+          description: Nome del paziente - propagato nell'evento Kafka, non persistito
+        patientLastName:
+          type: string
+          description: Cognome del paziente - propagato nell'evento Kafka, non persistito
+        patientPhone:
+          type: string
+          description: Telefono del paziente - null se SMS non in notificationChannels
+        doctorFirstName:
+          type: string
+          description: Nome del medico - propagato nell'evento Kafka, non persistito
+        doctorLastName:
+          type: string
+          description: Cognome del medico - propagato nell'evento Kafka, non persistito
+        doctorGender:
+          type: string
+          description: Sesso del medico (MASCHILE/FEMMINILE) - usato per il titolo Dott./Dott.ssa
+        specialization:
+          type: string
+          description: Specializzazione per cui e stato prenotato - persistita nell'appuntamento
+        clinicName:
+          type: string
+          description: Nome della clinica - propagato nell'evento Kafka, non persistito
+        clinicAddress:
+          type: string
+          description: Indirizzo della clinica - propagato nell'evento Kafka, non persistito
+        notificationChannels:
+          type: array
+          items:
+            type: string
+          description: Canali di notifica scelti dal paziente (EMAIL, SMS o entrambi)
+        notes:
+          type: string
+          description: Note opzionali del paziente
+
+    CancelAppointmentRequest:
+      type: object
+      required:
+        - cancelledBy
+      properties:
+        cancellationReason:
+          type: string
+          description: Motivo della cancellazione (opzionale)
+        cancelledBy:
+          $ref: '#/components/schemas/CancelledByApiEnum'
+        patientEmail:
+          type: string
+          description: Email del paziente - propagata nell'evento Kafka per notification-dmn
+        patientFirstName:
+          type: string
+          description: Nome del paziente - propagato nell'evento Kafka, non persistito
+        patientLastName:
+          type: string
+          description: Cognome del paziente - propagato nell'evento Kafka, non persistito
+        patientPhone:
+          type: string
+          description: Telefono del paziente - null se SMS non in notificationChannels
+        doctorFirstName:
+          type: string
+          description: Nome del medico - propagato nell'evento Kafka, non persistito
+        doctorLastName:
+          type: string
+          description: Cognome del medico - propagato nell'evento Kafka, non persistito
+        doctorGender:
+          type: string
+          description: Sesso del medico (MASCHILE/FEMMINILE) - usato per il titolo Dott./Dott.ssa
+        specialization:
+          type: string
+          description: Specializzazione per cui e stato prenotato - persistita nell'appuntamento
+        clinicName:
+          type: string
+          description: Nome della clinica - propagato nell'evento Kafka, non persistito
+        clinicAddress:
+          type: string
+          description: Indirizzo della clinica - propagato nell'evento Kafka, non persistito
+        notificationChannels:
+          type: array
+          items:
+            type: string
+          description: Canali di notifica scelti dal paziente (EMAIL, SMS o entrambi)
+
+    AppointmentResponse:
+      type: object
+      properties:
+        appointmentId:
+          type: string
+          description: Business key nel formato APT-{seq}
+        patientId:
+          type: string
+        doctorId:
+          type: string
+        clinicId:
+          type: string
+        slotDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+          description: Ora di inizio slot (HH:mm)
+        endTime:
+          type: string
+          description: Ora di fine slot (HH:mm)
+        bookingDate:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/AppointmentStatusApiEnum'
+        specialization:
+          type: string
+          description: Specializzazione per cui e stato prenotato
+        notes:
+          type: string
+        cancellationReason:
+          type: string
+        cancelledBy:
+          $ref: '#/components/schemas/CancelledByApiEnum'
+
+    AppointmentListOutput:
+      type: object
+      properties:
+        appointments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppointmentResponse'
+        page:
+          $ref: '#/components/schemas/MedBookPageResponse'
+
+    SlotDurationOutput:
+      type: object
+      properties:
+        slotDurationMinutes:
+          type: integer
+          description: Durata in minuti di ogni slot
+
+    # --------------------------------------------------------------------------
+    # ENUMS
+    # --------------------------------------------------------------------------
+
+    AppointmentStatusApiEnum:
+      type: string
+      enum:
+        - PRENOTATO
+        - IN_CORSO
+        - CANCELLATO
+        - COMPLETATO
+        - NON_PRESENTATO
+
+    CancelledByApiEnum:
+      type: string
+      enum:
+        - PAZIENTE
+        - AMMINISTRATORE
+        - RECEPTIONIST
+
+    # --------------------------------------------------------------------------
+    # TIPI CONDIVISI — da medbook-commons (importati via importMappings nel pom.xml)
+    # Le properties qui servono al generator per riconoscere il tipo e applicare
+    # l'importMapping corretto invece di emettere Object.
+    # --------------------------------------------------------------------------
+
+    MedBookApiVoidResponse:
+      type: object
+      description: Risposta base per gli endpoint che non restituiscono payload (PATCH, DELETE).
+      properties:
+        httpStatus:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+
+    MedBookApiResponse:
+      type: object
+      description: Risposta di successo con payload.
+      properties:
+        httpStatus:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        data:
+          description: Payload della risposta
+        page:
+          $ref: '#/components/schemas/MedBookPageResponse'
+
+    MedBookPageResponse:
+      type: object
+      description: Metadati di paginazione standard della piattaforma MedBook.
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+        size:
+          type: integer
+          example: 20
+        number:
+          type: integer
+          example: 0
+        first:
+          type: boolean
+          example: true
+        last:
+          type: boolean
+          example: false
+        empty:
+          type: boolean
+          example: false
+
+    MedBookContext:
+      type: object
+      description: Contesto della richiesta HTTP.
+      properties:
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        username:
+          type: string
+          example: luca.bianchi@medbook.it
+        roles:
+          type: array
+          items:
+            type: string
+        requestTimestamp:
+          type: string
+          format: date-time
+
+    MedBookApiErrorResponse:
+      type: object
+      description: Formato standard delle risposte di errore.
+      properties:
+        httpStatus:
+          type: integer
+          example: 404
+        success:
+          type: boolean
+          example: false
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        errorCode:
+          type: string
+          example: RESOURCE_NOT_FOUND
+        message:
+          description: Messaggio descrittivo dell'errore (stringa o lista di stringhe)
+        path:
+          type: string
+          description: Path dell'endpoint che ha generato l'errore

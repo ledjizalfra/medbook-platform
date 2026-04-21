@@ -1,0 +1,36 @@
+<app-public-navbar />
+
+<div class="page-wrapper">
+
+  <div class="page-header">
+    <h1>Chi siamo</h1>
+  </div>
+
+  <!-- Mission -->
+  <section class="mission-section">
+    <p>
+      MedBook connette pazienti e cliniche private.
+      Niente code al telefono, niente attese.
+      Solo prenotazioni semplici, veloci e confermate.
+    </p>
+    <p class="note">
+      <em>Progetto universitario sviluppato nell'ambito del corso di laurea — Università Telematica Pegaso.</em>
+    </p>
+  </section>
+
+  <!-- Valori -->
+  <section class="values-section">
+    <div class="values-grid">
+      @for (v of values; track v.title) {
+        <div class="value-card">
+          <mat-icon>{{ v.icon }}</mat-icon>
+          <h3>{{ v.title }}</h3>
+          <p>{{ v.desc }}</p>
+        </div>
+      }
+    </div>
+  </section>
+
+</div>
+
+<app-public-footer />

@@ -1,0 +1,74 @@
+<app-public-navbar />
+
+<div class="page-wrapper">
+
+  <div class="page-header">
+    <mat-icon class="header-icon">business</mat-icon>
+    <h1>Porta la tua clinica su MedBook</h1>
+    <p>Unisciti alla piattaforma e ricevi prenotazioni dai pazienti della tua zona.</p>
+  </div>
+
+  <!-- Come funziona per le cliniche -->
+  <mat-card class="info-card">
+    <mat-card-content>
+      <h2 class="card-title">Come funziona</h2>
+      <ol class="step-list">
+        <li>
+          <mat-icon class="step-icon">phone_in_talk</mat-icon>
+          <div>
+            <strong>Contattaci</strong>
+            <p>Chiamaci o scrivici per richiedere l'attivazione della tua struttura sulla piattaforma.</p>
+          </div>
+        </li>
+        <li>
+          <mat-icon class="step-icon">settings</mat-icon>
+          <div>
+            <strong>Attivazione</strong>
+            <p>Il nostro team registra la tua clinica, i tuoi medici e le disponibilita di visita.</p>
+          </div>
+        </li>
+        <li>
+          <mat-icon class="step-icon">event_available</mat-icon>
+          <div>
+            <strong>Sei online</strong>
+            <p>La tua clinica e visibile sulla piattaforma: i pazienti possono trovarti e prenotare visite direttamente online.</p>
+          </div>
+        </li>
+      </ol>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Contattaci -->
+  <mat-card class="contact-card">
+    <mat-card-content>
+      <mat-icon class="contact-icon">support_agent</mat-icon>
+      <h2>Contattaci</h2>
+      <p>Per richiedere l'attivazione della tua clinica su MedBook, contatta il nostro team:</p>
+      <div class="contact-info">
+        <div class="contact-item">
+          <mat-icon>phone</mat-icon>
+          <span>+39 081 123 4567</span>
+        </div>
+        <div class="contact-item">
+          <mat-icon>email</mat-icon>
+          <span>cliniche&#64;medbook.it</span>
+        </div>
+        <div class="contact-item">
+          <mat-icon>schedule</mat-icon>
+          <span>Lun - Ven, 9:00 - 18:00</span>
+        </div>
+      </div>
+      <p class="contact-note">La registrazione delle cliniche e dei medici avviene esclusivamente tramite il nostro team. Non e prevista l'auto-registrazione.</p>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="back-home">
+    <button mat-stroked-button routerLink="/">
+      <mat-icon>home</mat-icon>
+      Torna alla home
+    </button>
+  </div>
+
+</div>
+
+<app-public-footer />

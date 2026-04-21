@@ -1,0 +1,60 @@
+<div class="consent-container">
+
+  <mat-card class="consent-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="consent-icon">verified_user</mat-icon>
+      <mat-card-title>Consensi e Informativa Privacy</mat-card-title>
+      <mat-card-subtitle>Completa la registrazione per accedere alla piattaforma</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+
+      <p class="consent-intro">
+        Prima di poter utilizzare MedBook, e necessario leggere e accettare
+        l'informativa sulla privacy. Il consenso marketing e facoltativo.
+      </p>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+        <div class="consent-section consent-section--required">
+          <mat-checkbox formControlName="privacyConsentAccepted" color="primary">
+            <strong>Accetto l'informativa sulla privacy</strong> (obbligatorio)
+          </mat-checkbox>
+          <p class="consent-detail">
+            Dichiaro di aver letto e compreso l'
+            <a routerLink="/privacy-policy" target="_blank">informativa sulla privacy</a>
+            e acconsento al trattamento dei miei dati personali.
+          </p>
+        </div>
+
+        <div class="consent-section">
+          <mat-checkbox formControlName="marketingConsentAccepted" color="accent">
+            Accetto comunicazioni commerciali e promozionali
+          </mat-checkbox>
+          <p class="consent-detail">
+            Acconsento a ricevere comunicazioni relative a nuovi servizi,
+            aggiornamenti e offerte di MedBook. Potrai modificare questa
+            preferenza in qualsiasi momento dalle impostazioni del profilo.
+          </p>
+        </div>
+
+        <div class="consent-actions">
+          <button
+            mat-flat-button
+            color="primary"
+            type="submit"
+            [disabled]="form.invalid || saving()">
+            @if (saving()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              Accetta e prosegui
+            }
+          </button>
+        </div>
+
+      </form>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>

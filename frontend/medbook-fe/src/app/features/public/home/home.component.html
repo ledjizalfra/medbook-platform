@@ -1,0 +1,121 @@
+<app-public-navbar />
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-content">
+    <h1 class="hero-title">Prenota la tua visita privata</h1>
+    <p class="hero-subtitle">Scegli il medico, scegli l'orario. Senza telefonate.</p>
+    <div class="hero-actions">
+      <button mat-flat-button class="btn-hero-primary" (click)="goToAvailability()">
+        <mat-icon>event_available</mat-icon>
+        Prenota ora
+      </button>
+      <button mat-stroked-button class="btn-hero-secondary" routerLink="/come-funziona">
+        Come funziona
+      </button>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <mat-icon class="hero-icon">local_hospital</mat-icon>
+  </div>
+</section>
+
+<!-- ===== COME FUNZIONA ===== -->
+<section class="steps-section">
+  <div class="section-inner">
+    <h2 class="section-title">Come funziona</h2>
+    <div class="steps-grid">
+      @for (step of steps; track step.title; let i = $index) {
+        <div class="step-card">
+          <div class="step-number">{{ i + 1 }}</div>
+          <mat-icon class="step-icon">{{ step.icon }}</mat-icon>
+          <h3>{{ step.title }}</h3>
+          <p>{{ step.desc }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- ===== SPECIALIZZAZIONI ===== -->
+<section class="specs-section">
+  <div class="section-inner">
+    <h2 class="section-title">Le nostre specializzazioni</h2>
+
+    @if (loadingSpecs()) {
+      <div class="spinner-wrap">
+        <mat-spinner diameter="40" />
+      </div>
+    } @else if (specializations().length === 0) {
+      <p class="empty-msg">Nessuna specializzazione disponibile al momento.</p>
+    } @else {
+      <div class="chips-grid">
+        @for (spec of specializations(); track spec) {
+          <button mat-stroked-button class="spec-chip" (click)="goToAvailabilityWithSpec(spec)">
+            <mat-icon>{{ getSpecIcon(spec) }}</mat-icon>
+            {{ getField(spec, 'name') }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+</section>
+
+<!-- ===== CLINICHE ===== -->
+<section class="clinics-section">
+  <div class="section-inner">
+    <h2 class="section-title">Le nostre cliniche</h2>
+
+    @if (loadingClinics()) {
+      <div class="spinner-wrap">
+        <mat-spinner diameter="40" />
+      </div>
+    } @else if (clinics().length === 0) {
+      <p class="empty-msg">Nessuna clinica disponibile al momento.</p>
+    } @else {
+      <div class="clinics-grid">
+        @for (clinic of clinics(); track clinic) {
+          <mat-card class="clinic-card">
+            <div class="clinic-placeholder-img">
+              <mat-icon>business</mat-icon>
+            </div>
+            <mat-card-content>
+              <h3 class="clinic-name">{{ getField(clinic, 'name') }}</h3>
+              <p class="clinic-city">
+                <mat-icon class="inline-icon">location_on</mat-icon>
+                {{ getField(clinic, 'city') }}
+              </p>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+  </div>
+</section>
+
+<!-- ===== B2B CLINICHE ===== -->
+<section class="b2b-section">
+  <div class="section-inner b2b-inner">
+    <h2>Hai una clinica privata?</h2>
+    <p>Porta la tua struttura su MedBook.
+       Pensiamo noi all'attivazione, tu ricevi le prenotazioni.</p>
+    <button mat-flat-button class="btn-cta" routerLink="/registra-clinica">
+      Registra la tua clinica
+    </button>
+    <p class="b2b-note">La registrazione di cliniche e medici avviene tramite il nostro team.</p>
+  </div>
+</section>
+
+<!-- ===== CTA PAZIENTI — solo per utenti non autenticati ===== -->
+@if (!kc.isLoggedIn()) {
+  <section class="cta-section">
+    <div class="section-inner cta-inner">
+      <h2>Non sei ancora registrato?</h2>
+      <button mat-flat-button class="btn-cta" routerLink="/register">
+        Crea il tuo account
+      </button>
+    </div>
+  </section>
+}
+
+<app-public-footer />

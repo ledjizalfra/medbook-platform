@@ -1,0 +1,2054 @@
+openapi: 3.0.3
+
+# =============================================================================
+# MedBook Platform - BFF API
+# Backend For Frontend - unico punto di ingresso per il frontend Angular.
+# Proxy e orchestratore verso i microservizi di dominio (DMN).
+# =============================================================================
+
+info:
+  title: MedBook - BFF API
+  description: |
+    ## MedBook BFF
+    Unico punto di ingresso del frontend verso il sistema.
+    Orchestra le chiamate ai DMN via Feign client e restituisce risposte aggregate.
+    Non ha database proprio. E' un orchestratore stateless.
+
+    ### Ruoli supportati
+    - ROLE_PATIENT: paziente registrato
+    - ROLE_DOCTOR: medico
+    - ROLE_RECEPTIONIST: addetto alla reception
+    - ROLE_ADMIN: amministratore
+
+  version: 1.0.0
+  contact:
+    name: MedBook Team
+    email: djizalfra@gmail.com
+
+servers:
+  - url: http://localhost:8090
+    description: BFF locale - sviluppo
+
+tags:
+  - name: Patients
+    description: Proxy verso patient-dmn - gestione pazienti
+  - name: Doctors
+    description: Proxy verso doctor-dmn - gestione medici
+  - name: Specializations
+    description: Proxy verso doctor-dmn - catalogo specializzazioni
+  - name: Availabilities
+    description: Proxy verso doctor-dmn - template disponibilita settimanale
+  - name: Clinics
+    description: Proxy verso clinic-dmn - gestione sedi
+  - name: Assignments
+    description: Proxy verso clinic-dmn - assegnazioni medici a sedi
+  - name: Availability
+    description: Ricerca slot disponibili - logica interna BFF
+  - name: Appointments
+    description: Orchestrazione prenotazioni - chiama patient/doctor/clinic/appointment-dmn
+  - name: Notifications
+    description: Proxy verso notification-dmn - registro notifiche
+  - name: NotificationPreferences
+    description: Preferenze di notifica dell'utente autenticato
+
+# =============================================================================
+# ENDPOINTS
+# =============================================================================
+paths:
+
+  # ===========================================================================
+  # PATIENTS
+  # ===========================================================================
+
+  /bff/v1/patients:
+
+    post:
+      tags:
+        - Patients
+      operationId: postCreatePatient
+      summary: Registra un nuovo paziente
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePatientBffRequest'
+      responses:
+        '201':
+          description: Paziente registrato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '422':
+          description: Dati non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    get:
+      tags:
+        - Patients
+      operationId: getAllPatients
+      summary: Lista pazienti con filtri
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: lastName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: city
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: firstName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: fiscalCode
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: phone
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: gender
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: province
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: createdFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: createdTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: updatedFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: updatedTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista pazienti recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /bff/v1/patients/me:
+
+    get:
+      tags:
+        - Patients
+      operationId: getMyPatient
+      summary: Profilo paziente dell'utente autenticato
+      description: |
+        Restituisce il profilo del paziente autenticato.
+        Il patientId viene risolto internamente cercando per lo username (CF per pazienti, email per medici) del claim
+        'preferred_username' nel token JWT - non e' necessario passarlo come parametro.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      responses:
+        '200':
+          description: Profilo paziente trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Profilo paziente non trovato per l'utente autenticato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    patch:
+      tags:
+        - Patients
+      operationId: patchMyPatient
+      summary: Aggiorna il profilo paziente dell'utente autenticato
+      description: |
+        Aggiorna i dati modificabili del profilo paziente autenticato.
+        Il patientId viene risolto internamente - non e' necessario passarlo come parametro.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePatientBffRequest'
+      responses:
+        '200':
+          description: Profilo aggiornato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Profilo paziente non trovato per l'utente autenticato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /bff/v1/patients/{patientId}:
+
+    get:
+      tags:
+        - Patients
+      operationId: getPatientById
+      summary: Dettaglio paziente
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PatientIdPathParam'
+      responses:
+        '200':
+          description: Paziente trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Paziente non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    patch:
+      tags:
+        - Patients
+      operationId: patchUpdatePatient
+      summary: Aggiorna dati paziente
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PatientIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePatientBffRequest'
+      responses:
+        '200':
+          description: Paziente aggiornato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Paziente non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    delete:
+      tags:
+        - Patients
+      operationId: deletePatient
+      summary: Elimina logicamente un paziente
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PatientIdPathParam'
+      responses:
+        '200':
+          description: Paziente eliminato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Paziente non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /bff/v1/patients/{patientId}/restore:
+
+    patch:
+      tags:
+        - Patients
+      operationId: patchRestorePatient
+      summary: Ripristina un paziente eliminato logicamente
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PatientIdPathParam'
+      responses:
+        '200':
+          description: Paziente ripristinato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Paziente non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Il paziente non e cancellato - impossibile ripristinare
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # DOCTORS
+  # ===========================================================================
+
+  /bff/v1/doctors/me:
+
+    get:
+      tags:
+        - Doctors
+      operationId: getMyDoctor
+      summary: Profilo medico dell'utente autenticato
+      description: |
+        Restituisce il profilo del medico autenticato.
+        Il doctorId viene risolto internamente cercando per lo username (CF per pazienti, email per medici) del claim
+        'preferred_username' nel token JWT - non e' necessario passarlo come parametro.
+        Il risultato e' cached in L1 (request scope) e L2 (Caffeine, TTL 60 min).
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      responses:
+        '200':
+          description: Profilo medico trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Profilo medico non trovato per l'utente autenticato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /bff/v1/doctors:
+
+    post:
+      tags:
+        - Doctors
+      operationId: postCreateDoctor
+      summary: Crea un nuovo medico
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDoctorBffRequest'
+      responses:
+        '201':
+          description: Medico creato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '422':
+          description: Dati non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    get:
+      tags:
+        - Doctors
+      operationId: getAllDoctors
+      summary: Lista medici con filtri
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: lastName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: specialization
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: firstName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: phone
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: licenseNumber
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: createdFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: createdTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: updatedFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: updatedTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista medici recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /bff/v1/doctors/{doctorId}:
+
+    get:
+      tags:
+        - Doctors
+      operationId: getDoctorById
+      summary: Dettaglio medico
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdPathParam'
+      responses:
+        '200':
+          description: Medico trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Medico non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    patch:
+      tags:
+        - Doctors
+      operationId: patchUpdateDoctor
+      summary: Aggiorna dati medico
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDoctorBffRequest'
+      responses:
+        '200':
+          description: Medico aggiornato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+
+    delete:
+      tags:
+        - Doctors
+      operationId: deleteDoctor
+      summary: Elimina logicamente un medico
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdPathParam'
+      responses:
+        '200':
+          description: Medico eliminato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+
+  /bff/v1/doctors/{doctorId}/restore:
+
+    patch:
+      tags:
+        - Doctors
+      operationId: patchRestoreDoctor
+      summary: Ripristina un medico eliminato logicamente
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdPathParam'
+      responses:
+        '200':
+          description: Medico ripristinato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Medico non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Il medico non e cancellato - impossibile ripristinare
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # SPECIALIZATIONS
+  # ===========================================================================
+
+  /bff/v1/specializations:
+
+    get:
+      tags:
+        - Specializations
+      operationId: getSpecializations
+      summary: Lista specializzazioni disponibili
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      responses:
+        '200':
+          description: Lista specializzazioni recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  # ===========================================================================
+  # AVAILABILITIES (template per medico)
+  # ===========================================================================
+
+  /bff/v1/doctors/{doctorId}/availabilities:
+
+    post:
+      tags:
+        - Availabilities
+      operationId: postCreateAvailability
+      summary: Aggiunge template di disponibilita al medico
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAvailabilityBffRequest'
+      responses:
+        '201':
+          description: Template creato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '409':
+          description: Template gia esistente per questa combinazione
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    get:
+      tags:
+        - Availabilities
+      operationId: getAllAvailabilities
+      summary: Lista template disponibilita del medico
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdPathParam'
+      responses:
+        '200':
+          description: Lista template recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /bff/v1/doctors/{doctorId}/availabilities/{clinicId}/{dayOfWeek}/{startTime}:
+
+    delete:
+      tags:
+        - Availabilities
+      operationId: deleteAvailability
+      summary: Rimuove logicamente un template di disponibilita
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdPathParam'
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: dayOfWeek
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: startTime
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template eliminato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Template non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /bff/v1/doctors/{doctorId}/availabilities/{clinicId}/{dayOfWeek}/{startTime}/restore:
+
+    patch:
+      tags:
+        - Availabilities
+      operationId: patchRestoreAvailability
+      summary: Ripristina un template di disponibilita eliminato logicamente
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdPathParam'
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: dayOfWeek
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: startTime
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template ripristinato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Template non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Il template non e cancellato - impossibile ripristinare
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # CLINICS
+  # ===========================================================================
+
+  /bff/v1/clinics:
+
+    post:
+      tags:
+        - Clinics
+      operationId: postCreateClinic
+      summary: Crea una nuova sede clinica
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClinicBffRequest'
+      responses:
+        '201':
+          description: Sede creata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+    get:
+      tags:
+        - Clinics
+      operationId: getAllClinics
+      summary: Lista sedi cliniche
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: city
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: province
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: phone
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: address
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: postalCode
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: createdFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: createdTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: updatedFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: updatedTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista sedi recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /bff/v1/clinics/{clinicId}:
+
+    get:
+      tags:
+        - Clinics
+      operationId: getClinicById
+      summary: Dettaglio sede clinica
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+      responses:
+        '200':
+          description: Sede trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Sede non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    patch:
+      tags:
+        - Clinics
+      operationId: patchUpdateClinic
+      summary: Aggiorna dati sede clinica
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClinicBffRequest'
+      responses:
+        '200':
+          description: Sede aggiornata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+
+    delete:
+      tags:
+        - Clinics
+      operationId: deleteClinic
+      summary: Elimina logicamente una sede clinica
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+      responses:
+        '200':
+          description: Sede eliminata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+
+  /bff/v1/clinics/{clinicId}/restore:
+
+    patch:
+      tags:
+        - Clinics
+      operationId: patchRestoreClinic
+      summary: Ripristina una sede clinica eliminata logicamente
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+      responses:
+        '200':
+          description: Sede ripristinata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Sede non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: La sede non e cancellata - impossibile ripristinare
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # ASSIGNMENTS
+  # ===========================================================================
+
+  /bff/v1/clinics/{clinicId}/assignments:
+
+    post:
+      tags:
+        - Assignments
+      operationId: postCreateAssignment
+      summary: Assegna un medico a una sede
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssignmentBffRequest'
+      responses:
+        '201':
+          description: Assegnazione creata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+    get:
+      tags:
+        - Assignments
+      operationId: getAllAssignments
+      summary: Lista assegnazioni medici di una sede
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: doctorId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista assegnazioni recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /bff/v1/clinics/{clinicId}/assignments/{assignmentId}:
+
+    patch:
+      tags:
+        - Assignments
+      operationId: patchUpdateAssignment
+      summary: Aggiorna un'assegnazione
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAssignmentBffRequest'
+      responses:
+        '200':
+          description: Assegnazione aggiornata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+
+    delete:
+      tags:
+        - Assignments
+      operationId: deleteAssignment
+      summary: Rimuove un'assegnazione
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Assegnazione rimossa con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+
+  /bff/v1/clinics/{clinicId}/assignments/{assignmentId}/restore:
+
+    patch:
+      tags:
+        - Assignments
+      operationId: patchRestoreAssignment
+      summary: Ripristina un'assegnazione eliminata logicamente
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Assegnazione ripristinata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Sede o assegnazione non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: L'assegnazione non e cancellata - impossibile ripristinare
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # AVAILABILITY SEARCH (logica BFF)
+  # ===========================================================================
+
+  /bff/v1/availability:
+
+    get:
+      tags:
+        - Availability
+      operationId: getAvailability
+      summary: Ricerca slot disponibili
+      description: |
+        Genera gli slot disponibili nel periodo indicato.
+        Recupera i template da doctor-dmn, genera gli slot in memoria,
+        marca quelli occupati da appointment-dmn, arricchisce con nomi medico e sede.
+        Tutti i filtri sono opzionali tranne dateFrom e dateTo.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - name: clinicId
+          in: query
+          required: false
+          description: Filtra per sede
+          schema:
+            type: string
+        - name: doctorId
+          in: query
+          required: false
+          description: Filtra per medico
+          schema:
+            type: string
+        - name: specialization
+          in: query
+          required: false
+          description: Filtra per specializzazione
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          required: true
+          description: Data di inizio ricerca (inclusa)
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          required: true
+          description: Data di fine ricerca (inclusa)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista slot recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '400':
+          description: Parametri date non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # APPOINTMENTS
+  # ===========================================================================
+
+  /bff/v1/appointments:
+
+    post:
+      tags:
+        - Appointments
+      operationId: postBookAppointment
+      summary: Prenota un appuntamento
+      description: |
+        Orchestrazione completa: recupera dati paziente da JWT, arricchisce con
+        nome medico e sede, chiama appointment-dmn per la prenotazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookBffAppointmentRequest'
+      responses:
+        '201':
+          description: Appuntamento prenotato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '409':
+          description: Slot non disponibile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    get:
+      tags:
+        - Appointments
+      operationId: getListAppointments
+      summary: Lista appuntamenti con filtri
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: patientId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: doctorId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: clinicId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista appuntamenti recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /bff/v1/appointments/{appointmentId}:
+
+    get:
+      tags:
+        - Appointments
+      operationId: getAppointmentById
+      summary: Dettaglio appuntamento
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/AppointmentIdPathParam'
+      responses:
+        '200':
+          description: Appuntamento trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Appuntamento non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /bff/v1/appointments/{appointmentId}/cancel:
+
+    patch:
+      tags:
+        - Appointments
+      operationId: patchCancelAppointment
+      summary: Cancella un appuntamento
+      description: |
+        Cancella un appuntamento. Il ruolo dell'utente autenticato determina
+        il valore di cancelledBy (PAZIENTE, AMMINISTRATORE o RECEPTIONIST).
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/AppointmentIdPathParam'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelBffAppointmentRequest'
+      responses:
+        '200':
+          description: Appuntamento cancellato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Appuntamento non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # NOTIFICATIONS
+  # ===========================================================================
+
+  /bff/v1/notifications:
+
+    get:
+      tags:
+        - Notifications
+      operationId: getListNotifications
+      summary: Lista notifiche con filtri
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: appointmentId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: patientId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: channel
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista notifiche recuperata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /bff/v1/notifications/{notificationId}:
+
+    get:
+      tags:
+        - Notifications
+      operationId: getNotificationById
+      summary: Dettaglio notifica
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: NOT-1
+      responses:
+        '200':
+          description: Notifica trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Notifica non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # NOTIFICATION PREFERENCES
+  # ===========================================================================
+
+  /bff/v1/notification-preferences:
+
+    get:
+      tags:
+        - NotificationPreferences
+      operationId: getMyNotificationPreferences
+      summary: Legge le preferenze di notifica dell'utente autenticato
+      description: |
+        Restituisce le preferenze di notifica dell'utente corrente.
+        Il patientId viene risolto internamente cercando per il codice fiscale del claim 'preferred_username'.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      responses:
+        '200':
+          description: Preferenze trovate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Preferenze non ancora configurate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    patch:
+      tags:
+        - NotificationPreferences
+      operationId: patchMyNotificationPreferences
+      summary: Aggiorna le preferenze di notifica dell'utente autenticato
+      description: |
+        Aggiorna i canali di notifica dell'utente corrente (upsert).
+        Il patientId viene risolto internamente cercando per il codice fiscale del claim 'preferred_username'.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNotificationPreferencesBffRequest'
+      responses:
+        '200':
+          description: Preferenze aggiornate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+
+  # ---------------------------------------------------------------------------
+  # PARAMETRI RIUTILIZZABILI
+  # ---------------------------------------------------------------------------
+  parameters:
+
+    MedBookContextParam:
+      name: X-MedBook-Context
+      in: header
+      required: false
+      description: |
+        Contesto applicativo della richiesta - iniettato da MedBookContextInterceptor.
+        Non viene letto dall'header HTTP: il resolver preleva MedBookContextHolder.get().
+      schema:
+        $ref: '#/components/schemas/MedBookContext'
+
+    PatientIdPathParam:
+      name: patientId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: PAT-1
+
+    DoctorIdPathParam:
+      name: doctorId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: DOC-1
+
+    ClinicIdPathParam:
+      name: clinicId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: CLN-1
+
+    AppointmentIdPathParam:
+      name: appointmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        example: APT-1
+
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+        example: createdAt,desc
+
+  # ---------------------------------------------------------------------------
+  # SCHEMAS
+  # ---------------------------------------------------------------------------
+  schemas:
+
+    # =========================================================================
+    # TIPI CONDIVISI - importati da medbook-commons via importMappings
+    # =========================================================================
+
+    MedBookApiResponse:
+      type: object
+      description: Risposta di successo con payload.
+      properties:
+        httpStatus:
+          type: integer
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+        data:
+          description: Payload della risposta
+        page:
+          $ref: '#/components/schemas/MedBookPageResponse'
+
+    MedBookApiVoidResponse:
+      type: object
+      description: Risposta base per endpoint senza payload.
+      properties:
+        httpStatus:
+          type: integer
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+
+    MedBookApiErrorResponse:
+      type: object
+      description: Formato standard delle risposte di errore.
+      properties:
+        httpStatus:
+          type: integer
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+        errorCode:
+          type: string
+        message:
+          description: Messaggio di errore
+
+    MedBookPageResponse:
+      type: object
+      description: Metadati di paginazione.
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        size:
+          type: integer
+        number:
+          type: integer
+        first:
+          type: boolean
+        last:
+          type: boolean
+        empty:
+          type: boolean
+
+    MedBookContext:
+      type: object
+      description: Contesto della richiesta HTTP.
+      properties:
+        traceId:
+          type: string
+        username:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        requestTimestamp:
+          type: string
+          format: date-time
+
+    # =========================================================================
+    # PATIENT REQUEST
+    # =========================================================================
+
+    CreatePatientBffRequest:
+      type: object
+      description: Dati per la registrazione di un nuovo paziente
+      required:
+        - firstName
+        - lastName
+        - dateOfBirth
+        - gender
+        - email
+        - fiscalCode
+        - consensoPrivacy
+      properties:
+        firstName:
+          type: string
+          example: Mario
+        lastName:
+          type: string
+          example: Rossi
+        dateOfBirth:
+          type: string
+          format: date
+          example: "1990-01-15"
+        fiscalCode:
+          type: string
+          example: RSSMRA90A15H501Z
+        gender:
+          type: string
+          example: MASCHILE
+        email:
+          type: string
+          format: email
+          example: mario.rossi@email.it
+        phone:
+          type: string
+          example: "+393331234567"
+        address:
+          type: string
+          example: Via Roma 12
+        city:
+          type: string
+          example: Napoli
+        postalCode:
+          type: string
+          example: "80100"
+        province:
+          type: string
+          maxLength: 100
+          description: Sigla provincia (2 caratteri, es. TO, MI, NA)
+          example: TO
+        comuneNascita:
+          type: string
+          maxLength: 100
+          description: Comune di nascita (o citta estera per nati fuori Italia)
+        provinciaNascita:
+          type: string
+          maxLength: 100
+          description: Sigla provincia di nascita (o 'EE' per nati all'estero)
+          example: TO
+        regioneNascita:
+          type: string
+          maxLength: 100
+          description: Regione di nascita (o stato estero)
+        consensoPrivacy:
+          type: boolean
+          description: Consenso obbligatorio alla privacy policy e termini di utilizzo
+        consensoCommerciale:
+          type: boolean
+          description: Consenso facoltativo a comunicazioni commerciali
+          default: false
+        consensoProfilazione:
+          type: boolean
+          description: Consenso facoltativo alla profilazione
+          default: false
+        emailEnabled:
+          type: boolean
+          description: true se il canale EMAIL è abilitato
+          example: true
+        smsEnabled:
+          type: boolean
+          description: true se il canale SMS è abilitato
+          example: false
+        password:
+          type: string
+          format: password
+          description: |
+            Password dell'account Keycloak. Presente solo durante la registrazione
+            pubblica del paziente. Non viene mai loggata ne' salvata nel DB MedBook.
+          minLength: 8
+          example: Password1!
+
+    UpdatePatientBffRequest:
+      type: object
+      description: Dati per l'aggiornamento parziale di un paziente
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        province:
+          type: string
+          maxLength: 100
+          description: Sigla provincia (2 caratteri, es. TO, MI, NA)
+          example: TO
+        comuneNascita:
+          type: string
+          description: Comune di nascita (o citta estera per nati fuori Italia)
+        provinciaNascita:
+          type: string
+          maxLength: 100
+          description: Sigla provincia di nascita (o 'EE' per nati all'estero)
+          example: TO
+        regioneNascita:
+          type: string
+          description: Regione di nascita (o stato estero)
+        consensoCommerciale:
+          type: boolean
+          description: Consenso facoltativo a comunicazioni commerciali
+        consensoProfilazione:
+          type: boolean
+          description: Consenso facoltativo alla profilazione
+        status:
+          type: string
+
+    # =========================================================================
+    # DOCTOR REQUEST
+    # =========================================================================
+
+    CreateDoctorBffRequest:
+      type: object
+      description: Dati per la creazione di un nuovo medico
+      required:
+        - firstName
+        - lastName
+        - email
+        - phone
+        - licenseNumber
+      properties:
+        firstName:
+          type: string
+          example: Luca
+        lastName:
+          type: string
+          example: Bianchi
+        dateOfBirth:
+          type: string
+          format: date
+        gender:
+          type: string
+          example: MASCHILE
+        email:
+          type: string
+          format: email
+          example: luca.bianchi@medbook.it
+        phone:
+          type: string
+          example: "+393331234567"
+        licenseNumber:
+          type: string
+          example: RM-12345
+        emailEnabled:
+          type: boolean
+          description: true se il canale EMAIL è abilitato
+          example: true
+        smsEnabled:
+          type: boolean
+          description: true se il canale SMS è abilitato
+          example: false
+
+    UpdateDoctorBffRequest:
+      type: object
+      description: Dati per l'aggiornamento parziale di un medico
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        status:
+          type: string
+
+    # =========================================================================
+    # NOTIFICATION PREFERENCES REQUEST
+    # =========================================================================
+
+    UpdateNotificationPreferencesBffRequest:
+      type: object
+      description: Aggiornamento preferenze di notifica dell'utente autenticato
+      required:
+        - emailEnabled
+        - smsEnabled
+      properties:
+        emailEnabled:
+          type: boolean
+          description: true se il canale EMAIL è abilitato
+          example: true
+        smsEnabled:
+          type: boolean
+          description: true se il canale SMS è abilitato
+          example: false
+
+    # =========================================================================
+    # AVAILABILITY REQUEST
+    # =========================================================================
+
+    CreateAvailabilityBffRequest:
+      type: object
+      description: Template di disponibilita settimanale da creare per il medico
+      required:
+        - availabilities
+      properties:
+        availabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityItemBff'
+
+    AvailabilityItemBff:
+      type: object
+      description: Singolo template di disponibilita da creare
+      required:
+        - clinicId
+        - dayOfWeek
+        - startTime
+        - endTime
+      properties:
+        clinicId:
+          type: string
+          example: CLN-1
+        dayOfWeek:
+          type: string
+          example: LUNEDI
+        startTime:
+          type: string
+          example: "09:00"
+        endTime:
+          type: string
+          example: "13:00"
+
+    # =========================================================================
+    # CLINIC REQUEST
+    # =========================================================================
+
+    CreateClinicBffRequest:
+      type: object
+      description: Dati per la creazione di una nuova sede clinica
+      required:
+        - name
+        - email
+        - phone
+        - address
+        - city
+        - postalCode
+        - province
+        - termsAccepted
+      properties:
+        name:
+          type: string
+          example: MedBook Milano Centro
+        email:
+          type: string
+          format: email
+          example: milano.centro@medbook.it
+        phone:
+          type: string
+          example: "+390212345678"
+        address:
+          type: string
+          example: Via Roma 1
+        city:
+          type: string
+          example: Milano
+        postalCode:
+          type: string
+          example: "20121"
+        province:
+          type: string
+          maxLength: 100
+          description: Sigla provincia (2 caratteri, es. TO, MI, NA)
+          example: TO
+        termsAccepted:
+          type: boolean
+          description: |
+            Conferma accettazione dei Termini di Servizio da parte della clinica.
+            Deve essere true per procedere con la registrazione.
+          example: true
+
+    UpdateClinicBffRequest:
+      type: object
+      description: Dati per l'aggiornamento parziale di una sede clinica
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        province:
+          type: string
+          maxLength: 100
+          description: Sigla provincia (2 caratteri, es. TO, MI, NA)
+          example: TO
+        status:
+          type: string
+
+    # =========================================================================
+    # ASSIGNMENT REQUEST
+    # =========================================================================
+
+    CreateAssignmentBffRequest:
+      type: object
+      description: Dati per l'assegnazione di un medico a una sede
+      required:
+        - doctorId
+        - specialization
+      properties:
+        doctorId:
+          type: string
+          example: DOC-1
+        specialization:
+          type: string
+          example: CARDIOLOGIA
+
+    UpdateAssignmentBffRequest:
+      type: object
+      description: Dati per l'aggiornamento di un'assegnazione
+      properties:
+        specialization:
+          type: string
+        status:
+          type: string
+
+    # =========================================================================
+    # APPOINTMENT REQUEST
+    # =========================================================================
+
+    BookBffAppointmentRequest:
+      type: object
+      description: |
+        Richiesta di prenotazione appuntamento dal frontend al BFF.
+        Il BFF arricchisce la request con i dati paziente/medico/sede prima di
+        chiamare appointment-dmn.
+      required:
+        - doctorId
+        - clinicId
+        - slotDate
+        - startTime
+        - endTime
+      properties:
+        doctorId:
+          type: string
+          description: Business key del medico (DOC-xx)
+          example: DOC-1
+        clinicId:
+          type: string
+          description: Business key della sede (CLN-xx)
+          example: CLN-1
+        slotDate:
+          type: string
+          format: date
+          description: Data dell'appuntamento
+          example: "2026-04-15"
+        startTime:
+          type: string
+          description: Ora di inizio slot (HH:mm)
+          example: "09:00"
+        endTime:
+          type: string
+          description: Ora di fine slot (HH:mm)
+          example: "09:30"
+        specialization:
+          type: string
+          description: Specializzazione richiesta
+          example: CARDIOLOGIA
+        notificationChannels:
+          type: array
+          items:
+            type: string
+          description: Canali di notifica preferiti (EMAIL, SMS o entrambi)
+          example: ["EMAIL"]
+        notes:
+          type: string
+          description: Note opzionali per il medico
+
+    CancelBffAppointmentRequest:
+      type: object
+      description: |
+        Richiesta di cancellazione appuntamento dal frontend al BFF.
+        Il BFF determina il cancelledBy dal ruolo JWT dell'utente autenticato.
+      properties:
+        cancellationReason:
+          type: string
+          description: Motivo della cancellazione (opzionale)
+          example: Impegni improvvisi
+        notificationChannels:
+          type: array
+          items:
+            type: string
+          description: Canali di notifica per avvisare il paziente
+
+    # =========================================================================
+    # SLOT VIEW RESPONSE (logica BFF)
+    # =========================================================================
+
+    SlotViewResponse:
+      type: object
+      description: Slot di disponibilita - generato in memoria dal BFF
+      properties:
+        doctorId:
+          type: string
+          example: DOC-1
+        doctorFullName:
+          type: string
+          example: "Dr. Luca Bianchi"
+        clinicId:
+          type: string
+          example: CLN-1
+        clinicName:
+          type: string
+          example: MedBook Milano Centro
+        clinicCity:
+          type: string
+          description: Citta della sede
+          example: MILANO
+        clinicProvince:
+          type: string
+          description: Provincia della sede
+          example: Milano
+        specialization:
+          type: string
+          example: CARDIOLOGIA
+        slotDate:
+          type: string
+          format: date
+          example: "2026-04-15"
+        startTime:
+          type: string
+          example: "09:00"
+        endTime:
+          type: string
+          example: "09:30"
+        status:
+          type: string
+          enum:
+            - LIBERO
+            - PRENOTATO
+          description: Stato dello slot - LIBERO disponibile, PRENOTATO occupato

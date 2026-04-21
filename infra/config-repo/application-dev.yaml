@@ -1,12 +1,43 @@
+# =============================================================================
+# MedBook Platform — Profilo DEV (ambiente locale)
+#
+# Sovrascrive i default di produzione di application.yaml.
+# Attivo quando spring.profiles.active=dev nei bootstrap dei singoli servizi.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Sicurezza OAuth2 — Keycloak locale per sviluppo
+# ---------------------------------------------------------------------------
 spring:
   security:
     oauth2:
       resourceserver:
         jwt:
-          # Keycloak locale per sviluppo
           issuer-uri: http://localhost:8082/realms/medbook
 
-# config per abilitare il livello logging DEBUG
+  # -------------------------------------------------------------------------
+  # OpenFeign — timeout più generosi in sviluppo (servizi più lenti all'avvio)
+  # -------------------------------------------------------------------------
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 5000
+            read-timeout: 15000
+
+# ---------------------------------------------------------------------------
+# Tracing — 100% sampling in sviluppo per debug completo
+# ---------------------------------------------------------------------------
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
+# ---------------------------------------------------------------------------
+# Logging esteso per debug
+# ---------------------------------------------------------------------------
 logging:
   level:
     it.pegaso.projectwork.medbook: DEBUG
+    org.springframework.cloud.gateway: DEBUG

@@ -1,0 +1,23 @@
+/* ============================================================
+   MedBook — custom login theme
+   Aggiunge il pulsante di ritorno alla landing page
+   senza alterare il layout Keycloak di default.
+   ============================================================ */
+
+.medbook-back-link {
+  display: block;
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.875rem;
+  color: #6c757d;
+  text-decoration: none;
+}
+
+.medbook-back-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+.medbook-back-link::before {
+  content: '← ';
+}

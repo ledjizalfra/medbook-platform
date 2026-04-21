@@ -17,45 +17,32 @@
     <packaging>jar</packaging>
     <name>MedBook - API Gateway</name>
     <description>
-        Edge service — single entry point for all external traffic.
-        Handles routing, JWT validation, rate limiting
-        and client-side load balancing via Spring Cloud LoadBalancer + Eureka.
-        Note: uses Spring WebFlux (reactive) — NOT spring-boot-starter-web.
+        Edge service — punto di ingresso unico per tutto il traffico esterno.
+        Instrada le richieste verso medbook-bff via Spring Cloud Gateway (WebFlux).
+        NON contiene logica di business. NON usa spring-boot-starter-web (servlet).
     </description>
 
     <dependencies>
 
-        <!-- Spring Cloud Gateway — reactive, NOT spring-boot-starter-web -->
+        <!-- Spring Cloud Gateway — WebFlux-based, NON usare spring-boot-starter-web -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-gateway</artifactId>
+            <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
         </dependency>
 
-        <!-- Eureka Client — service discovery for load balancing -->
+        <!-- Eureka Client — risolve lb://medbook-bff via service discovery -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
 
-        <!-- Config Client -->
+        <!-- Config Client — carica la configurazione da config-server -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-config</artifactId>
         </dependency>
 
-        <!-- OAuth2 Resource Server — JWT validation via Keycloak public key -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-        </dependency>
-
-        <!-- Spring Security — reactive security filter chain -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-
-        <!-- Spring Boot Actuator -->
+        <!-- Actuator — health check e info endpoint -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -78,6 +65,10 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <skip>false</skip>
+                    <mainClass>it.pegaso.projectwork.medbook.gateway.ApiGatewayApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>

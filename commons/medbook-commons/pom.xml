@@ -97,6 +97,27 @@
             <artifactId>feign-core</artifactId>
         </dependency>
 
+        <!-- Spring Boot Test — per test unitari nel modulo commons -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Spring Cache — infrastruttura cache condivisa (@EnableCaching, @Cacheable) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Caffeine — provider cache in-memory ad alte prestazioni -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Jackson JSR310 — serializzazione delle date Java 8 -->
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -104,6 +125,93 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Swagger Annotations — per @Schema sui modelli generati da OpenAPI -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Encoder JSON per Logback — usato in produzione per ELK/Kibana -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+        </dependency>
+
     </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- Genera MedBookErrorResponse dalla spec OpenAPI condivisa -->
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-commons-models</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>
+                                ${project.basedir}/src/main/resources/openapi/medbook-commons-api.yaml
+                            </inputSpec>
+                            <generatorName>spring</generatorName>
+                            <!-- Genera solo i modelli — nessuna API/controller -->
+                            <generateApis>false</generateApis>
+                            <generateApiTests>false</generateApiTests>
+                            <generateModelTests>false</generateModelTests>
+                            <generateSupportingFiles>false</generateSupportingFiles>
+                            <!-- Package unico per tutti i modelli condivisi -->
+                            <modelPackage>
+                                it.pegaso.projectwork.medbook.commons.api.model
+                            </modelPackage>
+                            <configOptions>
+                                <useJakartaEe>true</useJakartaEe>
+                                <useSpringBoot3>true</useSpringBoot3>
+                                <dateLibrary>java8-localdatetime</dateLibrary>
+                                <openApiNullable>false</openApiNullable>
+                                <!-- useInheritanceWithComposedSchemas=true → genera Java "extends" da allOf+$ref
+                                     senza questa opzione il generator appiattisce allOf duplicando i campi -->
+                                <useInheritanceWithComposedSchemas>true</useInheritanceWithComposedSchemas>
+                                <!-- false → non genera @JsonTypeInfo/@JsonSubTypes sul parent,
+                                     evita che "responseType" appaia nel JSON delle response -->
+                                <legacyDiscriminatorBehavior>false</legacyDiscriminatorBehavior>
+                                <!-- @SuperBuilder → builder con chain su tutta la gerarchia:
+                                       MedBookApiErrorResponse.builder().httpStatus(404).errorCode("X").build()
+                                     @NoArgsConstructor → costruttore no-arg per il controller:
+                                       new MedBookApiResponse() -->
+                                <additionalModelTypeAnnotations>@lombok.experimental.SuperBuilder @lombok.NoArgsConstructor</additionalModelTypeAnnotations>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Aggiunge le sources generate al classpath di compilazione -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>add-generated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>
+                                    ${project.build.directory}/generated-sources/openapi/src/main/java
+                                </source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
 
 </project>

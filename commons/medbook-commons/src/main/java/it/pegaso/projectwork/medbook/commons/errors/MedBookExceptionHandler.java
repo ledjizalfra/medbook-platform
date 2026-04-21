@@ -2,20 +2,15 @@ package it.pegaso.projectwork.medbook.commons.errors;
 
 import feign.FeignException;
 import feign.RetryableException;
-import it.pegaso.projectwork.medbook.commons.errors.dto.MedBookErrorResponse;
+import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiErrorResponse;
 import it.pegaso.projectwork.medbook.commons.errors.exceptions.MedBookBusinessException;
 import it.pegaso.projectwork.medbook.commons.errors.exceptions.MedBookBusinessValidationException;
 import it.pegaso.projectwork.medbook.commons.errors.exceptions.MedBookNotFoundException;
-import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -29,14 +24,14 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * Handler globale delle eccezioni per tutti i controller REST del progetto MedBook.
  * Gestisce tutte le eccezioni principali: validazione, HTTP, sicurezza,
  * database, client Feign e optimistic locking.
- * Restituisce sempre una risposta nel formato standard ErrorResponseDto.
+ *
+ * Restituisce sempre una risposta nel formato standard MedBookApiErrorResponse.
  */
 @Slf4j
 @RestControllerAdvice
@@ -49,7 +44,7 @@ public class MedBookExceptionHandler {
     // Errori di validazione sui campi del body (@Valid, @NotNull, @Size, ecc.)
     // Restituisce la lista completa degli errori di validazione
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<MedBookErrorResponse> handleValidation(
+    public ResponseEntity<MedBookApiErrorResponse> handleValidation(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
 
         List<String> errors = ex.getBindingResult()
@@ -64,7 +59,7 @@ public class MedBookExceptionHandler {
 
     // Violazioni dei constraint di validazione su @RequestParam e @PathVariable
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<MedBookErrorResponse> handleConstraintViolation(
+    public ResponseEntity<MedBookApiErrorResponse> handleConstraintViolation(
             ConstraintViolationException ex, HttpServletRequest request) {
 
         List<String> errors = ex.getConstraintViolations()
@@ -76,23 +71,13 @@ public class MedBookExceptionHandler {
         return build(MedBookErrorCode.CONSTRAINT_VIOLATION, errors, request);
     }
 
-    // Violazioni dei constraint di validazione su @RequestParam e @PathVariable
-    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
-    public ResponseEntity<MedBookErrorResponse> handleInvalidDataAccessApiUsageException(
-            InvalidDataAccessApiUsageException ex, HttpServletRequest request) {
-
-        log.warn("Invalid Data Access: {}", ex.getMessage());
-        return build(MedBookErrorCode.CONSTRAINT_VIOLATION, ex.getMessage(), request);
-    }
-
-
     // =========================================================================
     // DOMINIO / APPLICAZIONE
     // =========================================================================
 
     // Risorsa non trovata nel database (404)
     @ExceptionHandler(MedBookNotFoundException.class)
-    public ResponseEntity<MedBookErrorResponse> handleResourceNotFound(
+    public ResponseEntity<MedBookApiErrorResponse> handleResourceNotFound(
             MedBookNotFoundException ex, HttpServletRequest request) {
 
         log.warn("Risorsa non trovata: {}", ex.getMessage());
@@ -101,7 +86,7 @@ public class MedBookExceptionHandler {
 
     // Violazione di una regola di business (422)
     @ExceptionHandler(MedBookBusinessException.class)
-    public ResponseEntity<MedBookErrorResponse> handleBusinessException(
+    public ResponseEntity<MedBookApiErrorResponse> handleBusinessException(
             MedBookBusinessException ex, HttpServletRequest request) {
 
         log.warn("Errore di business [{}]: {}", ex.getMedBookErrorCode().name(), ex.getMessage());
@@ -110,7 +95,7 @@ public class MedBookExceptionHandler {
 
     // Validazione di business fallita — restituisce la lista completa degli errori
     @ExceptionHandler(MedBookBusinessValidationException.class)
-    public ResponseEntity<MedBookErrorResponse> handleBusinessValidationException(
+    public ResponseEntity<MedBookApiErrorResponse> handleBusinessValidationException(
             MedBookBusinessValidationException ex, HttpServletRequest request) {
 
         log.warn("Validazione di business fallita: {}", ex.getErrors());
@@ -124,7 +109,7 @@ public class MedBookExceptionHandler {
 
     // Metodo HTTP non supportato (es. POST su endpoint GET)
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<MedBookErrorResponse> handleMethodNotSupported(
+    public ResponseEntity<MedBookApiErrorResponse> handleMethodNotSupported(
             HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
 
         return build(MedBookErrorCode.METHOD_NOT_ALLOWED,
@@ -134,7 +119,7 @@ public class MedBookExceptionHandler {
 
     // Content-Type non supportato (es. XML invece di JSON)
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-    public ResponseEntity<MedBookErrorResponse> handleMediaTypeNotSupported(
+    public ResponseEntity<MedBookApiErrorResponse> handleMediaTypeNotSupported(
             HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
 
         return build(MedBookErrorCode.UNSUPPORTED_MEDIA_TYPE,
@@ -144,7 +129,7 @@ public class MedBookExceptionHandler {
 
     // Endpoint non trovato — URL inesistente (404)
     @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
-    public ResponseEntity<MedBookErrorResponse> handleNoHandlerFound(
+    public ResponseEntity<MedBookApiErrorResponse> handleNoHandlerFound(
             Exception ex, HttpServletRequest request) {
 
         return build(MedBookErrorCode.ENDPOINT_NOT_FOUND,
@@ -154,7 +139,7 @@ public class MedBookExceptionHandler {
 
     // Corpo della request non leggibile o JSON malformato
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<MedBookErrorResponse> handleMessageNotReadable(
+    public ResponseEntity<MedBookApiErrorResponse> handleMessageNotReadable(
             HttpMessageNotReadableException ex, HttpServletRequest request) {
 
         log.warn("Corpo della request non leggibile: {}", ex.getMessage());
@@ -163,7 +148,7 @@ public class MedBookExceptionHandler {
 
     // Parametro obbligatorio mancante nella query string
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<MedBookErrorResponse> handleMissingParameter(
+    public ResponseEntity<MedBookApiErrorResponse> handleMissingParameter(
             MissingServletRequestParameterException ex, HttpServletRequest request) {
 
         return build(MedBookErrorCode.MISSING_PARAMETER,
@@ -173,7 +158,7 @@ public class MedBookExceptionHandler {
 
     // Variabile di path mancante (es. /patients/{id} senza {id})
     @ExceptionHandler(MissingPathVariableException.class)
-    public ResponseEntity<MedBookErrorResponse> handleMissingPathVariable(
+    public ResponseEntity<MedBookApiErrorResponse> handleMissingPathVariable(
             MissingPathVariableException ex, HttpServletRequest request) {
 
         return build(MedBookErrorCode.MISSING_PATH_VARIABLE,
@@ -183,7 +168,7 @@ public class MedBookExceptionHandler {
 
     // Tipo del parametro non corrispondente (es. stringa al posto di Long)
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<MedBookErrorResponse> handleTypeMismatch(
+    public ResponseEntity<MedBookApiErrorResponse> handleTypeMismatch(
             MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
 
         return build(MedBookErrorCode.TYPE_MISMATCH,
@@ -198,7 +183,7 @@ public class MedBookExceptionHandler {
 
     // Token JWT mancante o non valido (401)
     @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<MedBookErrorResponse> handleAuthentication(
+    public ResponseEntity<MedBookApiErrorResponse> handleAuthentication(
             AuthenticationException ex, HttpServletRequest request) {
 
         log.warn("Autenticazione fallita: {}", ex.getMessage());
@@ -207,39 +192,11 @@ public class MedBookExceptionHandler {
 
     // Utente autenticato ma senza i permessi necessari (403)
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<MedBookErrorResponse> handleAccessDenied(
+    public ResponseEntity<MedBookApiErrorResponse> handleAccessDenied(
             AccessDeniedException ex, HttpServletRequest request) {
 
         log.warn("Accesso negato per: {}", request.getRequestURI());
         return build(MedBookErrorCode.ACCESS_DENIED, request);
-    }
-
-
-    // =========================================================================
-    // DATABASE
-    // =========================================================================
-
-    // Violazione vincoli database (UNIQUE, NOT NULL, FK, CHECK)
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<MedBookErrorResponse> handleDataIntegrity(
-            DataIntegrityViolationException ex, HttpServletRequest request) {
-
-        log.warn("Violazione vincolo database: {}", ex.getMostSpecificCause().getMessage());
-        return build(MedBookErrorCode.DATA_INTEGRITY_VIOLATION, request);
-    }
-
-    // Conflitto Optimistic Locking — due utenti modificano lo stesso record contemporaneamente
-    // Fondamentale per la prevenzione del double-booking in appointment-dmn
-    @ExceptionHandler({
-            OptimisticLockException.class,
-            OptimisticLockingFailureException.class,
-            ObjectOptimisticLockingFailureException.class
-    })
-    public ResponseEntity<MedBookErrorResponse> handleOptimisticLocking(
-            Exception ex, HttpServletRequest request) {
-
-        log.warn("Conflitto Optimistic Locking su: {}", request.getRequestURI());
-        return build(MedBookErrorCode.OPTIMISTIC_LOCK_CONFLICT, request);
     }
 
 
@@ -249,7 +206,7 @@ public class MedBookExceptionHandler {
 
     // Errore generico nella chiamata Feign verso un altro DMN
     @ExceptionHandler(FeignException.class)
-    public ResponseEntity<MedBookErrorResponse> handleFeignException(
+    public ResponseEntity<MedBookApiErrorResponse> handleFeignException(
             feign.FeignException ex, HttpServletRequest request) {
 
         log.error("Errore chiamata Feign: status={}, message={}", ex.status(), ex.getMessage());
@@ -258,7 +215,7 @@ public class MedBookExceptionHandler {
 
     // Servizio downstream non raggiungibile
     @ExceptionHandler(RetryableException.class)
-    public ResponseEntity<MedBookErrorResponse> handleFeignRetryable(
+    public ResponseEntity<MedBookApiErrorResponse> handleFeignRetryable(
             feign.RetryableException ex, HttpServletRequest request) {
 
         log.error("Servizio downstream non raggiungibile: {}", ex.getMessage());
@@ -272,7 +229,7 @@ public class MedBookExceptionHandler {
 
     // Eccezione non prevista — ultimo fallback (500)
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<MedBookErrorResponse> handleGeneric(
+    public ResponseEntity<MedBookApiErrorResponse> handleGeneric(
             Exception ex, HttpServletRequest request) {
 
         log.error("Errore non gestito [{}]: {}", ex.getClass().getSimpleName(), ex.getMessage(), ex);
@@ -285,21 +242,21 @@ public class MedBookExceptionHandler {
     // =========================================================================
 
     // Build con messaggio personalizzato
-    private ResponseEntity<MedBookErrorResponse> build(
+    // success, timestamp, traceId sono impostati da MedBookResponseBodyAdvice
+    private ResponseEntity<MedBookApiErrorResponse> build(
             MedBookErrorCode medBookErrorCode, Object message, HttpServletRequest request) {
 
         return ResponseEntity.status(medBookErrorCode.getHttpStatus())
-                .body(MedBookErrorResponse.builder()
+                .body(MedBookApiErrorResponse.builder()
                         .httpStatus(medBookErrorCode.getHttpStatus().value())
                         .errorCode(medBookErrorCode.name())
                         .message(message)
                         .path(request.getRequestURI())
-                        .timestamp(LocalDateTime.now())
                         .build());
     }
 
     // Build con messaggio di default dall'enum
-    private ResponseEntity<MedBookErrorResponse> build(
+    private ResponseEntity<MedBookApiErrorResponse> build(
             MedBookErrorCode medBookErrorCode, HttpServletRequest request) {
 
         return build(medBookErrorCode, medBookErrorCode.getDefaultMessage(), request);

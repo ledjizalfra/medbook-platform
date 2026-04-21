@@ -1,0 +1,138 @@
+<app-medbook-page title="Il mio profilo" [loading]="loading()">
+
+  <!-- Vista sola lettura -->
+  @if (profileData() && !isEditing()) {
+    <mat-card class="profile-card">
+      <mat-card-content>
+
+        <div class="profile-header">
+          <div class="avatar-circle">
+            <mat-icon class="avatar-icon">badge</mat-icon>
+          </div>
+          <div class="profile-header-info">
+            <span class="profile-fullname">
+              {{ fullName }}
+            </span>
+            <span class="profile-id">{{ field('doctorId') }}</span>
+          </div>
+          <button mat-stroked-button color="primary" class="edit-btn" (click)="startEdit()">
+            <mat-icon>edit</mat-icon>
+            Modifica
+          </button>
+        </div>
+
+        <mat-divider class="section-divider" />
+
+        <div class="section-title">Dati professionali</div>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Nome</span>
+            <span class="info-value">{{ field('firstName') }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Cognome</span>
+            <span class="info-value">{{ field('lastName') }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Data di nascita</span>
+            <span class="info-value">
+              {{ profileData()?.['dateOfBirth'] ? ($any(profileData()?.['dateOfBirth']) | date:'dd/MM/yyyy') : '--' }}
+            </span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Sesso</span>
+            <span class="info-value">{{ formatGender(profileData()?.['gender']?.toString()) }}</span>
+          </div>
+          <div class="info-item full-span">
+            <span class="info-label">Numero di licenza</span>
+            <span class="info-value mono">{{ field('licenseNumber') }}</span>
+          </div>
+        </div>
+
+        <mat-divider class="section-divider" />
+
+        <div class="section-title">Contatti</div>
+        <div class="info-grid">
+          <div class="info-item full-span">
+            <span class="info-label">
+              <mat-icon class="inline-icon">email</mat-icon>
+              Email
+            </span>
+            <span class="info-value">{{ field('email') }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">
+              <mat-icon class="inline-icon">phone</mat-icon>
+              Telefono
+            </span>
+            <span class="info-value">{{ field('phone') }}</span>
+          </div>
+        </div>
+
+        <mat-divider class="section-divider" />
+
+        <div class="section-title">Indirizzo</div>
+        <div class="info-grid">
+          <div class="info-item full-span">
+            <span class="info-label">Via / Indirizzo</span>
+            <span class="info-value">{{ field('address') }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Città</span>
+            <span class="info-value">{{ field('city') }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">CAP</span>
+            <span class="info-value">{{ field('postalCode') }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Provincia</span>
+            <span class="info-value">{{ field('province') }}</span>
+          </div>
+        </div>
+
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Modalità modifica -->
+  @if (isEditing()) {
+    <mat-card class="profile-card">
+      <mat-card-content>
+
+        <div class="edit-header">
+          <mat-icon color="primary">edit</mat-icon>
+          <span class="edit-title">Modifica profilo</span>
+          @if (saving()) {
+            <mat-spinner diameter="20" class="saving-spinner" />
+          }
+        </div>
+
+        <mat-divider class="section-divider" />
+
+        <form [formGroup]="editForm" (ngSubmit)="onSubmit()">
+
+          <app-medbook-form [form]="editForm" [groups]="editGroups" />
+
+          <div class="readonly-notice">
+            <mat-icon>info_outline</mat-icon>
+            <span>Email, data di nascita, sesso, numero di licenza e specializzazioni non sono modificabili autonomamente.</span>
+          </div>
+
+          <div class="form-actions">
+            <button mat-button type="button" (click)="cancelEdit()" [disabled]="saving()">
+              Annulla
+            </button>
+            <button mat-flat-button color="primary" type="submit"
+                    [disabled]="editForm.invalid || saving()">
+              <mat-icon>save</mat-icon>
+              {{ saving() ? 'Salvataggio...' : 'Salva modifiche' }}
+            </button>
+          </div>
+
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+</app-medbook-page>

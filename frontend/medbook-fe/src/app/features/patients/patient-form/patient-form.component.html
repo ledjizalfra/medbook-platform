@@ -1,0 +1,147 @@
+<app-medbook-page [title]="pageTitle" [loading]="loading()" (backClick)="goBack()">
+
+  @if (!loading()) {
+    <mat-card>
+      <mat-card-content>
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+          <app-medbook-form [form]="form" [groups]="formGroups">
+
+            <!-- Slot: luogo di nascita (toggle estero + cascata geo) -->
+            <ng-template medbookFormSlot="luogoNascita">
+              <mat-checkbox [checked]="natoEstero()" (change)="onNatoEsteroChange($event.checked)"
+                            class="nato-estero-toggle">
+                Nato/a all'estero
+              </mat-checkbox>
+
+              @if (!natoEstero()) {
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Regione di nascita</mat-label>
+                    <mat-select formControlName="regioneNascita"
+                                (selectionChange)="onRegioneNascitaChange($event.value)">
+                      @for (r of regioniNascita$ | async; track r) {
+                        <mat-option [value]="r">{{ r }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Provincia di nascita</mat-label>
+                    <mat-select formControlName="provinciaNascita"
+                                (selectionChange)="onProvinciaNascitaChange($event.value)">
+                      @for (p of provinceNascita$ | async; track p.sigla) {
+                        <mat-option [value]="p.nome">{{ p.nome | uppercase }} ({{ p.sigla }})</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="third-width">
+                    <mat-label>Comune di nascita</mat-label>
+                    <mat-select formControlName="comuneNascita">
+                      @for (c of comuniNascita$ | async; track c) {
+                        <mat-option [value]="c">{{ c }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+              } @else {
+                <!-- Select paese + testo libero città per nati all'estero -->
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Stato estero di nascita</mat-label>
+                    <mat-select formControlName="regioneNascita">
+                      @for (p of paesi$ | async; track p.codice) {
+                        <mat-option [value]="p.nome">{{ p.nome }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Città estera di nascita</mat-label>
+                    <input matInput formControlName="comuneNascita" placeholder="Es: Parigi" />
+                  </mat-form-field>
+                </div>
+              }
+            </ng-template>
+
+            <!-- Slot: residenza (cascata geo con Observable) -->
+            <ng-template medbookFormSlot="residenza">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Indirizzo</mat-label>
+                <input matInput formControlName="address" />
+              </mat-form-field>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Regione</mat-label>
+                  <mat-select formControlName="regione" (selectionChange)="onRegioneChange($event.value)">
+                    @for (r of regioni$ | async; track r) {
+                      <mat-option [value]="r">{{ r }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Provincia</mat-label>
+                  <mat-select formControlName="province"
+                              (selectionChange)="onProvinciaChange($event.value)">
+                    @for (p of province$ | async; track p.sigla) {
+                      <mat-option [value]="p.nome">{{ p.nome | uppercase }} ({{ p.sigla }})</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>Città</mat-label>
+                  <mat-select formControlName="city"
+                              (selectionChange)="onComuneChange($event.value)">
+                    @for (c of comuni$ | async; track c) {
+                      <mat-option [value]="c">{{ c }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="half-width">
+                  <mat-label>CAP</mat-label>
+                  <input matInput formControlName="postalCode" maxlength="5" />
+                </mat-form-field>
+              </div>
+            </ng-template>
+
+            <!-- Slot: consensi GDPR -->
+            <ng-template medbookFormSlot="consensi">
+              <div class="consent-group">
+                <mat-checkbox formControlName="consensoPrivacy">
+                  Consenso alla Privacy Policy e Termini di utilizzo *
+                </mat-checkbox>
+                @if (form.get('consensoPrivacy')?.touched && form.get('consensoPrivacy')?.hasError('required')) {
+                  <p class="consent-error">Il consenso alla privacy è obbligatorio</p>
+                }
+
+                <mat-checkbox formControlName="consensoCommerciale">
+                  Consenso a comunicazioni commerciali (facoltativo)
+                </mat-checkbox>
+
+                <mat-checkbox formControlName="consensoProfilazione">
+                  Consenso alla profilazione (facoltativo)
+                </mat-checkbox>
+              </div>
+            </ng-template>
+
+          </app-medbook-form>
+
+          <div class="actions">
+            <button mat-button type="button" (click)="goBack()">Annulla</button>
+            <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
+              {{ saving() ? 'Salvataggio...' : 'Salva' }}
+            </button>
+          </div>
+
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+</app-medbook-page>

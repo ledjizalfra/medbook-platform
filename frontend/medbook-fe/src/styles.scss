@@ -1,0 +1,285 @@
+@use '@angular/material' as mat;
+
+// Font — unica fonte di verità in src/styles/_typography.scss
+// Per cambiare i font modifica solo quel file (+ il link Google Fonts in index.html)
+@use './styles/typography' as t;
+
+// Layout — dimensioni form e input centralizzate in src/styles/_layout.scss
+@use './styles/layout';
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: (
+        plain-family: t.$font-stack,
+        brand-family: t.$font-stack,
+        bold-weight: 600,
+        medium-weight: 500,
+        regular-weight: 400,
+      ),
+      density: -1,
+    )
+  );
+}
+
+body {
+  color-scheme: light;
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font-family: var(--font-stack);  // definita da _typography.scss via :root
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  height: 100%;
+}
+
+// Assicura che tutti i componenti Material ereditino il font stack corretto
+* {
+  font-family: inherit;
+}
+
+// =============================================================================
+// Override globale form — design moderno e compatto (_layout.scss per i valori)
+// =============================================================================
+
+// Input e select: altezza ridotta, bordi arrotondati, font compatto
+.mat-mdc-form-field {
+  .mat-mdc-text-field-wrapper {
+    .mat-mdc-form-field-flex {
+      height: var(--medbook-form-field-height);
+      align-items: center;
+    }
+  }
+  .mdc-text-field--outlined .mdc-floating-label,
+  .mat-mdc-input-element,
+  .mat-mdc-select-value {
+    font-size: var(--medbook-form-field-font) !important;
+  }
+  .mdc-text-field--outlined {
+    padding-top: var(--medbook-form-field-padding);
+    padding-bottom: var(--medbook-form-field-padding);
+  }
+  // Bordi arrotondati per design moderno
+  .mdc-notched-outline .mdc-notched-outline__leading {
+    border-radius: var(--medbook-form-field-radius) 0 0 var(--medbook-form-field-radius) !important;
+    width: var(--medbook-form-field-radius) !important;
+  }
+  .mdc-notched-outline .mdc-notched-outline__trailing {
+    border-radius: 0 var(--medbook-form-field-radius) var(--medbook-form-field-radius) 0 !important;
+  }
+}
+
+// Option panel: altezza ridotta e font compatto
+.mat-mdc-option {
+  min-height: 40px !important;
+  font-size: var(--medbook-form-field-font) !important;
+}
+
+// Checkbox: font allineato
+.mat-mdc-checkbox .mdc-form-field {
+  font-size: var(--medbook-form-field-font);
+}
+
+// Messaggi mat-error: taglia centralizzata
+.mat-mdc-form-field .mat-mdc-form-field-error {
+  font-size: var(--medbook-error-font) !important;
+}
+
+// Griglia form riutilizzabile — usata da MedBookForm e nei slot proiettati (ng-template)
+.mb-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), 1fr);
+  gap: 8px 16px;
+  margin-bottom: 4px;
+}
+.mb-cell {
+  grid-column: span var(--span, 1);
+  min-width: 0;
+}
+.mb-field {
+  width: 100%;
+}
+
+// Section label riutilizzabile in tutti i form
+.section-label {
+  margin: 12px 0 8px;
+  font-size: var(--medbook-section-label-font);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--medbook-section-label-color);
+  &:first-child { margin-top: 0; }
+}
+
+// Azioni filtri — riga bottoni sotto la griglia filtri
+.mb-filter-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+// =============================================================================
+// Allineamento width filtri / tabella / paginazione
+// La tabella puo essere piu larga del viewport quando ha molte colonne.
+// Usiamo un wrapper scrollabile per tutta la pagina cosi che filtri,
+// tabella e paginazione abbiano sempre la stessa larghezza.
+// =============================================================================
+.mb-page {
+  // Il contenuto scrollabile contiene sia filtri che tabella
+  overflow-x: auto;
+
+  // Tutti i figli diretti: stessa larghezza minima della tabella
+  > .filter-card,
+  > app-medbook-table,
+  > .action-card,
+  > .preferences-card {
+    min-width: fit-content;
+  }
+
+  .filter-card {
+    margin-bottom: 24px;
+  }
+}
+
+// Errore inline sotto i campi (cross-field) — centralizzato
+.field-error-hint {
+  font-size: var(--medbook-error-font);
+  color: #c62828;
+  margin: -6px 0 6px 0;
+}
+
+// Notice informativa readonly
+.readonly-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--medbook-form-field-radius);
+  background-color: var(--mat-sys-surface-variant, #f5f5f5);
+  color: var(--mat-sys-on-surface-variant);
+  font-size: var(--medbook-error-font);
+  margin: 8px 0 16px;
+  mat-icon { font-size: 1rem; height: 1rem; width: 1rem; flex-shrink: 0; }
+}
+
+// =============================================================================
+// Temi per ruolo — applicati dinamicamente da App tramite classe CSS sul <body>
+// =============================================================================
+
+body.theme-patient {
+  --theme-primary:   #1D9E75;
+  --theme-accent:    #0F6E56;
+  --theme-bg:        #E1F5EE;
+  --theme-bg-badge:  #9FE1CB;
+  --theme-text-dark: #085041;
+  --theme-text-mid:  #0F6E56;
+  background-color:  #E1F5EE;
+}
+
+body.theme-doctor {
+  --theme-primary:   #378ADD;
+  --theme-accent:    #185FA5;
+  --theme-bg:        #E6F1FB;
+  --theme-bg-badge:  #B5D4F4;
+  --theme-text-dark: #0C447C;
+  --theme-text-mid:  #185FA5;
+  background-color:  #E6F1FB;
+}
+
+body.theme-receptionist {
+  --theme-primary:   #BA7517;
+  --theme-accent:    #854F0B;
+  --theme-bg:        #FAEEDA;
+  --theme-bg-badge:  #FAC775;
+  --theme-text-dark: #633806;
+  --theme-text-mid:  #854F0B;
+  background-color:  #FAEEDA;
+}
+
+body.theme-admin {
+  --theme-primary:   #CC3333;
+  --theme-accent:    #A82020;
+  --theme-bg:        #FCECEA;
+  --theme-bg-badge:  #F7BFBB;
+  --theme-text-dark: #5C1010;
+  --theme-text-mid:  #A82020;
+  background-color:  #FCECEA;
+}
+
+body.theme-public {
+  --theme-primary:   #639922;
+  --theme-accent:    #3B6D11;
+  --theme-bg:        #EAF3DE;
+  --theme-bg-badge:  #C0DD97;
+  --theme-text-dark: #173404;
+  --theme-text-mid:  #3B6D11;
+  background-color:  #EAF3DE;
+}
+
+.btn-primary {
+  background-color: var(--theme-primary) !important;
+  color: white !important;
+  &:hover { background-color: var(--theme-accent) !important; }
+}
+
+.role-badge {
+  background-color: var(--theme-bg-badge);
+  color: var(--theme-text-dark);
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+// =============================================================================
+// Stile globale tabelle Material — header colorato + righe zebrate
+// =============================================================================
+
+.mat-mdc-header-row {
+  background-color: var(--theme-primary, #1976d2) !important;
+
+  .mat-mdc-header-cell {
+    color: white !important;
+    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+  }
+}
+
+.mat-mdc-row:nth-child(even) {
+  background-color: var(--theme-bg, #f5f5f5);
+}
+
+.mat-mdc-row:hover {
+  background-color: var(--theme-bg-badge, #e0e0e0) !important;
+}
+
+// Badge di stato riutilizzabile in tutte le tabelle
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &-attivo, &-libero, &-inviata    { background-color: #e8f5e9; color: #2e7d32; }
+  &-inattivo, &-occupato, &-fallita { background-color: #fce4ec; color: #c62828; }
+  &-prenotato                        { background-color: #e3f2fd; color: #1565c0; }
+  &-in_corso                         { background-color: #fff3e0; color: #e65100; }
+  &-in_attesa                        { background-color: #fff8e1; color: #f57f17; }
+  &-eliminato, &-cancellato, &-annullato { background-color: #f5f5f5; color: #757575; }
+  &-non_presentato                   { background-color: #fce4ec; color: #c62828; }
+  &-completato                       { background-color: #e8f5e9; color: #2e7d32; }
+}
+
+.no-data-cell {
+  text-align: center;
+  padding: 32px !important;
+  color: var(--mat-sys-on-surface-variant);
+}

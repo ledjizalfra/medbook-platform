@@ -1,0 +1,139 @@
+<div class="clinic-form-container">
+  <div class="clinic-form-card">
+
+    <div class="card-header">
+      <button mat-button (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Torna alle sedi
+      </button>
+      <h1 class="card-header-title">{{ pageTitle }}</h1>
+    </div>
+
+    <div class="card-body">
+
+      <!-- Riepilogo errori dello step corrente -->
+      @if (stepErrors().length > 0) {
+        <div class="validation-summary" role="alert">
+          <mat-icon>error_outline</mat-icon>
+          <div>
+            <strong>Correggi i seguenti errori per procedere:</strong>
+            <ul>
+              @for (err of stepErrors(); track err) {
+                <li>{{ err }}</li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+
+      <mat-stepper linear #stepper (selectionChange)="onStepChange()">
+
+        <!-- ============================================================ -->
+        <!-- STEP 1: Informazioni generali                               -->
+        <!-- ============================================================ -->
+        <mat-step [stepControl]="step1" label="Informazioni generali">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            Inserisci le informazioni generali della sede clinica.
+          </div>
+
+          <form [formGroup]="step1">
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Nome sede *</mat-label>
+              <input matInput formControlName="name" />
+            </mat-form-field>
+
+            <div class="mb-grid" style="--cols: 2">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Email *</mat-label>
+                <mat-icon matPrefix>email</mat-icon>
+                <input matInput type="email" formControlName="email" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Telefono</mat-label>
+                <mat-icon matPrefix>phone</mat-icon>
+                <input matInput type="tel" formControlName="phone" placeholder="011 123 4567" />
+              </mat-form-field>
+            </div>
+          </form>
+
+          <div class="step-actions">
+            <span></span>
+            <button mat-flat-button color="primary" (click)="validateStep(step1) && stepper.next()">
+              Avanti <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </mat-step>
+
+        <!-- ============================================================ -->
+        <!-- STEP 2: Indirizzo                                           -->
+        <!-- ============================================================ -->
+        <mat-step [stepControl]="step2" label="Indirizzo">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            Inserisci l'indirizzo della sede. La provincia determina la lista dei comuni.
+          </div>
+
+          <form [formGroup]="step2">
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Indirizzo *</mat-label>
+              <input matInput formControlName="address" />
+            </mat-form-field>
+
+            <div class="mb-grid" style="--cols: 3">
+              <app-searchable-select label="Provincia" cssClass="mb-field"
+                [options]="provinceOpts()" [control]="$any(step2.get('province'))"
+                (selectionChange)="onProvinciaChange($event)" />
+              <app-searchable-select label="Comune" cssClass="mb-field"
+                [options]="comuniOpts()" [control]="$any(step2.get('city'))"
+                (selectionChange)="onComuneChange($event)" />
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>CAP</mat-label>
+                <input matInput formControlName="postalCode" maxlength="5" />
+              </mat-form-field>
+            </div>
+          </form>
+
+          <div class="step-actions">
+            <button mat-stroked-button (click)="stepper.previous()">
+              <mat-icon>arrow_back</mat-icon> Indietro
+            </button>
+            <button mat-flat-button color="primary" (click)="validateStep(step2) && stepper.next()">
+              Avanti <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </mat-step>
+
+        <!-- ============================================================ -->
+        <!-- STEP 3: Riepilogo e conferma                                -->
+        <!-- ============================================================ -->
+        <mat-step [stepControl]="step3" label="Riepilogo">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            Verifica i dati inseriti e conferma per salvare la sede.
+          </div>
+
+          <div class="summary-table">
+            @for (item of summaryData; track item.label) {
+              <div class="summary-row">
+                <span class="summary-label">{{ item.label }}</span>
+                <span class="summary-value">{{ item.value }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="step-actions">
+            <button mat-stroked-button (click)="stepper.previous()">
+              <mat-icon>arrow_back</mat-icon> Indietro
+            </button>
+            <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="loading()">
+              @if (loading()) { <mat-spinner diameter="20" /> }
+              {{ loading() ? 'Salvataggio...' : 'Salva' }}
+            </button>
+          </div>
+        </mat-step>
+
+      </mat-stepper>
+    </div>
+  </div>
+</div>

@@ -1,8 +1,10 @@
 package it.pegaso.projectwork.medbook.commons.security.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -18,15 +20,19 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Configurazione Spring Security condivisa da tutti i DMN del progetto MedBook.
- * Configura la validazione del token JWT emesso da Keycloak.
- * Ogni DMN eredita questa configurazione automaticamente importando medbook-commons.
- * Le regole RBAC specifiche del dominio vengono gestite con @PreAuthorize
- * direttamente sui metodi dei controller.
+ * Configurazione Spring Security condivisa da tutti i moduli MedBook.
+ *
+ * Ogni modulo puo' esporre endpoint pubblici (senza JWT) tramite application.yml:
+ *   medbook.security.public-post-endpoints: [/bff/v1/patients]
+ *   medbook.security.public-get-endpoints:  [/bff/v1/some-resource]
+ *
+ * Se non configurate, le liste sono vuote e tutto richiede autenticazione JWT.
+ * Gli altri MS non devono modificare nulla.
  */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@EnableConfigurationProperties(MedBookSecurityProperties.class)
 @ConditionalOnProperty(
         prefix = "medbook.security",
         name = "enabled",
@@ -35,21 +41,40 @@ import java.util.stream.Collectors;
 )
 public class MedBookSecurityConfig {
 
+    private final MedBookSecurityProperties securityProperties;
+
+    public MedBookSecurityConfig(MedBookSecurityProperties securityProperties) {
+        this.securityProperties = securityProperties;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Disabilita CSRF — non necessario per API REST stateless
                 .csrf(AbstractHttpConfigurer::disable)
-                // Sessione stateless — ogni richiesta porta il JWT
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // Regole di autorizzazione
-                .authorizeHttpRequests(auth -> auth
-                        // Actuator health sempre accessibile — usato da Docker e Eureka
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        // Tutte le altre richieste richiedono autenticazione JWT
-                        .anyRequest().authenticated())
-                // Configura JWT validation con Keycloak
+                .authorizeHttpRequests(auth -> {
+                    // Actuator sempre accessibile
+                    auth.requestMatchers("/actuator/health", "/actuator/info").permitAll();
+
+                    // Endpoint GET pubblici configurati per modulo
+                    for (String pattern : securityProperties.getPublicGetEndpoints()) {
+                        auth.requestMatchers(HttpMethod.GET, pattern).permitAll();
+                    }
+
+                    // Endpoint POST pubblici configurati per modulo
+                    for (String pattern : securityProperties.getPublicPostEndpoints()) {
+                        auth.requestMatchers(HttpMethod.POST, pattern).permitAll();
+                    }
+
+                    // Endpoint DELETE pubblici configurati per modulo
+                    for (String pattern : securityProperties.getPublicDeleteEndpoints()) {
+                        auth.requestMatchers(HttpMethod.DELETE, pattern).permitAll();
+                    }
+
+                    // Tutto il resto richiede autenticazione JWT
+                    auth.anyRequest().authenticated();
+                })
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
@@ -57,25 +82,18 @@ public class MedBookSecurityConfig {
     }
 
     /**
-     * Configura la lettura dei ruoli dal token JWT di Keycloak.
-     * Keycloak include i ruoli nel campo realm_access.roles del JWT.
-     * Spring Security di default li cerca in un campo diverso —
-     * questo converter li legge dal posto corretto.
+     * Legge i ruoli dal claim realm_access.roles del token JWT Keycloak.
+     * Necessario perche' Spring Security di default li cerca in un claim diverso.
      */
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
 
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            // Legge realm_access.roles dal token JWT
-            Map<String, Object> realmAccess =
-                    jwt.getClaimAsMap("realm_access");
-
+            Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
             if (realmAccess == null || !realmAccess.containsKey("roles")) {
                 return List.of();
             }
-
-            // Converte i ruoli in GrantedAuthority
             Collection<?> roles = (Collection<?>) realmAccess.get("roles");
             return roles.stream()
                     .map(role -> new SimpleGrantedAuthority(role.toString()))

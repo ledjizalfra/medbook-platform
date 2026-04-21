@@ -1,0 +1,68 @@
+# =============================================================================
+# MedBook Platform — api-gateway
+# Configurazione di bootstrap — caricata prima del config-server
+# =============================================================================
+
+spring:
+  application:
+    name: api-gateway
+  profiles:
+    active: dev
+
+  config:
+    # 'optional:' consente l'avvio anche se il config-server non è raggiungibile.
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8071}
+
+  autoconfigure:
+    exclude:
+      # api-gateway è un edge service WebFlux — esclude la config JPA di commons
+      - it.pegaso.projectwork.medbook.commons.entity.config.MedBookJpaAuditingConfig
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          # CORS globale — allowedOriginPatterns copre dev (localhost:*) e prod (medbook.it)
+          # senza richiedere profili separati. Non usare allowedOrigins: "*" perché
+          # è incompatibile con allowCredentials: true (necessario per il Bearer token).
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOriginPatterns:
+                  - "http://localhost:*"
+                  - "https://medbook.it"
+                  - "https://*.medbook.it"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - PATCH
+                  - DELETE
+                  - OPTIONS
+                allowedHeaders:
+                  - "*"
+                allowCredentials: true
+                maxAge: 3600
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          routes:
+            - id: medbook-bff-route
+              uri: lb://medbook-bff
+              predicates:
+                - Path=/bff/**
+
+server:
+  port: 8080
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8070/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info

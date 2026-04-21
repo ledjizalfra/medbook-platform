@@ -1,0 +1,65 @@
+services:
+
+  # ===========================================================================
+  # Keycloak — Identity Provider
+  # ===========================================================================
+  keycloak:
+    # DEV: usa l'immagine base con il tema montato come volume (nessun rebuild)
+    # PROD: sostituire con l'immagine custom (vedi sezione prod sotto)
+    image: quay.io/keycloak/keycloak:26.0.0
+    container_name: medbook-keycloak
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8082
+      # Abilita la cache dei temi disabilitata in dev per vedere le modifiche senza restart
+      KC_SPI_THEME_STATIC_MAX_AGE: -1
+      KC_SPI_THEME_CACHE_THEMES: "false"
+      KC_SPI_THEME_CACHE_TEMPLATES: "false"
+    ports:
+      - "8082:8082"
+    volumes:
+      # Monta il tema come volume — modifiche visibili immediatamente senza rebuild
+      - ../infra/keycloak/themes/medbook:/opt/keycloak/themes/medbook
+
+  # ===========================================================================
+  # PostgreSQL — Database condiviso (un'istanza, schema per DMN)
+  # ===========================================================================
+  postgres:
+    image: postgres:16
+    container_name: medbook-postgres
+    environment:
+      POSTGRES_USER: medbook
+      POSTGRES_PASSWORD: medbook
+      POSTGRES_DB: medbook
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+
+# =============================================================================
+# PRODUZIONE — sostituire il servizio keycloak con:
+#
+#   keycloak:
+#     build:
+#       context: ../infra/keycloak
+#       dockerfile: Dockerfile
+#     container_name: medbook-keycloak
+#     command: start
+#     environment:
+#       KC_BOOTSTRAP_ADMIN_USERNAME: admin
+#       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+#       KC_HOSTNAME: https://auth.medbook.it
+#       KC_HTTP_ENABLED: "false"
+#       KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/server.crt
+#       KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/server.key
+#     ports:
+#       - "8443:8443"
+#
+# E aggiornare theme.properties:
+#   landingPageUrl=https://medbook.it
+# =============================================================================

@@ -1,0 +1,40 @@
+// Stili patient-form
+// .section-label, .field-error-hint, .readonly-notice sono globali in styles.scss
+
+:host ::ng-deep .mb-page { max-width: var(--medbook-form-max-width); }
+.page-title { font-size: 1.75rem; font-weight: 600; margin-top: 8px; }
+.loading-container { display: flex; justify-content: center; padding: 48px; }
+
+.form-row { display: flex; gap: 16px; }
+.half-width { flex: 1; }
+.third-width { flex: 1; min-width: 130px; }
+.full-width { width: 100%; }
+
+.nato-estero-toggle {
+  display: block;
+  margin-bottom: 10px;
+  font-size: var(--medbook-form-field-font);
+}
+
+.checkbox-group {
+  display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;
+}
+.checkbox-group-label {
+  font-size: var(--medbook-error-font);
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 4px;
+}
+
+.notification-channels {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 4px; flex-wrap: wrap;
+  .channel-label { font-size: var(--medbook-error-font); font-weight: 500; color: var(--mat-sys-on-surface-variant); }
+  .inline-icon { font-size: 0.9rem; height: 0.9rem; width: 0.9rem; vertical-align: middle; margin-right: 2px; }
+  .channel-hint { font-size: var(--medbook-error-font); color: var(--mat-sys-on-surface-variant); font-style: italic; }
+}
+
+.consent-group {
+  display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;
+  .consent-error { font-size: var(--medbook-error-font); color: #c62828; margin: -6px 0 0 32px; }
+}
+
+.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }

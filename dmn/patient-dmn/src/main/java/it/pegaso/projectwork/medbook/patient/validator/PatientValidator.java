@@ -5,7 +5,7 @@ import it.pegaso.projectwork.medbook.patient.validator.dto.ValidationRequest;
 /**
  * Interfacia per la validazione di business dei dati del paziente.
  * Esegue controlli che vanno oltre la validazione standard dei campi
- * (es. unicità email, codice fiscale, ecc.).
+ * (es. unicita email, codice fiscale, ecc.).
  * In caso di errori lancia BusinessValidationException con la lista
  * completa degli errori riscontrati.
  */

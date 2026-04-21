@@ -1,0 +1,115 @@
+<app-medbook-page title="Cerca disponibilità" [loading]="loading()">
+
+  <mat-card class="filter-card">
+    <mat-card-header>
+      <mat-card-title>Filtri di ricerca</mat-card-title>
+      <mat-card-subtitle>Disponibilità nei prossimi 30 giorni</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="filterForm" (ngSubmit)="search()">
+        <app-medbook-form [form]="filterForm" [groups]="filterGroups">
+
+          <!-- Riga 1: Specializzazione (obbligatoria) + Medico -->
+          <ng-template medbookFormSlot="medico">
+            <div class="mb-grid" style="--cols: 2">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Specializzazione *</mat-label>
+                <mat-select formControlName="specialization" (selectionChange)="onSpecializationChange()">
+                  @for (spec of specializations(); track spec) {
+                    <mat-option [value]="spec">{{ spec }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Medico</mat-label>
+                <mat-select formControlName="doctorId" (selectionChange)="onDoctorChange()">
+                  <mat-option value="">Tutti i medici</mat-option>
+                  @for (doctor of filteredDoctors(); track doctor.doctorId) {
+                    <mat-option [value]="doctor.doctorId">{{ doctor.fullName }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+          </ng-template>
+
+          <!-- Riga 2: Sede clinica (provincia → citta → sede) — condizionata da spec + medico -->
+          <ng-template medbookFormSlot="sede">
+            <div class="mb-grid" style="--cols: 3">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Provincia</mat-label>
+                <mat-select formControlName="province" (selectionChange)="onProvinceChange()">
+                  <mat-option value="">Tutte</mat-option>
+                  @for (p of availableProvinces(); track p.value) {
+                    <mat-option [value]="p.value">{{ p.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Città</mat-label>
+                <mat-select formControlName="city" (selectionChange)="onCityChange()">
+                  <mat-option value="">Tutte</mat-option>
+                  @for (c of availableCities(); track c) {
+                    <mat-option [value]="c">{{ c }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Sede</mat-label>
+                <mat-select formControlName="clinicId">
+                  <mat-option value="">Tutte le sedi</mat-option>
+                  @for (clinic of filteredClinics(); track clinic.clinicId) {
+                    <mat-option [value]="clinic.clinicId">
+                      {{ clinic.name }} ({{ clinic.city }})
+                    </mat-option>
+                  }
+                </mat-select>
+                <mat-hint>{{ filteredClinics().length }} sede/i</mat-hint>
+              </mat-form-field>
+            </div>
+          </ng-template>
+
+          <!-- Riga 3: Periodo di ricerca -->
+          <ng-template medbookFormSlot="periodo">
+            <div class="mb-grid" style="--cols: 2">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Data da</mat-label>
+                <input matInput [matDatepicker]="pickerFrom" formControlName="dateFrom"
+                       [min]="today" [max]="maxDate" placeholder="gg/mm/aaaa" />
+                <mat-datepicker-toggle matIconSuffix [for]="pickerFrom" />
+                <mat-datepicker #pickerFrom />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Data a</mat-label>
+                <input matInput [matDatepicker]="pickerTo" formControlName="dateTo"
+                       [min]="today" [max]="maxDate" placeholder="gg/mm/aaaa" />
+                <mat-datepicker-toggle matIconSuffix [for]="pickerTo" />
+                <mat-datepicker #pickerTo />
+              </mat-form-field>
+            </div>
+            <div class="mb-filter-actions">
+              <button mat-flat-button color="primary" type="submit" [disabled]="loading() || filterForm.invalid">
+                <mat-icon>search</mat-icon> Cerca
+              </button>
+              <button mat-button type="button" (click)="resetFilters()">
+                <mat-icon>clear</mat-icon> Azzera
+              </button>
+            </div>
+          </ng-template>
+
+        </app-medbook-form>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <app-medbook-table
+    [columns]="resultColumns"
+    [actions]="resultActions"
+    [data]="results()"
+    [pagination]="{ pageIndex: pageIndex(), pageSize: pageSize(), totalElements: totalElements(), pageSizeOptions: [10, 25, 50] }"
+    emptyMessage="Nessuna disponibilità trovata. Modifica i filtri e riprova."
+    (pageChange)="onPageChange($event)" />
+</app-medbook-page>

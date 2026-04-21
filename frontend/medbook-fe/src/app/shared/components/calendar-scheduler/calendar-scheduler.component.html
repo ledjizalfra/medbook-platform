@@ -1,0 +1,37 @@
+<mat-card class="scheduler">
+
+  <div class="scheduler-header">
+    <div class="nav-controls">
+      <button mat-icon-button (click)="navigate(-1)">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <span class="scheduler-title">{{ title() }}</span>
+      <button mat-icon-button (click)="navigate(1)">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+    <div class="view-controls">
+      <button mat-stroked-button [class.active]="view === 'day'" (click)="setView('day')">Giorno</button>
+      <button mat-stroked-button [class.active]="view === 'week'" (click)="setView('week')">Settimana</button>
+      <button mat-stroked-button [class.active]="view === 'month'" (click)="setView('month')">Mese</button>
+    </div>
+  </div>
+
+  <div class="scheduler-body">
+    @if (visibleSlots().length === 0) {
+      <p class="no-slots">Nessuno slot in questo periodo</p>
+    } @else {
+      <div class="slot-grid">
+        @for (slot of visibleSlots(); track slot.id) {
+          <div [class]="getSlotClass(slot)" (click)="slotClicked.emit(slot)">
+            <span class="slot-time">{{ slot.startTime }} - {{ slot.endTime }}</span>
+            @if (slot.label) {
+              <span class="slot-label">{{ slot.label }}</span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+</mat-card>

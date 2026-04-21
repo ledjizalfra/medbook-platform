@@ -1,0 +1,60 @@
+# =============================================================================
+# MedBook Platform — appointment-dmn
+# =============================================================================
+
+server:
+  port: 8093
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/med_appointment_db?stringtype=unspecified
+    username: ${DB_USERNAME:medbook}
+    password: ${DB_PASSWORD:medbook}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    baseline-on-migrate: false
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
+appointment:
+  slot-duration-minutes: 30
+  max-active-appointments: 10
+  kafka:
+    topic:
+      appointment-booked: medbook.appointment.booked.topic
+      appointment-cancelled: medbook.appointment.cancelled.topic
+      appointment-reminder: medbook.appointment.reminder.topic
+  scheduler:
+    close-day-hour: 23
+    reminder-hour: 15
+
+---
+# =============================================================================
+# appointment-dmn — Profilo DEV
+# =============================================================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true

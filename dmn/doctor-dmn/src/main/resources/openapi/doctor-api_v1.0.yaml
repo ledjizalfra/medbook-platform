@@ -1,0 +1,1836 @@
+openapi: 3.0.3
+
+# =============================================================================
+# MedBook Platform - Doctor API
+# Microservizio di dominio per la gestione dei medici, delle loro
+# specializzazioni mediche e dei template di disponibilita settimanale.
+# =============================================================================
+
+info:
+  title: MedBook - Doctor API
+  description: |
+    ## Doctor API
+    Gestisce il ciclo di vita completo del medico sulla piattaforma MedBook,
+    incluse le specializzazioni mediche e i template di disponibilita settimanale.
+
+    ### Funzionalita principali
+    - Registrazione e gestione del profilo professionale del medico
+    - Gestione delle specializzazioni mediche (un medico puo averne piu di una)
+    - Gestione dei template di disponibilita ricorrente settimanale per sede
+    - Lista paginata e filtrata dei medici
+    - Catalogo delle specializzazioni disponibili (lookup per il FE)
+
+    ### Risorse esposte
+    - **Doctors** - profilo professionale del medico (`DOC-{seq}`)
+    - **DoctorSpecializations** - specializzazioni mediche associate (`SPC-{seq}`)
+    - **Specialization** - catalogo lookup delle specializzazioni disponibili (`SPC-1..SPC-18`)
+    - **Availabilities** - template di disponibilita settimanale (`DAV-{seq}`)
+
+    ### Convenzioni
+    - Tutti gli endpoint richiedono autenticazione JWT
+    - L'ID tecnico interno non viene mai esposto nelle API
+    - Si utilizza la **Business Key** (es. `DOC-1`) come identificatore pubblico
+    - Il soft delete non elimina fisicamente il record dal database
+    - Le risposte di successo sono sempre incapsulate in **MedBookApiResponse** o **MedBookApiVoidResponse**
+    - Le risposte di errore seguono sempre il formato **MedBookApiErrorResponse**
+    - `MedBookContext` e sempre il primo parametro di ogni operazione
+
+    ### Gestione disponibilita
+    La disponibilita del medico e gestita esclusivamente dall'amministrazione
+    su accordo con il medico. Il processo di negoziazione avviene fuori dal sistema.
+    `ROLE_DOCTOR` ha accesso in sola lettura al proprio calendario.
+    `ROLE_RECEPTIONIST` puo gestire le disponibilita dei medici della propria sede.
+
+  version: 1.0.0
+  contact:
+    name: MedBook Team
+    email: djizalfra@gmail.com
+
+servers:
+  - url: http://localhost:8091
+    description: Server di sviluppo locale
+
+tags:
+  - name: Doctors
+    description: Operazioni CRUD sul profilo professionale dei medici
+  - name: DoctorSpecializations
+    description: Gestione delle specializzazioni mediche associate ai medici
+  - name: Specialization
+    description: Catalogo lookup delle specializzazioni mediche disponibili sulla piattaforma
+  - name: DoctorAvailabilities
+    description: Gestione dei template di disponibilita settimanale dei medici per sede e ricerca globale per il BFF
+  - name: DoctorConsent
+    description: Gestione consensi privacy e marketing del medico (first-login flow)
+
+# =============================================================================
+# ENDPOINTS
+# =============================================================================
+paths:
+
+  # ===========================================================================
+  # DOCTORS
+  # ===========================================================================
+
+  /api/v1/doctors:
+
+    # -------------------------------------------------------------------------
+    # Creazione nuovo medico
+    # -------------------------------------------------------------------------
+    post:
+      tags:
+        - Doctors
+      operationId: postCreateDoctor
+      summary: Crea un nuovo medico
+      description: |
+        Registra un nuovo medico sulla piattaforma MedBook.
+        Genera automaticamente la business key nel formato DOC-{seq}.
+        Email e numero di iscrizione all'Ordine dei Medici devono essere univoci nel sistema.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDoctorRequest'
+      responses:
+        '201':
+          description: Medico creato con successo - data contiene CreateDoctorOutput con la business key generata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '400':
+          description: Dati della richiesta non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Email o numero di iscrizione all'Ordine gia esistente nel sistema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Lista paginata dei medici
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - Doctors
+      operationId: getAllDoctors
+      summary: Recupera tutti i medici con paginazione
+      description: |
+        Restituisce la lista paginata dei medici con i campi principali.
+        Supporta filtri per stato, cognome e specializzazione.
+        Supporta ordinamento tramite il parametro sort.
+        Accessibile a ROLE_ADMIN e ROLE_RECEPTIONIST.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/DoctorStatusFilterParam'
+        - $ref: '#/components/parameters/LastNameFilterParam'
+        - $ref: '#/components/parameters/SpecializationFilterParam'
+        - name: firstName
+          in: query
+          required: false
+          description: Filtra per nome del medico (ricerca parziale case-insensitive)
+          schema:
+            type: string
+        - name: email
+          in: query
+          required: false
+          description: Filtra per indirizzo email esatto (case-insensitive)
+          schema:
+            type: string
+            format: email
+        - name: phone
+          in: query
+          required: false
+          description: Filtra per numero di telefono (ricerca parziale)
+          schema:
+            type: string
+        - name: licenseNumber
+          in: query
+          required: false
+          description: Filtra per numero di iscrizione all'Ordine (ricerca parziale)
+          schema:
+            type: string
+        - name: createdFrom
+          in: query
+          required: false
+          description: Filtra per data creazione - da (inclusa)
+          schema:
+            type: string
+            format: date
+        - name: createdTo
+          in: query
+          required: false
+          description: Filtra per data creazione - a (inclusa)
+          schema:
+            type: string
+            format: date
+        - name: updatedFrom
+          in: query
+          required: false
+          description: Filtra per data aggiornamento - da (inclusa)
+          schema:
+            type: string
+            format: date
+        - name: updatedTo
+          in: query
+          required: false
+          description: Filtra per data aggiornamento - a (inclusa)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista medici recuperata con successo - data contiene DoctorListOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /api/v1/doctors/{doctorId}:
+
+    # -------------------------------------------------------------------------
+    # Recupero medico per business key
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - Doctors
+      operationId: getDoctorById
+      summary: Recupera un medico tramite la sua business key
+      description: |
+        Restituisce i dati completi di un medico identificato dalla business key.
+        La business key ha il formato DOC-{seq} (es. DOC-1, DOC-42).
+        ROLE_DOCTOR puo accedere solo al proprio profilo.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+      responses:
+        '200':
+          description: Medico trovato - data contiene DoctorDetailOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Medico non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Aggiornamento parziale medico (PATCH)
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - Doctors
+      operationId: patchUpdateDoctor
+      summary: Aggiorna parzialmente i dati di un medico
+      description: |
+        Aggiorna solo i campi forniti nella richiesta.
+        I campi non inclusi nel body restano invariati.
+        La business key e il numero di iscrizione all'Ordine non possono essere modificati.
+        Se lo stato diventa DISATTIVO, SOSPESO o IN_FERIE, tutte le disponibilita
+        del medico vengono automaticamente impostate a DISATTIVO.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDoctorRequest'
+      responses:
+        '200':
+          description: Medico aggiornato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '400':
+          description: Dati della richiesta non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '404':
+          description: Medico non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Email gia esistente nel sistema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Eliminazione logica medico (soft delete)
+    # -------------------------------------------------------------------------
+    delete:
+      tags:
+        - Doctors
+      operationId: deleteDoctor
+      summary: Elimina logicamente un medico
+      description: |
+        Esegue un soft delete del medico - il record non viene eliminato
+        fisicamente dal database ma viene marcato come cancellato (DELETED = true).
+        Il medico non sara piu visibile nelle ricerche.
+        Tutte le disponibilita del medico vengono automaticamente impostate a DISATTIVO.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+      responses:
+        '200':
+          description: Medico eliminato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Medico non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /api/v1/doctors/{doctorId}/restore:
+
+    # -------------------------------------------------------------------------
+    # Ripristino medico cancellato
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - Doctors
+      operationId: patchRestoreDoctor
+      summary: Ripristina un medico eliminato logicamente
+      description: |
+        Ripristina un medico precedentemente eliminato logicamente.
+        Il record viene riattivato impostando DELETED = false e STATUS = ATTIVO.
+        I dati originali restano intatti - nessuna informazione viene persa.
+        Le disponibilita NON vengono ripristinate automaticamente — vanno
+        riattivate singolarmente se necessario.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+      responses:
+        '200':
+          description: Medico ripristinato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Medico non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Il medico non e cancellato - impossibile ripristinare
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # SPECIALIZATION — Catalogo lookup (tag singolare)
+  # ===========================================================================
+
+  /api/v1/doctors/specializations:
+
+    # -------------------------------------------------------------------------
+    # Lista catalogo specializzazioni (lookup per il FE)
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - Specialization
+      operationId: getSpecializations
+      summary: Recupera il catalogo delle specializzazioni mediche disponibili
+      description: |
+        Restituisce la lista di tutte le specializzazioni mediche disponibili
+        sulla piattaforma MedBook, ordinate alfabeticamente per nome.
+        Usata dal FE per popolare la listbox di selezione.
+        Dati statici gestiti via seed Flyway — nessun endpoint di scrittura.
+        Accessibile a tutti i ruoli autenticati.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      responses:
+        '200':
+          description: Catalogo specializzazioni recuperato con successo - data contiene SpecializationListOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  # ===========================================================================
+  # DOCTOR SPECIALIZATIONS — Associazioni specializzazione-medico
+  # ===========================================================================
+
+  /api/v1/doctors/{doctorId}/specializations:
+
+    # -------------------------------------------------------------------------
+    # Aggiunta specializzazione al medico
+    # -------------------------------------------------------------------------
+    post:
+      tags:
+        - DoctorSpecializations
+      operationId: postCreateDoctorSpecialization
+      summary: Aggiunge una specializzazione medica al medico
+      description: |
+        Associa una specializzazione medica al medico tramite la sua business key
+        nel catalogo (SPECIALIZATION_ID dalla tabella SPECIALIZATIONS).
+        La business key dell'assignment e composta da (doctorId, specializationId).
+        La stessa specializzazione non puo essere registrata due volte per lo stesso medico.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDoctorSpecializationRequest'
+      responses:
+        '201':
+          description: Specializzazione aggiunta con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '400':
+          description: Dati della richiesta non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '404':
+          description: Medico o specializzazione del catalogo non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Il medico ha gia questa specializzazione registrata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Lista specializzazioni del medico
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - DoctorSpecializations
+      operationId: getAllDoctorSpecializations
+      summary: Recupera tutte le specializzazioni di un medico
+      description: |
+        Restituisce la lista di tutte le specializzazioni mediche associate al medico.
+        ROLE_DOCTOR puo accedere solo alle proprie specializzazioni.
+        ROLE_ADMIN e ROLE_RECEPTIONIST possono accedere a quelle di qualsiasi medico.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+      responses:
+        '200':
+          description: Lista specializzazioni recuperata con successo - data contiene DoctorSpecializationListOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Medico non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /api/v1/doctors/{doctorId}/specializations/{specializationId}:
+
+    # -------------------------------------------------------------------------
+    # Aggiornamento specializzazione
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - DoctorSpecializations
+      operationId: patchUpdateDoctorSpecialization
+      summary: Aggiorna una specializzazione del medico
+      description: |
+        Aggiorna i dati di una specializzazione medica del medico.
+        Permette di modificare il flag isPrimary.
+        Un solo record per medico puo avere isPrimary = true.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+        - $ref: '#/components/parameters/SpecializationIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDoctorSpecializationRequest'
+      responses:
+        '200':
+          description: Specializzazione aggiornata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '400':
+          description: Dati della richiesta non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '404':
+          description: Medico o specializzazione non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Eliminazione logica specializzazione
+    # -------------------------------------------------------------------------
+    delete:
+      tags:
+        - DoctorSpecializations
+      operationId: deleteDoctorSpecialization
+      summary: Rimuove una specializzazione dal medico
+      description: |
+        Esegue un soft delete della specializzazione medica del medico.
+        Il record non viene eliminato fisicamente dal database.
+        Non e possibile eliminare l'unica specializzazione rimasta.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+        - $ref: '#/components/parameters/SpecializationIdParam'
+      responses:
+        '200':
+          description: Specializzazione rimossa con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Medico o specializzazione non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Impossibile eliminare l'unica specializzazione del medico
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /api/v1/doctors/{doctorId}/specializations/{specializationId}/restore:
+
+    # -------------------------------------------------------------------------
+    # Ripristino specializzazione cancellata
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - DoctorSpecializations
+      operationId: patchRestoreDoctorSpecialization
+      summary: Ripristina una specializzazione eliminata logicamente
+      description: |
+        Ripristina una specializzazione medica precedentemente eliminata logicamente.
+        Il record viene riattivato impostando DELETED = false.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+        - $ref: '#/components/parameters/SpecializationIdParam'
+      responses:
+        '200':
+          description: Specializzazione ripristinata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Medico o specializzazione non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: La specializzazione non e cancellata - impossibile ripristinare
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # AVAILABILITIES
+  # ===========================================================================
+
+  /api/v1/doctors/{doctorId}/availabilities:
+
+    # -------------------------------------------------------------------------
+    # Creazione template di disponibilita (bulk)
+    # -------------------------------------------------------------------------
+    post:
+      tags:
+        - DoctorAvailabilities
+      operationId: postCreateAvailability
+      summary: Crea uno o piu template di disponibilita settimanale per il medico
+      description: |
+        Registra uno o piu template di disponibilita ricorrente settimanale del medico
+        presso una o piu sedi. La durata dello slot e comune a tutti i template della request.
+        La business key composta e (AVAILABILITY_ID, DOCTOR_ID, CLINIC_ID, DAY_OF_WEEK, START_TIME).
+        Il controllo di unicita applicativo garantisce che non esistano due template con la
+        stessa combinazione (DOCTOR_ID, CLINIC_ID, DAY_OF_WEEK, START_TIME) — un medico puo avere
+        piu slot per lo stesso giorno e sede purche con START_TIME diverso.
+        Se anche un solo template fallisce la validazione, l'intera operazione e annullata (@Transactional).
+        ROLE_ADMIN e ROLE_RECEPTIONIST (propria sede) possono eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAvailabilityRequest'
+      responses:
+        '201':
+          description: Template di disponibilita creati con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '400':
+          description: Dati della richiesta non validi (es. endTime precedente a startTime)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '404':
+          description: Medico non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Il medico ha gia un template per una delle combinazioni sede+giorno+oraInizio fornite
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Lista template di disponibilita del medico
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - DoctorAvailabilities
+      operationId: getAllAvailabilities
+      summary: Recupera tutti i template di disponibilita di un medico
+      description: |
+        Restituisce la lista di tutti i template di disponibilita settimanale del medico.
+        Supporta filtro per sede e giorno della settimana.
+        ROLE_DOCTOR puo accedere solo alle proprie disponibilita.
+        ROLE_ADMIN, ROLE_RECEPTIONIST e BFF possono accedere a quelle di qualsiasi medico.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+        - $ref: '#/components/parameters/ClinicIdFilterParam'
+        - $ref: '#/components/parameters/DayOfWeekFilterParam'
+        - $ref: '#/components/parameters/AvailabilityStatusFilterParam'
+      responses:
+        '200':
+          description: Lista disponibilita recuperata con successo - data contiene AvailabilityListOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Medico non trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /api/v1/doctors/{doctorId}/availabilities/{clinicId}/{dayOfWeek}/{startTime}:
+
+    # -------------------------------------------------------------------------
+    # Aggiornamento template di disponibilita
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - DoctorAvailabilities
+      operationId: patchUpdateAvailability
+      summary: Aggiorna un template di disponibilita del medico
+      description: |
+        Aggiorna i dati di un template di disponibilita settimanale del medico.
+        Il template e identificato dalla business key composta (clinicId, dayOfWeek, startTime).
+        Solo i campi forniti nella richiesta vengono aggiornati (endTime, slotDurationMinutes, status).
+        clinicId, dayOfWeek e startTime sono la business key — non modificabili via PATCH.
+        ROLE_ADMIN e ROLE_RECEPTIONIST (propria sede) possono eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+        - $ref: '#/components/parameters/DayOfWeekPathParam'
+        - $ref: '#/components/parameters/StartTimePathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAvailabilityRequest'
+      responses:
+        '200':
+          description: Template di disponibilita aggiornato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '400':
+          description: Dati della richiesta non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '404':
+          description: Medico o template di disponibilita non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Eliminazione logica template di disponibilita
+    # -------------------------------------------------------------------------
+    delete:
+      tags:
+        - DoctorAvailabilities
+      operationId: deleteAvailability
+      summary: Elimina logicamente un template di disponibilita del medico
+      description: |
+        Esegue un soft delete del template di disponibilita - il record non viene
+        eliminato fisicamente ma viene marcato come cancellato (DELETED = true).
+        Il template e identificato dalla business key composta (clinicId, dayOfWeek, startTime).
+        ROLE_ADMIN e ROLE_RECEPTIONIST (propria sede) possono eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+        - $ref: '#/components/parameters/DayOfWeekPathParam'
+        - $ref: '#/components/parameters/StartTimePathParam'
+      responses:
+        '200':
+          description: Template di disponibilita eliminato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Medico o template di disponibilita non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /api/v1/doctors/{doctorId}/availabilities/{clinicId}/{dayOfWeek}/{startTime}/restore:
+
+    # -------------------------------------------------------------------------
+    # Ripristino template di disponibilita cancellato
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - DoctorAvailabilities
+      operationId: patchRestoreAvailability
+      summary: Ripristina un template di disponibilita eliminato logicamente
+      description: |
+        Ripristina un template di disponibilita precedentemente eliminato logicamente.
+        Il template e identificato dalla business key composta (clinicId, dayOfWeek, startTime).
+        Il record viene riattivato impostando DELETED = false e STATUS = ATTIVO.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdParam'
+        - $ref: '#/components/parameters/ClinicIdPathParam'
+        - $ref: '#/components/parameters/DayOfWeekPathParam'
+        - $ref: '#/components/parameters/StartTimePathParam'
+      responses:
+        '200':
+          description: Template di disponibilita ripristinato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Medico o template di disponibilita non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Il template non e cancellato - impossibile ripristinare
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # ADMIN - Pubblicazione manuale snapshot disponibilita
+  # ===========================================================================
+
+  /api/v1/doctor/availabilities:
+
+    # -------------------------------------------------------------------------
+    # Ricerca globale template disponibilita - usato dal BFF
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - DoctorAvailabilities
+      operationId: getGlobalAvailabilities
+      summary: Ricerca template di disponibilita con filtri globali
+      description: |
+        Restituisce la lista di tutti i template di disponibilita ATTIVI.
+        Filtrabile per sede, medico, specializzazione e giorno della settimana.
+        Tutti i parametri sono opzionali e combinabili.
+        Usato dal BFF durante la ricerca slot disponibili.
+        I filtri sono semanticamente allineati a quelli di GET /appointment/v1/appointments.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/DoctorIdFilterParam'
+        - $ref: '#/components/parameters/ClinicIdFilterParam'
+        - $ref: '#/components/parameters/SpecializationFilterParam'
+        - $ref: '#/components/parameters/DayOfWeekFilterParam'
+      responses:
+        '200':
+          description: Lista template recuperata con successo - data contiene DoctorAvailabilityListOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  # ===========================================================================
+  # DOCTOR CONSENT
+  # ===========================================================================
+
+  /api/v1/doctors/me/consent-status:
+
+    get:
+      tags:
+        - DoctorConsent
+      operationId: getDoctorConsentStatus
+      summary: Recupera lo stato dei consensi del medico autenticato
+      description: |
+        Restituisce lo stato di accettazione dei consensi (privacy e marketing) del medico
+        identificato tramite email. Accessibile a ROLE_DOCTOR.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - name: email
+          in: query
+          required: true
+          description: Email del medico (estratta dal JWT dal BFF)
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Stato consensi recuperato - data contiene DoctorConsentStatusOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Medico non trovato per l'email indicata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /api/v1/doctors/me/consent:
+
+    post:
+      tags:
+        - DoctorConsent
+      operationId: postAcceptDoctorConsent
+      summary: Accettazione consensi al first-login
+      description: |
+        Permette al medico di accettare il consenso privacy obbligatorio e
+        opzionalmente il consenso marketing. Eseguibile una sola volta al first-login.
+        Il campo privacyConsentAccepted deve essere true.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - name: email
+          in: query
+          required: true
+          description: Email del medico (estratta dal JWT dal BFF)
+          schema:
+            type: string
+            format: email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptDoctorConsentRequest'
+      responses:
+        '200':
+          description: Consensi accettati con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '400':
+          description: Il consenso privacy deve essere accettato (true)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '404':
+          description: Medico non trovato per l'email indicata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    patch:
+      tags:
+        - DoctorConsent
+      operationId: patchUpdateDoctorConsent
+      summary: Modifica consensi facoltativi
+      description: |
+        Permette al medico di modificare il consenso marketing.
+        Il consenso privacy non puo essere revocato.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - name: email
+          in: query
+          required: true
+          description: Email del medico (estratta dal JWT dal BFF)
+          schema:
+            type: string
+            format: email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDoctorConsentRequest'
+      responses:
+        '200':
+          description: Consensi aggiornati con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Medico non trovato per l'email indicata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+
+  # ---------------------------------------------------------------------------
+  # PARAMETRI RIUTILIZZABILI
+  # ---------------------------------------------------------------------------
+  parameters:
+
+    MedBookContextParam:
+      name: X-MedBook-Context
+      in: header
+      required: false
+      description: |
+        Contesto applicativo della richiesta - iniettato da MedBookContextInterceptor.
+        Non viene letto dall'header HTTP: il resolver preleva MedBookContextHolder.get().
+      schema:
+        $ref: '#/components/schemas/MedBookContext'
+
+    DoctorIdParam:
+      name: doctorId
+      in: path
+      required: true
+      description: Business key del medico nel formato DOC-{seq} (es. DOC-1)
+      schema:
+        type: string
+        example: DOC-1
+
+    SpecializationIdParam:
+      name: specializationId
+      in: path
+      required: true
+      description: Business key della specializzazione nel catalogo (FK verso SPECIALIZATIONS, es. SPC-1)
+      schema:
+        type: string
+        example: SPC-1
+
+    ClinicIdPathParam:
+      name: clinicId
+      in: path
+      required: true
+      description: Business key della sede nel formato CLN-{seq} — parte della business key composta del template
+      schema:
+        type: string
+        example: CLN-1
+
+    DayOfWeekPathParam:
+      name: dayOfWeek
+      in: path
+      required: true
+      description: Giorno della settimana — parte della business key composta del template
+      schema:
+        $ref: '#/components/schemas/DayOfWeekApiEnum'
+
+    StartTimePathParam:
+      name: startTime
+      in: path
+      required: true
+      description: Ora di inizio nel formato HH:mm — parte della business key composta del template
+      schema:
+        type: string
+        example: "09:00"
+
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Numero di pagina (0-based)
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      description: Numero di elementi per pagina
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      description: Ordinamento nel formato campo,direzione (es. lastName,asc)
+      schema:
+        type: string
+        example: lastName,asc
+
+    DoctorStatusFilterParam:
+      name: status
+      in: query
+      required: false
+      description: Filtra per stato del medico
+      schema:
+        $ref: '#/components/schemas/DoctorStatusApiEnum'
+
+    LastNameFilterParam:
+      name: lastName
+      in: query
+      required: false
+      description: Filtra per cognome (ricerca esatta)
+      schema:
+        type: string
+        example: Bianchi
+
+    SpecializationFilterParam:
+      name: specialization
+      in: query
+      required: false
+      description: Filtra per tipo di specializzazione medica
+      schema:
+        $ref: '#/components/schemas/MedicalSpecializationApiEnum'
+
+    DoctorIdFilterParam:
+      name: doctorId
+      in: query
+      required: false
+      description: Filtra per medico (business key nel formato DOC-{seq})
+      schema:
+        type: string
+        example: DOC-1
+
+    ClinicIdFilterParam:
+      name: clinicId
+      in: query
+      required: false
+      description: Filtra per sede (business key nel formato CLN-{seq})
+      schema:
+        type: string
+        example: CLN-1
+
+    DayOfWeekFilterParam:
+      name: dayOfWeek
+      in: query
+      required: false
+      description: Filtra per giorno della settimana
+      schema:
+        $ref: '#/components/schemas/DayOfWeekApiEnum'
+
+    AvailabilityStatusFilterParam:
+      name: status
+      in: query
+      required: false
+      description: Filtra per stato del template di disponibilita
+      schema:
+        $ref: '#/components/schemas/AvailabilityStatusApiEnum'
+
+  # ---------------------------------------------------------------------------
+  # SCHEMAS
+  # ---------------------------------------------------------------------------
+  schemas:
+
+    # =========================================================================
+    # REQUESTS - Doctors
+    # =========================================================================
+
+    CreateDoctorRequest:
+      type: object
+      description: Dati richiesti per la registrazione di un nuovo medico
+      required:
+        - firstName
+        - lastName
+        - gender
+        - email
+        - phone
+        - licenseNumber
+      properties:
+        firstName:
+          type: string
+          maxLength: 100
+          example: Luca
+        lastName:
+          type: string
+          maxLength: 100
+          example: Bianchi
+        dateOfBirth:
+          type: string
+          format: date
+          example: "1975-06-20"
+        gender:
+          $ref: '#/components/schemas/GenderApiEnum'
+        email:
+          type: string
+          format: email
+          maxLength: 150
+          example: luca.bianchi@medbook.it
+        phone:
+          type: string
+          maxLength: 20
+          example: "+393331234567"
+        licenseNumber:
+          type: string
+          maxLength: 50
+          description: Numero di iscrizione all'Ordine dei Medici - deve essere univoco nel sistema
+          example: RM-12345
+
+    UpdateDoctorRequest:
+      type: object
+      description: |
+        Dati per l'aggiornamento parziale del medico.
+        Solo i campi presenti nella richiesta vengono aggiornati.
+        La business key e il numero di iscrizione all'Ordine non sono modificabili.
+        Se status diventa DISATTIVO, SOSPESO o IN_FERIE, le disponibilita
+        del medico vengono automaticamente disattivate.
+      properties:
+        firstName:
+          type: string
+          maxLength: 100
+          example: Luca
+        lastName:
+          type: string
+          maxLength: 100
+          example: Bianchi
+        dateOfBirth:
+          type: string
+          format: date
+          example: "1975-06-20"
+        email:
+          type: string
+          format: email
+          maxLength: 150
+          example: luca.bianchi@medbook.it
+        phone:
+          type: string
+          maxLength: 20
+          example: "+393331234567"
+        status:
+          $ref: '#/components/schemas/DoctorStatusApiEnum'
+        doctorId:
+          type: string
+          description: |
+            Business key del medico (DOC-{seq}).
+            Non inviare dal client - viene iniettato dal service dalla URL path variable.
+          example: DOC-1
+
+    # =========================================================================
+    # REQUESTS - DoctorSpecializations
+    # =========================================================================
+
+    CreateDoctorSpecializationRequest:
+      type: object
+      description: |
+        Dati richiesti per associare una specializzazione medica al medico.
+        specializationId e la business key della specializzazione nel catalogo
+        (SPC-1..SPC-18 dalla tabella SPECIALIZATIONS).
+      required:
+        - specializationId
+      properties:
+        specializationId:
+          type: string
+          description: Business key della specializzazione nel catalogo (SPC-1..SPC-18)
+          example: SPC-1
+        isPrimary:
+          type: boolean
+          description: |
+            Indica se questa e la specializzazione principale del medico.
+            Un solo record per medico puo avere isPrimary = true.
+            Se non specificato viene impostato a false.
+          default: false
+          example: true
+
+    UpdateDoctorSpecializationRequest:
+      type: object
+      description: |
+        Dati per l'aggiornamento della specializzazione del medico.
+        Solo i campi presenti nella richiesta vengono aggiornati.
+        Permette di modificare solo il flag isPrimary.
+      properties:
+        isPrimary:
+          type: boolean
+          description: |
+            Aggiorna il flag di specializzazione principale.
+            Un solo record per medico puo avere isPrimary = true.
+          example: true
+
+    # =========================================================================
+    # REQUESTS - Availabilities
+    # =========================================================================
+
+    CreateAvailabilityRequest:
+      type: object
+      description: |
+        Richiesta di creazione bulk di template di disponibilita settimanale.
+        Se anche un solo template fallisce la validazione, l'intera operazione
+        viene annullata (@Transactional rollback).
+        La durata degli slot e configurata in appointment-dmn tramite
+        appointment.slot-duration-minutes.
+      required:
+        - availabilities
+      properties:
+        availabilities:
+          type: array
+          minItems: 1
+          description: Lista dei template di disponibilita da creare
+          items:
+            $ref: '#/components/schemas/CreateAvailabilityItem'
+
+    CreateAvailabilityItem:
+      type: object
+      description: |
+        Singolo template di disponibilita settimanale da creare.
+        La combinazione (clinicId, dayOfWeek, startTime) deve essere univoca per il medico.
+      required:
+        - clinicId
+        - dayOfWeek
+        - startTime
+        - endTime
+      properties:
+        clinicId:
+          type: string
+          description: Business key della sede nel formato CLN-{seq}
+          example: CLN-1
+        dayOfWeek:
+          $ref: '#/components/schemas/DayOfWeekApiEnum'
+        startTime:
+          type: string
+          format: time
+          description: Ora di inizio della disponibilita nel formato HH:mm
+          example: "09:00"
+        endTime:
+          type: string
+          format: time
+          description: Ora di fine della disponibilita nel formato HH:mm - deve essere successiva a startTime
+          example: "13:00"
+
+    UpdateAvailabilityRequest:
+      type: object
+      description: |
+        Dati per l'aggiornamento parziale del template di disponibilita.
+        Solo i campi presenti nella richiesta vengono aggiornati.
+        clinicId, dayOfWeek e startTime NON sono modificabili — sono la business key del template
+        e vengono passati come path variables nell'URL.
+      properties:
+        endTime:
+          type: string
+          format: time
+          description: Ora di fine della disponibilita nel formato HH:mm
+          example: "13:00"
+        status:
+          $ref: '#/components/schemas/AvailabilityStatusApiEnum'
+
+    # =========================================================================
+    # OUTPUTS - Doctors
+    # =========================================================================
+
+    CreateDoctorOutput:
+      type: object
+      description: Output della creazione del medico - contiene solo la business key generata
+      properties:
+        doctorId:
+          type: string
+          description: Business key generata nel formato DOC-{seq}
+          example: DOC-1
+
+    DoctorDetailOutput:
+      type: object
+      description: Dati completi del medico - restituiti da GET /doctors/{doctorId}
+      properties:
+        doctorId:
+          type: string
+          example: DOC-1
+        firstName:
+          type: string
+          example: Luca
+        lastName:
+          type: string
+          example: Bianchi
+        dateOfBirth:
+          type: string
+          format: date
+          example: "1975-06-20"
+        gender:
+          $ref: '#/components/schemas/GenderApiEnum'
+        email:
+          type: string
+          example: luca.bianchi@medbook.it
+        phone:
+          type: string
+          example: "+393331234567"
+        licenseNumber:
+          type: string
+          example: RM-12345
+        status:
+          $ref: '#/components/schemas/DoctorStatusApiEnum'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          description: Utente che ha creato il record
+        updatedBy:
+          type: string
+          description: Ultimo utente che ha modificato il record
+        consentStatus:
+          $ref: '#/components/schemas/ConsentStatusApiEnum'
+
+    DoctorItemSummaryOutput:
+      type: object
+      description: Dati sintetici del medico - utilizzato nella lista paginata
+      properties:
+        doctorId:
+          type: string
+          example: DOC-1
+        firstName:
+          type: string
+          example: Luca
+        lastName:
+          type: string
+          example: Bianchi
+        email:
+          type: string
+          example: luca.bianchi@medbook.it
+        licenseNumber:
+          type: string
+          example: RM-12345
+        status:
+          $ref: '#/components/schemas/DoctorStatusApiEnum'
+
+    DoctorListOutput:
+      type: object
+      description: DTO interno del service per la lista paginata dei medici
+      properties:
+        doctors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DoctorDetailOutput'
+        page:
+          $ref: '#/components/schemas/MedBookPageResponse'
+
+    # =========================================================================
+    # OUTPUTS - Specialization catalog
+    # =========================================================================
+
+    SpecializationOutput:
+      type: object
+      description: Voce del catalogo specializzazioni
+      properties:
+        specializationId:
+          type: string
+          description: Business key nel formato SPC-{seq}
+          example: SPC-1
+        name:
+          type: string
+          description: Nome della specializzazione
+          example: CARDIOLOGIA
+
+    SpecializationListOutput:
+      type: object
+      description: Lista del catalogo specializzazioni disponibili sulla piattaforma
+      properties:
+        specializations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecializationOutput'
+
+    # =========================================================================
+    # OUTPUTS - DoctorSpecializations
+    # =========================================================================
+
+    DoctorSpecializationDetailOutput:
+      type: object
+      description: Dati completi di una specializzazione medica associata al medico
+      properties:
+        doctorId:
+          type: string
+          example: DOC-1
+        specializationId:
+          type: string
+          description: Business key della specializzazione nel catalogo (FK verso SPECIALIZATIONS)
+          example: SPC-1
+        specialization:
+          $ref: '#/components/schemas/MedicalSpecializationApiEnum'
+        isPrimary:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DoctorSpecializationListOutput:
+      type: object
+      description: Lista di tutte le specializzazioni del medico
+      properties:
+        specializations:
+          type: array
+          items:
+            $ref: '#/components/schemas/DoctorSpecializationDetailOutput'
+
+    # =========================================================================
+    # OUTPUTS - Availabilities
+    # =========================================================================
+
+    AvailabilityDetailOutput:
+      type: object
+      description: |
+        Dati completi di un template di disponibilita settimanale del medico.
+        La business key composta e (doctorId, clinicId, dayOfWeek, startTime).
+      properties:
+        doctorId:
+          type: string
+          example: DOC-1
+        clinicId:
+          type: string
+          example: CLN-1
+        dayOfWeek:
+          $ref: '#/components/schemas/DayOfWeekApiEnum'
+        startTime:
+          type: string
+          format: time
+          example: "09:00"
+        endTime:
+          type: string
+          format: time
+          example: "13:00"
+        status:
+          $ref: '#/components/schemas/AvailabilityStatusApiEnum'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AvailabilityListOutput:
+      type: object
+      description: Lista di tutti i template di disponibilita del medico
+      properties:
+        availabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityDetailOutput'
+
+    DoctorAvailabilityResponse:
+      type: object
+      description: |
+        Template di disponibilita settimanale arricchito - usato dal BFF per la ricerca slot.
+        Contiene i dati del medico (nome, cognome, genere), la specializzazione e la fascia oraria.
+        Prodotto da una JOIN nativa tra DOCTOR_AVAILABILITIES, DOCTORS e DOCTOR_SPECIALIZATIONS.
+      properties:
+        doctorId:
+          type: string
+          description: Business key del medico nel formato DOC-{seq}
+          example: DOC-1
+        firstName:
+          type: string
+          description: Nome del medico
+          example: Luca
+        lastName:
+          type: string
+          description: Cognome del medico
+          example: Bianchi
+        gender:
+          type: string
+          description: Genere del medico (MASCHILE/FEMMINILE)
+          example: MASCHILE
+        specializationId:
+          type: string
+          description: Business key della specializzazione nel formato SPC-{seq}
+          example: SPC-1
+        specialization:
+          type: string
+          description: Nome della specializzazione (dalla join con DOCTOR_SPECIALIZATIONS)
+          example: CARDIOLOGIA
+        clinicId:
+          type: string
+          description: Business key della sede nel formato CLN-{seq}
+          example: CLN-1
+        dayOfWeek:
+          $ref: '#/components/schemas/DayOfWeekApiEnum'
+        startTime:
+          type: string
+          format: time
+          description: Ora di inizio della disponibilita nel formato HH:mm
+          example: "09:00"
+        endTime:
+          type: string
+          format: time
+          description: Ora di fine della disponibilita nel formato HH:mm
+          example: "13:00"
+
+    DoctorAvailabilityListOutput:
+      type: object
+      description: Lista dei template di disponibilita attivi - usato dal BFF
+      properties:
+        availabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/DoctorAvailabilityResponse'
+
+    # =========================================================================
+    # FILTRI
+    # =========================================================================
+
+    GetAllDoctorsFilter:
+      type: object
+      description: Oggetto di filtro per la ricerca dei medici (uso interno service/repository)
+      properties:
+        status:
+          $ref: '#/components/schemas/DoctorStatusApiEnum'
+        firstName:
+          type: string
+          description: Ricerca parziale case-insensitive sul nome
+          example: Luca
+        lastName:
+          type: string
+          example: Bianchi
+        specialization:
+          $ref: '#/components/schemas/MedicalSpecializationApiEnum'
+        email:
+          type: string
+          format: email
+          description: Filtro per email esatta (case-insensitive)
+          example: luca.bianchi@medbook.it
+        phone:
+          type: string
+          description: Ricerca parziale sul numero di telefono
+          example: "+39333"
+        licenseNumber:
+          type: string
+          description: Ricerca parziale sul numero di iscrizione all'Ordine
+          example: "RM-12345"
+        createdFrom:
+          type: string
+          format: date
+          description: Filtra per data creazione - da (inclusa)
+        createdTo:
+          type: string
+          format: date
+          description: Filtra per data creazione - a (inclusa)
+        updatedFrom:
+          type: string
+          format: date
+          description: Filtra per data aggiornamento - da (inclusa)
+        updatedTo:
+          type: string
+          format: date
+          description: Filtra per data aggiornamento - a (inclusa)
+
+    # =========================================================================
+    # ENUMS
+    # =========================================================================
+
+    GenderApiEnum:
+      type: string
+      enum:
+        - MASCHILE
+        - FEMMINILE
+      description: Genere del medico
+
+    DoctorStatusApiEnum:
+      type: string
+      enum:
+        - ATTIVO
+        - DISATTIVO
+        - SOSPESO
+        - IN_FERIE
+      description: |
+        Stato del ciclo di vita del medico:
+        - ATTIVO: medico operativo
+        - DISATTIVO: medico non piu attivo nella struttura
+        - SOSPESO: medico temporaneamente sospeso
+        - IN_FERIE: medico in ferie o congedo temporaneo
+
+    AvailabilityStatusApiEnum:
+      type: string
+      enum:
+        - ATTIVO
+        - DISATTIVO
+      description: |
+        Stato del template di disponibilita:
+        - ATTIVO: template attivo - gli slot vengono generati da questo template
+        - DISATTIVO: template sospeso - nessun nuovo slot viene generato
+
+    MedicalSpecializationApiEnum:
+      type: string
+      enum:
+        - CARDIOLOGIA
+        - DERMATOLOGIA
+        - ENDOCRINOLOGIA
+        - GASTROENTEROLOGIA
+        - MEDICINA_GENERALE
+        - GINECOLOGIA
+        - MEDICINA_INTERNA
+        - NEUROLOGIA
+        - ONCOLOGIA
+        - OFTALMOLOGIA
+        - ORTOPEDIA
+        - OTORINOLARINGOIATRIA
+        - PEDIATRIA
+        - PSICHIATRIA
+        - PNEUMOLOGIA
+        - RADIOLOGIA
+        - REUMATOLOGIA
+        - UROLOGIA
+      description: Specializzazione medica disponibile sulla piattaforma MedBook
+
+    DayOfWeekApiEnum:
+      type: string
+      enum:
+        - LUNEDI
+        - MARTEDI
+        - MERCOLEDI
+        - GIOVEDI
+        - VENERDI
+        - SABATO
+        - DOMENICA
+      description: Giorno della settimana per il template di disponibilita
+
+    # =========================================================================
+    # TIPI CONDIVISI — da medbook-commons (importati via importMappings)
+    # =========================================================================
+
+    MedBookApiVoidResponse:
+      type: object
+      description: Risposta base per gli endpoint che non restituiscono payload (PATCH, DELETE).
+      properties:
+        httpStatus:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+
+    MedBookApiResponse:
+      type: object
+      description: Risposta di successo con payload.
+      properties:
+        httpStatus:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        data:
+          description: Payload della risposta
+        page:
+          $ref: '#/components/schemas/MedBookPageResponse'
+
+    MedBookPageResponse:
+      type: object
+      description: Metadati di paginazione standard della piattaforma MedBook.
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+        size:
+          type: integer
+          example: 20
+        number:
+          type: integer
+          example: 0
+        first:
+          type: boolean
+          example: true
+        last:
+          type: boolean
+          example: false
+        empty:
+          type: boolean
+          example: false
+
+    MedBookContext:
+      type: object
+      description: Contesto della richiesta HTTP.
+      properties:
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        username:
+          type: string
+          example: luca.bianchi@medbook.it
+        roles:
+          type: array
+          items:
+            type: string
+        requestTimestamp:
+          type: string
+          format: date-time
+
+    MedBookApiErrorResponse:
+      type: object
+      description: Formato standard delle risposte di errore.
+      properties:
+        httpStatus:
+          type: integer
+          example: 404
+        success:
+          type: boolean
+          example: false
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        errorCode:
+          type: string
+          example: RESOURCE_NOT_FOUND
+        message:
+          description: Messaggio descrittivo dell'errore (stringa o lista di stringhe)
+        path:
+          type: string
+          description: Path dell'endpoint che ha generato l'errore
+
+    # =========================================================================
+    # CONSENT SCHEMAS
+    # =========================================================================
+
+    ConsentStatusApiEnum:
+      type: string
+      description: Stato del consenso privacy del medico
+      enum:
+        - PENDING
+        - ACCEPTED
+
+    AcceptDoctorConsentRequest:
+      type: object
+      description: Payload per accettazione consensi al first-login
+      required:
+        - privacyConsentAccepted
+      properties:
+        privacyConsentAccepted:
+          type: boolean
+          description: Consenso privacy obbligatorio - deve essere true
+          example: true
+        marketingConsentAccepted:
+          type: boolean
+          description: Consenso marketing facoltativo
+          example: false
+
+    UpdateDoctorConsentRequest:
+      type: object
+      description: Payload per modifica consensi facoltativi
+      required:
+        - marketingConsentAccepted
+      properties:
+        marketingConsentAccepted:
+          type: boolean
+          description: Consenso marketing facoltativo
+          example: true
+
+    DoctorConsentStatusOutput:
+      type: object
+      description: Stato completo dei consensi del medico
+      properties:
+        consentStatus:
+          $ref: '#/components/schemas/ConsentStatusApiEnum'
+        privacyConsentAccepted:
+          type: boolean
+        privacyConsentAcceptedAt:
+          type: string
+          format: date-time
+        marketingConsentAccepted:
+          type: boolean
+        marketingConsentAcceptedAt:
+          type: string
+          format: date-time

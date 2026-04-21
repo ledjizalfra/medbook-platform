@@ -1,0 +1,1173 @@
+openapi: 3.0.3
+
+# =============================================================================
+# MedBook Platform - Clinic API
+# Microservizio di dominio per la gestione delle sedi
+# e delle assegnazioni medico-sede.
+# =============================================================================
+
+info:
+  title: MedBook - Clinic API
+  description: |
+    ## Clinic API
+    Gestisce le sedi fisiche della rete di poliambulatori MedBook
+    e le assegnazioni dei medici alle sedi.
+
+    ### Risorse esposte
+    - **Clinics** - sedi fisiche della rete (`CLN-{seq}`)
+    - **Assignments** - assegnazioni medico-sede con validita temporale (`ASG-{seq}`)
+
+    ### Convenzioni
+    - Tutti gli endpoint richiedono autenticazione JWT
+    - L'ID tecnico interno non viene mai esposto nelle API
+    - Si utilizza la **Business Key** come identificatore pubblico
+    - Il soft delete non elimina fisicamente il record dal database
+    - Le risposte di successo sono sempre incapsulate in **MedBookApiResponse** o **MedBookApiVoidResponse**
+    - Le risposte di errore seguono sempre il formato **MedBookApiErrorResponse**
+    - `MedBookContext` e sempre il primo parametro di ogni operazione
+
+    ### Visibilita
+    Le sedi sono visibili a tutti gli utenti autenticati.
+    Le assegnazioni medico-sede sono accessibili solo ad ADMIN, RECEPTIONIST e BFF.
+
+  version: 1.0.0
+  contact:
+    name: MedBook Team
+    email: djizalfra@gmail.com
+
+servers:
+  - url: http://localhost:8092
+    description: Server di sviluppo locale
+
+tags:
+  - name: Clinics
+    description: Operazioni CRUD sulle sedi fisiche della rete di poliambulatori
+  - name: Assignments
+    description: Gestione delle assegnazioni medico-sede con validita temporale
+
+# =============================================================================
+# ENDPOINTS
+# =============================================================================
+paths:
+
+  # ===========================================================================
+  # CLINICS
+  # ===========================================================================
+
+  /api/v1/clinics:
+
+    # -------------------------------------------------------------------------
+    # Creazione nuova sede
+    # -------------------------------------------------------------------------
+    post:
+      tags:
+        - Clinics
+      operationId: postCreateClinic
+      summary: Crea una nuova sede
+      description: |
+        Registra una nuova sede nella rete di poliambulatori MedBook.
+        Genera automaticamente la business key nel formato CLN-{seq}.
+        Email deve essere univoca nel sistema.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClinicRequest'
+      responses:
+        '201':
+          description: Sede creata con successo - data contiene CreateClinicOutput con la business key generata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '400':
+          description: Dati della richiesta non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Email gia esistente nel sistema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Lista paginata delle sedi
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - Clinics
+      operationId: getAllClinics
+      summary: Recupera tutte le sedi con paginazione
+      description: |
+        Restituisce la lista paginata delle sedi con i campi principali.
+        Supporta filtri per stato e citta.
+        Accessibile a tutti gli utenti autenticati.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/ClinicStatusFilterParam'
+        - $ref: '#/components/parameters/CityFilterParam'
+        - $ref: '#/components/parameters/NameFilterParam'
+        - $ref: '#/components/parameters/EmailFilterParam'
+        - $ref: '#/components/parameters/ProvinceFilterParam'
+        - $ref: '#/components/parameters/PhoneFilterParam'
+        - $ref: '#/components/parameters/AddressFilterParam'
+        - $ref: '#/components/parameters/PostalCodeFilterParam'
+        - $ref: '#/components/parameters/CreatedFromFilterParam'
+        - $ref: '#/components/parameters/CreatedToFilterParam'
+        - $ref: '#/components/parameters/UpdatedFromFilterParam'
+        - $ref: '#/components/parameters/UpdatedToFilterParam'
+      responses:
+        '200':
+          description: Lista sedi recuperata con successo - data contiene ClinicListOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /api/v1/clinics/{clinicId}:
+
+    # -------------------------------------------------------------------------
+    # Recupero sede per business key
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - Clinics
+      operationId: getClinicById
+      summary: Recupera una sede tramite la sua business key
+      description: |
+        Restituisce i dati completi di una sede identificata dalla business key.
+        La business key ha il formato CLN-{seq} (es. CLN-1, CLN-42).
+        Accessibile a tutti gli utenti autenticati.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdParam'
+      responses:
+        '200':
+          description: Sede trovata - data contiene ClinicDetailOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Sede non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Aggiornamento parziale sede (PATCH)
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - Clinics
+      operationId: patchUpdateClinic
+      summary: Aggiorna parzialmente i dati di una sede
+      description: |
+        Aggiorna solo i campi forniti nella richiesta.
+        I campi non inclusi nel body restano invariati.
+        La business key non puo essere modificata.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClinicRequest'
+      responses:
+        '200':
+          description: Sede aggiornata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '400':
+          description: Dati della richiesta non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '404':
+          description: Sede non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: Email gia esistente nel sistema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Eliminazione logica sede (soft delete)
+    # -------------------------------------------------------------------------
+    delete:
+      tags:
+        - Clinics
+      operationId: deleteClinic
+      summary: Elimina logicamente una sede
+      description: |
+        Esegue un soft delete della sede - il record non viene eliminato
+        fisicamente dal database ma viene marcato come cancellato (DELETED = true).
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdParam'
+      responses:
+        '200':
+          description: Sede eliminata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Sede non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /api/v1/clinics/{clinicId}/restore:
+
+    # -------------------------------------------------------------------------
+    # Ripristino sede cancellata
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - Clinics
+      operationId: patchRestoreClinic
+      summary: Ripristina una sede eliminata logicamente
+      description: |
+        Ripristina una sede precedentemente eliminata logicamente.
+        Il record viene riattivato impostando DELETED = false e STATUS = ATTIVO.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdParam'
+      responses:
+        '200':
+          description: Sede ripristinata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Sede non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: La sede non e cancellata - impossibile ripristinare
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  # ===========================================================================
+  # ASSIGNMENTS
+  # ===========================================================================
+
+  /api/v1/clinics/{clinicId}/assignments:
+
+    # -------------------------------------------------------------------------
+    # Creazione nuova assegnazione medico-sede
+    # -------------------------------------------------------------------------
+    post:
+      tags:
+        - Assignments
+      operationId: postCreateAssignment
+      summary: Assegna un medico a una sede
+      description: |
+        Crea una nuova assegnazione medico-sede con validita temporale.
+        Genera automaticamente la business key nel formato ASG-{seq}.
+        La tabella e storicizzata - piu assegnazioni per la stessa coppia
+        DOCTOR_ID/CLINIC_ID sono ammesse in periodi diversi.
+        DOCTOR_ID e una FK cross-service verso doctor-dmn.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssignmentRequest'
+      responses:
+        '201':
+          description: Assegnazione creata con successo - data contiene CreateAssignmentOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '400':
+          description: Dati della richiesta non validi (es. validTo precedente a validFrom)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '404':
+          description: Sede non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Lista assegnazioni della sede
+    # -------------------------------------------------------------------------
+    get:
+      tags:
+        - Assignments
+      operationId: getAllAssignments
+      summary: Recupera tutte le assegnazioni di una sede
+      description: |
+        Restituisce la lista di tutte le assegnazioni medico-sede.
+        Supporta filtro per medico e stato.
+        Accessibile a ROLE_ADMIN, ROLE_RECEPTIONIST (propria sede) e BFF.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdParam'
+        - $ref: '#/components/parameters/DoctorIdFilterParam'
+        - $ref: '#/components/parameters/AssignmentStatusFilterParam'
+      responses:
+        '200':
+          description: Lista assegnazioni recuperata con successo - data contiene AssignmentListOutput
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+        '404':
+          description: Sede non trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /api/v1/clinics/{clinicId}/assignments/{assignmentId}:
+
+    # -------------------------------------------------------------------------
+    # Aggiornamento assegnazione
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - Assignments
+      operationId: patchUpdateAssignment
+      summary: Aggiorna un'assegnazione medico-sede
+      description: |
+        Aggiorna i dati di un'assegnazione medico-sede.
+        Tipicamente usato per impostare la data di fine (validTo)
+        quando il medico lascia la sede.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdParam'
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAssignmentRequest'
+      responses:
+        '200':
+          description: Assegnazione aggiornata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '400':
+          description: Dati della richiesta non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '404':
+          description: Sede o assegnazione non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+    # -------------------------------------------------------------------------
+    # Eliminazione logica assegnazione
+    # -------------------------------------------------------------------------
+    delete:
+      tags:
+        - Assignments
+      operationId: deleteAssignment
+      summary: Termina un'assegnazione medico-sede
+      description: |
+        Esegue un soft delete dell'assegnazione - il record non viene eliminato
+        fisicamente ma viene marcato come cancellato (DELETED = true).
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdParam'
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Assegnazione terminata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Sede o assegnazione non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+  /api/v1/clinics/{clinicId}/assignments/{assignmentId}/restore:
+
+    # -------------------------------------------------------------------------
+    # Ripristino assegnazione cancellata
+    # -------------------------------------------------------------------------
+    patch:
+      tags:
+        - Assignments
+      operationId: patchRestoreAssignment
+      summary: Ripristina un'assegnazione eliminata logicamente
+      description: |
+        Ripristina un'assegnazione precedentemente eliminata logicamente.
+        Il record viene riattivato impostando DELETED = false e STATUS = ATTIVO.
+        Solo ROLE_ADMIN puo eseguire questa operazione.
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/ClinicIdParam'
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Assegnazione ripristinata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+        '404':
+          description: Sede o assegnazione non trovati
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+        '409':
+          description: L'assegnazione non e cancellata - impossibile ripristinare
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiErrorResponse'
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+
+  # ---------------------------------------------------------------------------
+  # PARAMETRI RIUTILIZZABILI
+  # ---------------------------------------------------------------------------
+  parameters:
+
+    # -------------------------------------------------------------------------
+    # Contesto applicativo - iniettato automaticamente da MedBookContextInterceptor
+    # tramite MedBookContextHandlerMethodArgumentResolver (BeanPostProcessor position 0)
+    # -------------------------------------------------------------------------
+    MedBookContextParam:
+      name: X-MedBook-Context
+      in: header
+      required: false
+      description: |
+        Contesto applicativo della richiesta - iniettato da MedBookContextInterceptor.
+        Non viene letto dall'header HTTP: il resolver preleva MedBookContextHolder.get().
+      schema:
+        $ref: '#/components/schemas/MedBookContext'
+
+    # -------------------------------------------------------------------------
+    # Business key sede - riutilizzato in GET, PATCH, DELETE e sub-risorse
+    # -------------------------------------------------------------------------
+    ClinicIdParam:
+      name: clinicId
+      in: path
+      required: true
+      description: Business key della sede nel formato CLN-{seq} (es. CLN-1)
+      schema:
+        type: string
+        example: CLN-1
+
+    # -------------------------------------------------------------------------
+    # Business key assegnazione
+    # -------------------------------------------------------------------------
+    AssignmentIdParam:
+      name: assignmentId
+      in: path
+      required: true
+      description: Business key dell'assegnazione nel formato ASG-{seq} (es. ASG-1)
+      schema:
+        type: string
+        example: ASG-1
+
+    # -------------------------------------------------------------------------
+    # Paginazione - parametri standard Spring Pageable
+    # -------------------------------------------------------------------------
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Numero di pagina (0-based)
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      description: Numero di elementi per pagina
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      description: Ordinamento nel formato campo,direzione (es. name,asc)
+      schema:
+        type: string
+        example: name,asc
+
+    # -------------------------------------------------------------------------
+    # Filtri - lista sedi
+    # -------------------------------------------------------------------------
+    ClinicStatusFilterParam:
+      name: status
+      in: query
+      required: false
+      description: Filtra per stato della sede
+      schema:
+        $ref: '#/components/schemas/ClinicStatusApiEnum'
+
+    CityFilterParam:
+      name: city
+      in: query
+      required: false
+      description: Filtra per citta (case-insensitive)
+      schema:
+        type: string
+        example: Milano
+
+    NameFilterParam:
+      name: name
+      in: query
+      required: false
+      description: Filtra per nome della sede (case-insensitive, like)
+      schema:
+        type: string
+        example: Milano Centro
+
+    EmailFilterParam:
+      name: email
+      in: query
+      required: false
+      description: Filtra per email della sede (case-insensitive, like)
+      schema:
+        type: string
+        example: milano@medbook.it
+
+    ProvinceFilterParam:
+      name: province
+      in: query
+      required: false
+      description: Filtra per sigla provincia (case-insensitive)
+      schema:
+        type: string
+        example: MI
+
+    PhoneFilterParam:
+      name: phone
+      in: query
+      required: false
+      description: Filtra per numero di telefono della sede (ricerca parziale)
+      schema:
+        type: string
+        example: "+39021"
+
+    AddressFilterParam:
+      name: address
+      in: query
+      required: false
+      description: Filtra per indirizzo della sede (ricerca parziale case-insensitive)
+      schema:
+        type: string
+        example: Via Roma
+
+    PostalCodeFilterParam:
+      name: postalCode
+      in: query
+      required: false
+      description: Filtra per codice postale (ricerca parziale)
+      schema:
+        type: string
+        example: "20121"
+
+    CreatedFromFilterParam:
+      name: createdFrom
+      in: query
+      required: false
+      description: Filtra per data creazione - da (inclusa)
+      schema:
+        type: string
+        format: date
+        example: "2025-01-01"
+
+    CreatedToFilterParam:
+      name: createdTo
+      in: query
+      required: false
+      description: Filtra per data creazione - a (inclusa)
+      schema:
+        type: string
+        format: date
+        example: "2025-12-31"
+
+    UpdatedFromFilterParam:
+      name: updatedFrom
+      in: query
+      required: false
+      description: Filtra per data ultimo aggiornamento - da (inclusa)
+      schema:
+        type: string
+        format: date
+        example: "2025-01-01"
+
+    UpdatedToFilterParam:
+      name: updatedTo
+      in: query
+      required: false
+      description: Filtra per data ultimo aggiornamento - a (inclusa)
+      schema:
+        type: string
+        format: date
+        example: "2025-12-31"
+
+    # -------------------------------------------------------------------------
+    # Filtri - lista assegnazioni
+    # -------------------------------------------------------------------------
+    DoctorIdFilterParam:
+      name: doctorId
+      in: query
+      required: false
+      description: Filtra per medico (business key nel formato DOC-{seq})
+      schema:
+        type: string
+        example: DOC-1
+
+    AssignmentStatusFilterParam:
+      name: status
+      in: query
+      required: false
+      description: Filtra per stato dell'assegnazione
+      schema:
+        $ref: '#/components/schemas/AssignmentStatusApiEnum'
+
+  # ---------------------------------------------------------------------------
+  # SCHEMAS
+  # ---------------------------------------------------------------------------
+  schemas:
+
+    # =========================================================================
+    # REQUESTS - Clinics
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # REQUEST - Creazione nuova sede
+    # -------------------------------------------------------------------------
+    CreateClinicRequest:
+      type: object
+      description: Dati richiesti per la registrazione di una nuova sede
+      required:
+        - name
+        - email
+        - phone
+        - address
+        - city
+        - postalCode
+        - province
+      properties:
+        name:
+          type: string
+          maxLength: 150
+          description: Nome della sede del poliambulatorio
+          example: MedBook Milano Centro
+        email:
+          type: string
+          format: email
+          maxLength: 150
+          description: Indirizzo mail della sede - deve essere univoco nel sistema
+          example: milano.centro@medbook.it
+        phone:
+          type: string
+          maxLength: 20
+          description: Numero di telefono della sede
+          example: "+390212345678"
+        address:
+          type: string
+          maxLength: 200
+          description: Via e numero civico della sede
+          example: Via Roma 1
+        city:
+          type: string
+          maxLength: 100
+          description: Citta in cui si trova la sede
+          example: Milano
+        postalCode:
+          type: string
+          maxLength: 10
+          description: Codice di avviamento postale (CAP)
+          example: "20121"
+        province:
+          type: string
+          maxLength: 100
+          description: Nome della provincia (es. TORINO, MILANO, NAPOLI)
+          example: TORINO
+        termsAccepted:
+          type: boolean
+          description: Conferma accettazione dei Termini di Servizio
+          example: true
+
+    # -------------------------------------------------------------------------
+    # REQUEST - Aggiornamento parziale sede (PATCH)
+    # -------------------------------------------------------------------------
+    UpdateClinicRequest:
+      type: object
+      description: |
+        Dati per l'aggiornamento parziale della sede.
+        Solo i campi presenti nella richiesta vengono aggiornati.
+        La business key non e modificabile.
+      properties:
+        name:
+          type: string
+          maxLength: 150
+          description: Nome della sede
+          example: MedBook Milano Centro
+        email:
+          type: string
+          format: email
+          maxLength: 150
+          description: Indirizzo mail della sede - deve essere univoco nel sistema
+          example: milano.centro@medbook.it
+        phone:
+          type: string
+          maxLength: 20
+          description: Numero di telefono della sede
+          example: "+390212345678"
+        address:
+          type: string
+          maxLength: 200
+          description: Via e numero civico della sede
+          example: Via Roma 1
+        city:
+          type: string
+          maxLength: 100
+          description: Citta in cui si trova la sede
+          example: Milano
+        postalCode:
+          type: string
+          maxLength: 10
+          description: Codice di avviamento postale (CAP)
+          example: "20121"
+        province:
+          type: string
+          maxLength: 100
+          description: Nome della provincia
+          example: TORINO
+        status:
+          $ref: '#/components/schemas/ClinicStatusApiEnum'
+
+    # =========================================================================
+    # REQUESTS - Assignments
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # REQUEST - Creazione assegnazione medico-sede
+    # -------------------------------------------------------------------------
+    CreateAssignmentRequest:
+      type: object
+      description: |
+        Dati richiesti per assegnare un medico a una sede.
+        La tabella e storicizzata - un medico puo essere riassegnato
+        alla stessa sede in periodi diversi.
+      required:
+        - doctorId
+        - validFrom
+      properties:
+        doctorId:
+          type: string
+          description: Business key del medico nel formato DOC-{seq} - FK cross-service verso doctor-dmn
+          example: DOC-1
+        validFrom:
+          type: string
+          format: date
+          description: Data di inizio validita dell'assegnazione (YYYY-MM-DD)
+          example: "2025-01-01"
+        validTo:
+          type: string
+          format: date
+          description: Data di fine validita dell'assegnazione (YYYY-MM-DD) - null indica assegnazione ancora attiva
+          example: "2025-12-31"
+
+    # -------------------------------------------------------------------------
+    # REQUEST - Aggiornamento assegnazione
+    # -------------------------------------------------------------------------
+    UpdateAssignmentRequest:
+      type: object
+      description: |
+        Dati per l'aggiornamento dell'assegnazione.
+        Tipicamente usato per impostare la data di fine quando il medico lascia la sede.
+      properties:
+        validTo:
+          type: string
+          format: date
+          description: Data di fine validita dell'assegnazione - deve essere successiva a validFrom
+          example: "2025-12-31"
+        status:
+          $ref: '#/components/schemas/AssignmentStatusApiEnum'
+
+    # =========================================================================
+    # OUTPUTS - Clinics
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # OUTPUT - Creazione sede
+    # -------------------------------------------------------------------------
+    CreateClinicOutput:
+      type: object
+      description: Output della creazione della sede - contiene solo la business key generata
+      properties:
+        clinicId:
+          type: string
+          description: Business key generata nel formato CLN-{seq}
+          example: CLN-1
+
+    # -------------------------------------------------------------------------
+    # OUTPUT - Dettaglio sede (GET by id)
+    # -------------------------------------------------------------------------
+    ClinicDetailOutput:
+      type: object
+      description: Dati completi della sede - restituiti da GET /clinics/{clinicId}
+      properties:
+        clinicId:
+          type: string
+          description: Business key nel formato CLN-{seq}
+          example: CLN-1
+        name:
+          type: string
+          example: MedBook Milano Centro
+        email:
+          type: string
+          example: milano.centro@medbook.it
+        phone:
+          type: string
+          example: "+390212345678"
+        address:
+          type: string
+          example: Via Roma 1
+        city:
+          type: string
+          example: Milano
+        postalCode:
+          type: string
+          example: "20121"
+        province:
+          type: string
+          example: MI
+        status:
+          $ref: '#/components/schemas/ClinicStatusApiEnum'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp di creazione del record
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp dell'ultimo aggiornamento
+        createdBy:
+          type: string
+          description: Utente che ha creato il record
+        updatedBy:
+          type: string
+          description: Ultimo utente che ha modificato il record
+
+    # -------------------------------------------------------------------------
+    # OUTPUT - Elemento singolo nella lista sedi
+    # -------------------------------------------------------------------------
+    ClinicItemSummaryOutput:
+      type: object
+      description: Dati sintetici della sede - utilizzato nella lista paginata
+      properties:
+        clinicId:
+          type: string
+          description: Business key nel formato CLN-{seq}
+          example: CLN-1
+        name:
+          type: string
+          example: MedBook Milano Centro
+        city:
+          type: string
+          example: Milano
+        province:
+          type: string
+          example: MI
+        status:
+          $ref: '#/components/schemas/ClinicStatusApiEnum'
+
+    # -------------------------------------------------------------------------
+    # OUTPUT - Lista paginata delle sedi
+    # -------------------------------------------------------------------------
+    ClinicListOutput:
+      type: object
+      description: DTO interno del service per la lista paginata delle sedi
+      properties:
+        clinics:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClinicDetailOutput'
+          description: Lista delle sedi nella pagina corrente
+        page:
+          $ref: '#/components/schemas/MedBookPageResponse'
+
+    # =========================================================================
+    # OUTPUTS - Assignments
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # OUTPUT - Creazione assegnazione
+    # -------------------------------------------------------------------------
+    CreateAssignmentOutput:
+      type: object
+      description: Output della creazione dell'assegnazione - contiene solo la business key generata
+      properties:
+        assignmentId:
+          type: string
+          description: Business key generata nel formato ASG-{seq}
+          example: ASG-1
+
+    # -------------------------------------------------------------------------
+    # OUTPUT - Dettaglio assegnazione
+    # -------------------------------------------------------------------------
+    AssignmentDetailOutput:
+      type: object
+      description: Dati completi di un'assegnazione medico-sede
+      properties:
+        assignmentId:
+          type: string
+          description: Business key nel formato ASG-{seq}
+          example: ASG-1
+        clinicId:
+          type: string
+          description: Business key della sede nel formato CLN-{seq}
+          example: CLN-1
+        doctorId:
+          type: string
+          description: Business key del medico nel formato DOC-{seq} - FK cross-service verso doctor-dmn
+          example: DOC-1
+        validFrom:
+          type: string
+          format: date
+          description: Data di inizio validita dell'assegnazione
+          example: "2025-01-01"
+        validTo:
+          type: string
+          format: date
+          description: Data di fine validita dell'assegnazione - null indica assegnazione ancora attiva
+          example: "2025-12-31"
+        status:
+          $ref: '#/components/schemas/AssignmentStatusApiEnum'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # -------------------------------------------------------------------------
+    # OUTPUT - Lista assegnazioni della sede
+    # -------------------------------------------------------------------------
+    AssignmentListOutput:
+      type: object
+      description: Lista di tutte le assegnazioni medico-sede
+      properties:
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentDetailOutput'
+          description: Lista delle assegnazioni della sede
+
+    # =========================================================================
+    # TIPI CONDIVISI - Definiti in medbook-commons e importati via importMappings.
+    # Le definizioni qui sotto servono solo per la risoluzione dei $ref e per
+    # la documentazione Swagger UI. Non vengono rigenerati nel modulo clinic-dmn.
+    # =========================================================================
+
+    MedBookApiVoidResponse:
+      type: object
+      description: |
+        Risposta base per gli endpoint che non restituiscono payload (PATCH, DELETE).
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        httpStatus:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+
+    MedBookApiResponse:
+      type: object
+      description: |
+        Risposta di successo con payload.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        httpStatus:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        data:
+          description: Payload della risposta - oggetto singolo o lista
+        page:
+          $ref: '#/components/schemas/MedBookPageResponse'
+
+    MedBookPageResponse:
+      type: object
+      description: |
+        Metadati di paginazione standard della piattaforma MedBook.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        totalElements:
+          type: integer
+          format: int64
+          example: 150
+        totalPages:
+          type: integer
+          example: 8
+        size:
+          type: integer
+          example: 20
+        number:
+          type: integer
+          example: 0
+        first:
+          type: boolean
+          example: true
+        last:
+          type: boolean
+          example: false
+        empty:
+          type: boolean
+          example: false
+
+    MedBookContext:
+      type: object
+      description: |
+        Contesto della richiesta HTTP - contiene le informazioni di sicurezza e tracciabilita.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        username:
+          type: string
+          example: admin@medbook.it
+        roles:
+          type: array
+          items:
+            type: string
+        requestTimestamp:
+          type: string
+          format: date-time
+
+    MedBookApiErrorResponse:
+      type: object
+      description: |
+        Formato standard delle risposte di errore della piattaforma MedBook.
+        Definita in medbook-commons - importata via importMappings.
+      properties:
+        httpStatus:
+          type: integer
+          example: 404
+        success:
+          type: boolean
+          example: false
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          example: 6f4d2a1b3c8e9f0a
+        errorCode:
+          type: string
+          example: RESOURCE_NOT_FOUND
+        message:
+          description: |
+            Messaggio descrittivo dell'errore.
+            Puo essere una stringa singola o una lista di stringhe
+            in caso di errori di validazione multipli.
+        path:
+          type: string
+          example: /api/v1/clinics/CLN-999
+
+    # =========================================================================
+    # ENUMS
+    # =========================================================================
+
+    ClinicStatusApiEnum:
+      type: string
+      enum:
+        - ATTIVO
+        - DISATTIVO
+      description: |
+        Stato operativo della sede:
+        - ATTIVO: sede operativa
+        - DISATTIVO: sede sospesa
+
+    AssignmentStatusApiEnum:
+      type: string
+      enum:
+        - ATTIVO
+        - DISATTIVO
+      description: |
+        Stato dell'assegnazione medico-sede:
+        - ATTIVO: assegnazione attiva
+        - DISATTIVO: assegnazione terminata

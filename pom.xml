@@ -46,8 +46,10 @@
         <module>dmn/clinic-dmn</module>
         <module>dmn/clinic-dmn-client</module>
         <module>dmn/appointment-dmn</module>
+        <module>dmn/appointment-dmn-client</module>
         <module>dmn/appointment-dmn-events</module>
         <module>dmn/notification-dmn</module>
+        <module>dmn/notification-dmn-client</module>
 
         <!-- Edge modules -->
         <module>edge/api-gateway</module>
@@ -83,7 +85,7 @@
         <!-- Security fix — CVE Jackson Core async parser -->
         <jackson-core.version>2.19.0</jackson-core.version>
 
-        <openapi.generator.plugin.version>7.4.0</openapi.generator.plugin.version>
+        <openapi.generator.plugin.version>7.8.0</openapi.generator.plugin.version>
     </properties>
 
 
@@ -187,6 +189,13 @@
                 <version>2.2.20</version>
             </dependency>
 
+            <!-- Twilio SDK — invio SMS (notification-dmn) -->
+            <dependency>
+                <groupId>com.twilio.sdk</groupId>
+                <artifactId>twilio</artifactId>
+                <version>10.4.1</version>
+            </dependency>
+
             <!-- Client modules -->
             <dependency>
                 <groupId>it.pegaso.projectwork.medbook</groupId>
@@ -203,12 +212,31 @@
                 <artifactId>clinic-dmn-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>it.pegaso.projectwork.medbook</groupId>
+                <artifactId>appointment-dmn-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- Events module -->
             <dependency>
                 <groupId>it.pegaso.projectwork.medbook</groupId>
                 <artifactId>appointment-dmn-events</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <!-- Notification client -->
+            <dependency>
+                <groupId>it.pegaso.projectwork.medbook</groupId>
+                <artifactId>notification-dmn-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Encoder JSON per Logback — usato in produzione per ELK/Kibana -->
+            <dependency>
+                <groupId>net.logstash.logback</groupId>
+                <artifactId>logstash-logback-encoder</artifactId>
+                <version>7.4</version>
             </dependency>
 
         </dependencies>
@@ -234,7 +262,45 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Spring Cache — richiesto da MedBookCacheConfig in medbook-commons.
+             Dichiarato optional in commons, deve essere esplicito in ogni DMN. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
+        <!-- Caffeine — provider cache in-memory usato da MedBookCacheConfig.
+             Dichiarato optional in commons, deve essere esplicito in ogni DMN. -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
     </dependencies>
+
+    <!-- ================================================================ -->
+    <!-- Profiles                                                         -->
+    <!-- ================================================================ -->
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <!--
+                Spring Boot DevTools rileva la modifica e riavvia automaticamente il contesto
+                Spring senza dover fermare e rilanciare l'applicazione manualmente
+                -->
+                <dependency>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-devtools</artifactId>
+                    <scope>runtime</scope>
+                    <optional>true</optional>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 
     <!-- ================================================================ -->
     <!-- Build plugins                                                    -->
@@ -243,11 +309,15 @@
         <pluginManagement>
             <plugins>
 
-                <!-- Spring Boot Maven plugin -->
+                <!-- Spring Boot Maven plugin — skip=true di default per il parent POM.
+                     Ogni modulo eseguibile sovrascrive con skip=false nel proprio pom.xml.
+                     Senza questo, 'mvn spring-boot:run -pl ... -am' fallisce sul parent
+                     con "Unable to find a suitable main class". -->
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <configuration>
+                        <skip>true</skip>
                         <excludes>
                             <exclude>
                                 <groupId>org.projectlombok</groupId>
@@ -271,6 +341,11 @@
                                 <version>${lombok.version}</version>
                             </path>
                             <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok-mapstruct-binding</artifactId>
+                                <version>0.2.0</version>
+                            </path>
+                            <path>
                                 <groupId>org.mapstruct</groupId>
                                 <artifactId>mapstruct-processor</artifactId>
                                 <version>${mapstruct.version}</version>
@@ -286,8 +361,16 @@
                     <version>${openapi.generator.plugin.version}</version>
                 </plugin>
 
+                <!-- Build Helper - aggiunge le sources generate al classpath di compilazione -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>3.6.0</version>
+                </plugin>
+
             </plugins>
         </pluginManagement>
+
     </build>
 
 </project>

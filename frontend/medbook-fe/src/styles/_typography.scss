@@ -1,0 +1,42 @@
+// =============================================================================
+// TYPOGRAPHY — unica fonte di verità per tutti i font dell'applicazione.
+//
+// Come cambiare i font:
+//   1. Aggiorna le variabili Sass qui sotto ($font-primary, $font-secondary)
+//   2. Aggiorna il link Google Fonts in src/index.html con i nuovi nomi
+//      (cerca: "fonts.googleapis.com/css2?family=...")
+//
+// Struttura:
+//   $font-primary   → font principale dell'interfaccia
+//   $font-secondary → primo fallback (se primary non disponibile)
+//   $font-fallback  → stack nativo del sistema operativo
+//   $font-stack     → stack completo pronto per l'uso in CSS/Material
+//   $font-mono      → font monospace per codici, ID, dati tecnici
+//
+// I CSS custom properties (--font-stack, --font-mono) sono esportati in :root
+// così i componenti possono usarli con var() senza dover importare questo file.
+// =============================================================================
+
+// Font principale: geometrico, moderno, ottima leggibilità a tutti i pesi
+$font-primary:   'Inter';
+
+// Font secondario: arrotondato, accessibile, buona alternativa a piccole dimensioni
+$font-secondary: 'Nunito';
+
+// Fallback nativo: usa il font di sistema se i webfont non si caricano
+$font-fallback:  system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+// Stack completo — usato da Angular Material (mat.theme) e da body
+$font-stack: #{$font-primary}, #{$font-secondary}, $font-fallback;
+
+// Font monospace — per codici fiscali, business key (PAT-xxx, DOC-xxx), ecc.
+$font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, 'Cascadia Code', monospace;
+
+// =============================================================================
+// CSS custom properties — accessibili da qualsiasi componente con var()
+// senza bisogno di importare questo file Sass nei singoli .scss
+// =============================================================================
+:root {
+  --font-stack: #{$font-stack};
+  --font-mono:  #{$font-mono};
+}

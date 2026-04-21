@@ -1,0 +1,119 @@
+<app-medbook-page title="Pazienti" [loading]="loading()">
+
+  <!-- Filtri con MedBookForm -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <form [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+        <app-medbook-form [form]="filterForm" [groups]="filterGroups">
+
+          <ng-template medbookFormSlot="filtri">
+            <div class="mb-grid" style="--cols: 4">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Cognome</mat-label>
+                <input matInput formControlName="lastName" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Nome</mat-label>
+                <input matInput formControlName="firstName" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Codice Fiscale</mat-label>
+                <input matInput formControlName="fiscalCode" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Telefono</mat-label>
+                <input matInput formControlName="phone" />
+              </mat-form-field>
+            </div>
+            <div class="mb-grid" style="--cols: 4">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Citta</mat-label>
+                <input matInput formControlName="city" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Provincia</mat-label>
+                <input matInput formControlName="province" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Sesso</mat-label>
+                <mat-select formControlName="gender">
+                  <mat-option value="">Tutti</mat-option>
+                  <mat-option value="M">Maschile</mat-option>
+                  <mat-option value="F">Femminile</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Stato</mat-label>
+                <mat-select formControlName="status">
+                  <mat-option value="">Tutti</mat-option>
+                  <mat-option value="ATTIVO">Attivo</mat-option>
+                  <mat-option value="INATTIVO">Inattivo</mat-option>
+                  <mat-option value="CANCELLATO">Cancellato</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+            <div class="mb-grid" style="--cols: 4">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Creato dal</mat-label>
+                <input matInput [matDatepicker]="createdFromPicker" formControlName="createdFrom" placeholder="gg/mm/aaaa" />
+                <mat-datepicker-toggle matIconSuffix [for]="createdFromPicker" />
+                <mat-datepicker #createdFromPicker />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Creato al</mat-label>
+                <input matInput [matDatepicker]="createdToPicker" formControlName="createdTo" placeholder="gg/mm/aaaa" />
+                <mat-datepicker-toggle matIconSuffix [for]="createdToPicker" />
+                <mat-datepicker #createdToPicker />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Aggiornato dal</mat-label>
+                <input matInput [matDatepicker]="updatedFromPicker" formControlName="updatedFrom" placeholder="gg/mm/aaaa" />
+                <mat-datepicker-toggle matIconSuffix [for]="updatedFromPicker" />
+                <mat-datepicker #updatedFromPicker />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Aggiornato al</mat-label>
+                <input matInput [matDatepicker]="updatedToPicker" formControlName="updatedTo" placeholder="gg/mm/aaaa" />
+                <mat-datepicker-toggle matIconSuffix [for]="updatedToPicker" />
+                <mat-datepicker #updatedToPicker />
+              </mat-form-field>
+            </div>
+            <div class="mb-filter-actions">
+              <button mat-flat-button color="primary" type="submit" [disabled]="!hasFilters">
+                <mat-icon>search</mat-icon> Cerca
+              </button>
+              <button mat-stroked-button type="button" (click)="resetFilters()">
+                <mat-icon>clear</mat-icon> Azzera
+              </button>
+              <mat-slide-toggle
+                [checked]="showDeleted()"
+                (change)="onShowDeletedChange($event.checked)"
+                color="warn">
+                Mostra cancellati
+              </mat-slide-toggle>
+            </div>
+          </ng-template>
+
+        </app-medbook-form>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <app-medbook-table
+    [columns]="columns"
+    [actions]="tableActions"
+    [data]="patients()"
+    [pagination]="{ pageIndex: pageIndex(), pageSize: pageSize(), totalElements: totalElements(), pageSizeOptions: [10, 25, 50] }"
+    [emptyMessage]="searchPerformed() ? 'Nessun paziente trovato' : 'Inserisci almeno un filtro e clicca Cerca per visualizzare i risultati.'"
+    [emptyIcon]="searchPerformed() ? 'person_off' : 'search'"
+    (pageChange)="onPageChange($event)" />
+</app-medbook-page>

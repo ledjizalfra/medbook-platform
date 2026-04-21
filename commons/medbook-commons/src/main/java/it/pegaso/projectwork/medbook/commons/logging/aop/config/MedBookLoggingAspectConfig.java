@@ -76,25 +76,27 @@ public class MedBookLoggingAspectConfig {
         String className = joinPoint.getSignature().getDeclaringType().getSimpleName();
         String methodName = joinPoint.getSignature().getName();
 
-        // Logga gli args solo in DEBUG — mai in INFO/WARN/ERROR
+        // Logga i parametri in solo DEBUG level.
+        // In ambiente di produzione, logga solo in INFO senza i parametri per evitare overhead e rischi di sicurezza.
+        // I parametri importanti per il debugging saranno inseriti nel MDC
         if (log.isDebugEnabled()) {
-            log.debug("START [{}.{}] in {} — args: {}",
+            log.debug("\n>>> START [{}.{}] in {} - params: {}\n",
                     className, methodName, layer,
                     MedBookJsonUtils.toJson(joinPoint.getArgs(), false));
         } else {
-            log.info("START [{}.{}] in {}", className, methodName, layer);
+            log.info("\n>>> START [{}.{}] in {}\n", className, methodName, layer);
         }
 
         try {
             Object result = joinPoint.proceed();
 
             if (log.isDebugEnabled()) {
-                log.debug("END [{}.{}] in {} — elapsed: {} — result: {}",
+                log.debug("\n<<< END [{}.{}] in {} - proceed in: {} - result: {}\n",
                         className, methodName, layer,
                         MedBookLogUtils.elapsedTimeFormatted(startTime),
                         MedBookJsonUtils.toJson(result, false));
             } else {
-                log.info("END [{}.{}] in {} — elapsed: {}",
+                log.info("\n<<< END [{}.{}] in {} - proceed in: {}\n",
                         className, methodName, layer,
                         MedBookLogUtils.elapsedTimeFormatted(startTime));
             }
@@ -102,7 +104,7 @@ public class MedBookLoggingAspectConfig {
             return result;
 
         } catch (Exception ex) {
-            log.error("ERROR [{}.{}] in {} — elapsed: {} — exception: {}",
+            log.error("\n<<< ERROR [{}.{}] in {} - proceed in: {} — exception: {}\n",
                     className, methodName, layer,
                     MedBookLogUtils.elapsedTimeFormatted(startTime),
                     ex.getMessage());

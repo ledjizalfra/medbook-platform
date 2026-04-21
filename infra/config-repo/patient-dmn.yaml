@@ -1,52 +1,63 @@
 # =============================================================================
-# MedBook Platform - patient-dmn
-# Configurazione specifica del microservizio di dominio paziente
-# Caricata dal config-server all'avvio del servizio
+# MedBook Platform — patient-dmn
 # =============================================================================
+
 server:
-  # Porta su cui il servizio è in ascolto
   port: 8090
 
 spring:
   datasource:
-    # URL di connessione al database PostgreSQL dedicato a patient-dmn
-    url: jdbc:postgresql://localhost:5432/med_patient_db
-    # Credenziali di accesso al database
-    username: medbook
-    password: medbook
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/med_patient_db?stringtype=unspecified
+    username: ${DB_USERNAME:medbook}
+    password: ${DB_PASSWORD:medbook}
     driver-class-name: org.postgresql.Driver
-
   jpa:
     hibernate:
-      # Flyway gestisce lo schema — Hibernate non deve mai modificarlo
       ddl-auto: validate
-    # Disabilita il log delle query SQL in sviluppo (abilitare per debug)
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        # Formatta le query SQL nei log per maggiore leggibilità
-        format_sql: true
-
+        format_sql: false
   flyway:
-    # Abilita le migrazioni automatiche all'avvio
     enabled: true
-    # Percorso degli script di migrazione Flyway
     locations: classpath:db/migration
-    # Valida i checksum degli script già eseguiti all'avvio
     validate-on-migrate: true
-    # Non eseguire il baseline su un DB esistente
     baseline-on-migrate: false
 
-# Configurazione specifica del patient-dmn
+medbook:
+  security:
+    # Endpoint richiamati dal BFF durante la registrazione pubblica del paziente.
+    # L'autenticazione è gestita a livello BFF — il DMN si fida della rete interna.
+    public-post-endpoints:
+      - /api/v1/patients
+    public-delete-endpoints:
+      - /api/v1/patients/*
+
 patient:
   business-key:
-    # Prefisso della business key — formato PAT-{seq}
     prefix: PAT-
-    # Nome della sequenza PostgreSQL
     sequence-name: patient_seq
+  validation:
+    # Regex sintattica del codice fiscale italiano (16 caratteri alfanumerici)
+    cf-regex: "^[A-Za-z]{6}[0-9]{2}[A-Za-z][0-9]{2}[A-Za-z][0-9]{3}[A-Za-z]$"
   pagination:
-    # Numero di elementi per pagina di default
     default-page-size: 20
-    # Numero massimo di elementi per pagina
     max-page-size: 100
+
+---
+# =============================================================================
+# patient-dmn — Profilo DEV
+# =============================================================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    # Solo in dev: ripara checksum senza bloccare l'avvio. Mai in produzione.
+    repair-on-migrate: true

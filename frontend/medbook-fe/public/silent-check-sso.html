@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!--
+  silent-check-sso.html — Pagina helper per il Silent SSO Check di Keycloak
+
+  Keycloak usa questa pagina per verificare silenziosamente se l'utente ha già
+  una sessione attiva, senza mostrare all'utente nessun redirect visibile.
+
+  Come funziona:
+  1. All'inizializzazione, keycloak-js crea un <iframe> nascosto nel browser.
+  2. L'iframe carica questo file all'URL: window.location.origin + '/silent-check-sso.html'
+     (configurato in keycloak.service.ts tramite silentCheckSsoRedirectUri).
+  3. Keycloak reindirizza l'iframe verso il proprio server per fare il check della sessione.
+  4. Al termine, l'iframe torna su questo file con il risultato nell'URL (hash/query).
+  5. L'unica cosa che deve fare questa pagina è postare l'URL corrente alla finestra
+     padre tramite postMessage, così keycloak-js può leggerlo e determinare
+     se l'utente è autenticato o no.
+
+  IMPORTANTE: questo file deve risiedere nella cartella public/ (Angular 17+)
+  per essere servito staticamente all'URL http://localhost:4200/silent-check-sso.html.
+  Non contiene logica applicativa e non deve essere modificato.
+-->
+<html>
+<body>
+  <script>parent.postMessage(location.href, location.origin);</script>
+</body>
+</html>

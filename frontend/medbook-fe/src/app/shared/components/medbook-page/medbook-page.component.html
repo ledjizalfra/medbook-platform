@@ -1,0 +1,26 @@
+<div class="mb-page">
+  <div class="mb-page-header">
+    @if (showBack) {
+      <button mat-button class="mb-back-btn" (click)="backClick.emit()">
+        <mat-icon>arrow_back</mat-icon> {{ backLabel }}
+      </button>
+    }
+    <h1 class="mb-page-title">{{ title }}</h1>
+    <div class="mb-page-actions">
+      <ng-content select="[pageActions]" />
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="mb-loading-brand">
+      <div class="mb-spinner-wrap">
+        <mat-spinner diameter="72" />
+        <app-medbook-logo class="mb-spinner-logo" [size]="36" />
+      </div>
+    </div>
+  }
+
+  @if (!loading) {
+    <ng-content />
+  }
+</div>

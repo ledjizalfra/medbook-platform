@@ -1,0 +1,25 @@
+// Sidebar — larghezza fissa, colori agganciati al tema attivo
+:host {
+  display: block;
+  width: 240px;
+  min-width: 240px;
+  border-right: 1px solid var(--mat-sys-outline-variant);
+  // Sfondo leggermente colorato con il colore background del tema
+  background-color: var(--theme-bg, var(--mat-sys-surface-container-low));
+  overflow-y: auto;
+}
+
+mat-nav-list {
+  padding-top: 8px;
+}
+
+// Voce di menu attiva: bordo sinistro colorato con il primary del tema
+:host ::ng-deep .active-link {
+  background-color: var(--theme-bg-badge, var(--mat-sys-secondary-container)) !important;
+  color: var(--theme-text-dark, var(--mat-sys-on-secondary-container)) !important;
+  border-left: 3px solid var(--theme-primary, var(--mat-sys-primary));
+
+  mat-icon {
+    color: var(--theme-primary, var(--mat-sys-primary)) !important;
+  }
+}

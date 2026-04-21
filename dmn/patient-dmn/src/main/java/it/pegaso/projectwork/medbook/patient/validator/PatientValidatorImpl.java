@@ -4,7 +4,9 @@ import it.pegaso.projectwork.medbook.commons.errors.exceptions.MedBookBusinessVa
 import it.pegaso.projectwork.medbook.commons.errors.exceptions.MedBookNotFoundException;
 import it.pegaso.projectwork.medbook.commons.utils.MedBookJsonUtils;
 import it.pegaso.projectwork.medbook.patient.constants.PatientConstants;
-import it.pegaso.projectwork.medbook.patient.entity.PatientEntity;
+import it.pegaso.projectwork.medbook.patient.model.entity.PatientEntity;
+import it.pegaso.projectwork.medbook.patient.helper.PatientDomainHelper;
+import it.pegaso.projectwork.medbook.patient.properties.PatientProperties;
 import it.pegaso.projectwork.medbook.patient.repository.PatientRepository;
 import it.pegaso.projectwork.medbook.patient.validator.dto.ValidationRequest;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,10 @@ import static it.pegaso.projectwork.medbook.patient.constants.PatientConstants.*
  * Implementazione della validazione di business per il paziente.
  * Raccoglie tutti gli errori prima di lanciarli — il client riceve
  * la lista completa in una sola risposta.
+ *
+ * Nota: la validazione di concordanza CF ↔ dati anagrafici (nome, cognome,
+ * data di nascita, comune) è delegata al BFF, dove è controllata da una
+ * property on/off. Qui si valida solo il formato sintattico del CF.
  */
 @Slf4j
 @Component
@@ -32,7 +38,8 @@ import static it.pegaso.projectwork.medbook.patient.constants.PatientConstants.*
 public class PatientValidatorImpl implements PatientValidator {
 
     private final PatientRepository patientRepository;
-
+    private final PatientDomainHelper patientDomainHelper;
+    private final PatientProperties patientProperties;
 
     // =========================================================================
     // VALIDAZIONE REQUEST/FILTER
@@ -41,6 +48,8 @@ public class PatientValidatorImpl implements PatientValidator {
     public void validateCreatePatientRequest(ValidationRequest validationRequest) {
         List<String> errors = new ArrayList<>();
 
+        consensoPrivacyValidation(validationRequest, errors);
+        fiscalCodeFormatValidation(validationRequest, errors);
         fiscalCodeValidation(validationRequest, errors);
         emailValidation(validationRequest, errors);
 
@@ -59,13 +68,31 @@ public class PatientValidatorImpl implements PatientValidator {
     // =========================================================================
     // VALIDAZIONE CAMPI
     // =========================================================================
+
+    /** Verifica che il consenso privacy sia presente e accettato — senza consenso la registrazione non è consentita */
+    private void consensoPrivacyValidation(ValidationRequest validationRequest, List<String> errors) {
+        if (validationRequest.getConsensoPrivacy() == null || !validationRequest.getConsensoPrivacy()) {
+            errors.add(CONSENSO_PRIVACY_FIELD_NAME + ": " + CONSENSO_PRIVACY_OBBLIGATORIO);
+        }
+    }
+
+    /** Validazione sintattica del codice fiscale (solo formato, non concordanza con anagrafe — quella è nel BFF) */
+    private void fiscalCodeFormatValidation(ValidationRequest validationRequest, List<String> errors) {
+        if (StringUtils.isBlank(validationRequest.getFiscalCode())) return;
+        if (!validationRequest.getFiscalCode().matches(patientProperties.getValidation().getCfRegex())) {
+            errors.add(FISCAL_CODE_FIELD_NAME + ": " + CF_FORMATO_NON_VALIDO);
+        }
+    }
+
     private void emailValidation(ValidationRequest validationRequest, List<String> errors) {
-        List<PatientEntity> patientEmailListFound = patientRepository.getByEmailIncludeDeletedNative(validationRequest.getEmail());
+        List<PatientEntity> patientEmailListFound = patientRepository.getByEmailIncludeDeleted(validationRequest.getEmail());
         constraintValidation(validationRequest, errors, patientEmailListFound, PatientConstants.EMAIL_FIELD_NAME);
     }
 
     private void fiscalCodeValidation(ValidationRequest validationRequest, List<String> errors) {
-        List<PatientEntity> patientFiscalCodeListFound = patientRepository.getByFiscalCodeIncludeDeletedNative(validationRequest.getFiscalCode());
+        // Se il codice fiscale non è fornito (registrazione pubblica) non si valida unicità
+        if (StringUtils.isBlank(validationRequest.getFiscalCode())) return;
+        List<PatientEntity> patientFiscalCodeListFound = patientRepository.getByFiscalCodeIncludeDeleted(validationRequest.getFiscalCode());
         constraintValidation(validationRequest, errors, patientFiscalCodeListFound, FISCAL_CODE_FIELD_NAME);
     }
 
@@ -81,7 +108,7 @@ public class PatientValidatorImpl implements PatientValidator {
             // per un paziente diverso dal paziente su cui si sta per fare update.
             // In sostanza cerca se esiste un paziente con id diverso da quello nella request e che abbia lo stesso CF
             String patientId = validationRequest.getPatientId();
-            Optional<PatientEntity> patientOptFoundById = patientRepository.getByPatientIdIncludeDeletedNative(patientId);
+            Optional<PatientEntity> patientOptFoundById = patientDomainHelper.findByPatientIdIncludingDeleted(patientId);
             if(patientOptFoundById.isPresent() && !patientOptFoundById.get().isDeleted()) {
                 // Abbiamo trovato il paziente by patientId e non è cancellato
 

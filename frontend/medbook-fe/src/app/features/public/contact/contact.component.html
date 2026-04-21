@@ -1,0 +1,78 @@
+<app-public-navbar />
+
+<div class="page-wrapper">
+
+  <div class="page-header">
+    <h1>Scrivici</h1>
+    <p>Per informazioni, assistenza o per portare la tua clinica su MedBook.</p>
+  </div>
+
+  <div class="contact-layout">
+
+    <!-- Form di contatto -->
+    <div class="form-col">
+      <form [formGroup]="form">
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nome</mat-label>
+          <input matInput formControlName="name" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Email</mat-label>
+          <input matInput type="email" formControlName="email" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Oggetto</mat-label>
+          <mat-select formControlName="subject">
+            @for (s of subjects; track s) {
+              <mat-option [value]="s">{{ s }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Messaggio</mat-label>
+          <textarea matInput formControlName="message" rows="5"></textarea>
+        </mat-form-field>
+
+        <!-- Pulsante solo UI — nessuna azione BE -->
+        <button mat-flat-button class="btn-send" [disabled]="form.invalid" type="button">
+          <mat-icon>send</mat-icon>
+          Invia
+        </button>
+
+      </form>
+
+      <p class="form-note">Per prenotare una visita, accedi alla tua area personale.</p>
+    </div>
+
+    <!-- Dati di contatto -->
+    <div class="info-col">
+      <h2>Informazioni</h2>
+      <div class="contact-info">
+        <div class="info-item">
+          <mat-icon>email</mat-icon>
+          <span>info&#64;medbook-platform.it</span>
+        </div>
+        <div class="info-item">
+          <mat-icon>phone</mat-icon>
+          <span>+39 06 1234567</span>
+        </div>
+        <div class="info-item">
+          <mat-icon>location_on</mat-icon>
+          <span>Roma, Italia</span>
+        </div>
+        <div class="info-item">
+          <mat-icon>schedule</mat-icon>
+          <span>Lun–Ven: 9:00 – 18:00</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<app-public-footer />

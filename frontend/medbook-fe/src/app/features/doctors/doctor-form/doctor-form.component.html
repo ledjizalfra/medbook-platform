@@ -1,0 +1,194 @@
+<div class="doctor-form-container">
+  <div class="doctor-form-card">
+
+    <div class="card-header">
+      <button mat-button (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Torna ai medici
+      </button>
+      <h1 class="card-header-title">{{ pageTitle }}</h1>
+    </div>
+
+    <div class="card-body">
+
+      <!-- Riepilogo errori dello step corrente -->
+      @if (stepErrors().length > 0) {
+        <div class="validation-summary" role="alert">
+          <mat-icon>error_outline</mat-icon>
+          <div>
+            <strong>Correggi i seguenti errori per procedere:</strong>
+            <ul>
+              @for (err of stepErrors(); track err) {
+                <li>{{ err }}</li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+
+      <mat-stepper linear #stepper (selectionChange)="onStepChange()">
+
+        <!-- ============================================================ -->
+        <!-- STEP 1: Anagrafica                                          -->
+        <!-- ============================================================ -->
+        <mat-step [stepControl]="step1" label="Anagrafica">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            Inserisci i dati anagrafici del medico.
+          </div>
+
+          <form [formGroup]="step1">
+            <div class="mb-grid" style="--cols: 2">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Nome *</mat-label>
+                <input matInput formControlName="firstName" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Cognome *</mat-label>
+                <input matInput formControlName="lastName" />
+              </mat-form-field>
+            </div>
+
+            <div class="mb-grid" style="--cols: 2">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Data di nascita</mat-label>
+                <input matInput [matDatepicker]="dpBirth" formControlName="dateOfBirth" placeholder="gg/mm/aaaa" />
+                <mat-datepicker-toggle matIconSuffix [for]="dpBirth" />
+                <mat-datepicker #dpBirth />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Sesso</mat-label>
+                <mat-select formControlName="gender">
+                  <mat-option value="MASCHILE">Maschile</mat-option>
+                  <mat-option value="FEMMINILE">Femminile</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+          </form>
+
+          <div class="step-actions">
+            <span></span>
+            <button mat-flat-button color="primary" (click)="validateStep(step1) && stepper.next()">
+              Avanti <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </mat-step>
+
+        <!-- ============================================================ -->
+        <!-- STEP 2: Dati professionali                                  -->
+        <!-- ============================================================ -->
+        <mat-step [stepControl]="step2" label="Dati professionali">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            Inserisci i dati professionali e le specializzazioni.
+          </div>
+
+          <form [formGroup]="step2">
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Numero di licenza medica *</mat-label>
+              <input matInput formControlName="licenseNumber" />
+            </mat-form-field>
+
+            <div class="mb-grid" style="--cols: 2">
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Email *</mat-label>
+                <mat-icon matPrefix>email</mat-icon>
+                <input matInput type="email" formControlName="email" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="mb-field">
+                <mat-label>Telefono</mat-label>
+                <mat-icon matPrefix>phone</mat-icon>
+                <input matInput type="tel" formControlName="phone" placeholder="333 123 4567" />
+              </mat-form-field>
+            </div>
+
+            <p class="section-label">Specializzazioni</p>
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Specializzazioni</mat-label>
+              <mat-select formControlName="specializations" multiple>
+                @for (opt of specializationOptions(); track opt.value) {
+                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </form>
+
+          <div class="step-actions">
+            <button mat-stroked-button (click)="stepper.previous()">
+              <mat-icon>arrow_back</mat-icon> Indietro
+            </button>
+            <button mat-flat-button color="primary" (click)="validateStep(step2) && stepper.next()">
+              Avanti <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </mat-step>
+
+        <!-- ============================================================ -->
+        <!-- STEP 3: Notifiche (solo creazione)                          -->
+        <!-- ============================================================ -->
+        @if (isCreateMode) {
+          <mat-step [stepControl]="step3" label="Notifiche">
+            <div class="step-hint">
+              <mat-icon>info_outline</mat-icon>
+              Scegli i canali di notifica per il medico.
+            </div>
+
+            <form [formGroup]="step3">
+              <p class="section-label">Canali di notifica</p>
+              <div class="notification-channels" formGroupName="notificationChannels">
+                <mat-checkbox formControlName="email">
+                  <mat-icon class="inline-icon">email</mat-icon> Email
+                </mat-checkbox>
+                <mat-checkbox formControlName="sms" [disabled]="smsDisabled">
+                  <mat-icon class="inline-icon">sms</mat-icon> SMS
+                </mat-checkbox>
+                @if (smsDisabled) {
+                  <span class="channel-hint">Inserisci il telefono nello step precedente per abilitare gli SMS</span>
+                }
+              </div>
+            </form>
+
+            <div class="step-actions">
+              <button mat-stroked-button (click)="stepper.previous()">
+                <mat-icon>arrow_back</mat-icon> Indietro
+              </button>
+              <button mat-flat-button color="primary" (click)="validateStep(step3) && stepper.next()">
+                Avanti <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </mat-step>
+        }
+
+        <!-- ============================================================ -->
+        <!-- STEP FINALE: Riepilogo e conferma                           -->
+        <!-- ============================================================ -->
+        <mat-step label="Riepilogo">
+          <div class="step-hint">
+            <mat-icon>info_outline</mat-icon>
+            Verifica i dati inseriti prima di confermare.
+          </div>
+
+          <div class="summary-table">
+            @for (item of summaryData; track item.label) {
+              <div class="summary-row">
+                <span class="summary-label">{{ item.label }}</span>
+                <span class="summary-value">{{ item.value }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="step-actions">
+            <button mat-stroked-button (click)="stepper.previous()">
+              <mat-icon>arrow_back</mat-icon> Indietro
+            </button>
+            <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="loading()">
+              @if (loading()) { <mat-spinner diameter="20" /> }
+              {{ loading() ? 'Salvataggio...' : 'Salva' }}
+            </button>
+          </div>
+        </mat-step>
+
+      </mat-stepper>
+    </div>
+  </div>
+</div>

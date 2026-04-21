@@ -1,0 +1,28 @@
+<mat-toolbar>
+  <span class="brand">MedBook</span>
+
+  <!-- Link all'area pubblica — visibile nell'area riservata senza fare logout -->
+  <a class="public-link" routerLink="/">
+    <mat-icon>language</mat-icon>
+    Area Pubblica
+  </a>
+
+  <span class="spacer"></span>
+
+  <!-- Nome utente: link al profilo se il ruolo lo prevede, altrimenti solo testo -->
+  @if (kc.getProfileRoute()) {
+    <a class="username username-link" [routerLink]="kc.getProfileRoute()">
+      <mat-icon class="username-icon">account_circle</mat-icon>
+      {{ kc.getFullName() }}
+    </a>
+  } @else {
+    <span class="username">
+      <mat-icon class="username-icon">account_circle</mat-icon>
+      {{ kc.getFullName() }}
+    </span>
+  }
+
+  <button mat-icon-button (click)="kc.logout()" title="Esci">
+    <mat-icon>logout</mat-icon>
+  </button>
+</mat-toolbar>
