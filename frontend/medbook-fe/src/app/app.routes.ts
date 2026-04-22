@@ -177,6 +177,8 @@ export const routes: Routes = [
       { path: APP_ROUTES.DOCTORS, loadComponent: () => import('./features/doctors/doctor-list/doctor-list.component').then(m => m.DoctorListComponent) },
       { path: `${APP_ROUTES.DOCTORS}/new`, loadComponent: () => import('./features/doctors/doctor-form/doctor-form.component').then(m => m.DoctorFormComponent) },
       { path: `${APP_ROUTES.DOCTORS}/:id/edit`, loadComponent: () => import('./features/doctors/doctor-form/doctor-form.component').then(m => m.DoctorFormComponent) },
+      { path: `${APP_ROUTES.DOCTORS}/availabilities`, loadComponent: () => import('./features/doctors/doctor-availabilities-page/doctor-availabilities-page.component').then(m => m.DoctorAvailabilitiesPageComponent) },
+      { path: `${APP_ROUTES.DOCTORS}/assignments`, loadComponent: () => import('./features/doctors/doctor-assignments-page/doctor-assignments-page.component').then(m => m.DoctorAssignmentsPageComponent) },
       { path: APP_ROUTES.CLINICS, loadComponent: () => import('./features/clinics/clinic-list/clinic-list.component').then(m => m.ClinicListComponent) },
       { path: `${APP_ROUTES.CLINICS}/new`, loadComponent: () => import('./features/clinics/clinic-form/clinic-form.component').then(m => m.ClinicFormComponent) },
       { path: `${APP_ROUTES.CLINICS}/:id/edit`, loadComponent: () => import('./features/clinics/clinic-form/clinic-form.component').then(m => m.ClinicFormComponent) },

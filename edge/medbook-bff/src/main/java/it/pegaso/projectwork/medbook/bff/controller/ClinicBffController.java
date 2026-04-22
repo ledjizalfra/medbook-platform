@@ -1,5 +1,6 @@
 package it.pegaso.projectwork.medbook.bff.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import it.pegaso.projectwork.medbook.bff.server.api.AssignmentsApi;
 import it.pegaso.projectwork.medbook.bff.server.api.ClinicsApi;
 import it.pegaso.projectwork.medbook.bff.server.model.CreateAssignmentBffRequest;
@@ -35,7 +36,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     // === CLINICS ===
 
     /** Crea una nuova sede (ROLE_ADMIN). */
-    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiResponse> postCreateClinic(
             MedBookContext context, CreateClinicBffRequest createClinicBffRequest) {
@@ -43,7 +44,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     }
 
     /** Lista sedi cliniche. */
-    // @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiResponse> getAllClinics(
             MedBookContext context, Integer page, Integer size, String sort,
@@ -57,7 +58,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     }
 
     /** Dettaglio sede. */
-    // @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiResponse> getClinicById(
             MedBookContext context, String clinicId) {
@@ -65,7 +66,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     }
 
     /** Aggiorna dati sede (ROLE_ADMIN). */
-    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> patchUpdateClinic(
             MedBookContext context, String clinicId, UpdateClinicBffRequest updateClinicBffRequest) {
@@ -73,7 +74,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     }
 
     /** Elimina logicamente una sede (ROLE_ADMIN). */
-    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> deleteClinic(
             MedBookContext context, String clinicId) {
@@ -83,7 +84,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     // === ASSIGNMENTS ===
 
     /** Assegna un medico a una sede (ROLE_ADMIN). */
-    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiResponse> postCreateAssignment(
             MedBookContext context, String clinicId, CreateAssignmentBffRequest createAssignmentBffRequest) {
@@ -91,7 +92,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     }
 
     /** Lista assegnazioni di una sede. */
-    // @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiResponse> getAllAssignments(
             MedBookContext context, String clinicId, Integer page, Integer size, String sort,
@@ -100,7 +101,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     }
 
     /** Aggiorna un'assegnazione (ROLE_ADMIN). */
-    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> patchUpdateAssignment(
             MedBookContext context, String clinicId, String assignmentId,
@@ -109,7 +110,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     }
 
     /** Rimuove un'assegnazione (ROLE_ADMIN). */
-    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> deleteAssignment(
             MedBookContext context, String clinicId, String assignmentId) {
@@ -117,7 +118,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     }
 
     /** Ripristina una sede eliminata logicamente (ROLE_ADMIN). */
-    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> patchRestoreClinic(
             MedBookContext context, String clinicId) {
@@ -125,7 +126,7 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
     }
 
     /** Ripristina un'assegnazione eliminata logicamente (ROLE_ADMIN). */
-    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> patchRestoreAssignment(
             MedBookContext context, String clinicId, String assignmentId) {

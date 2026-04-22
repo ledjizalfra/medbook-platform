@@ -1,16 +1,9 @@
-<app-medbook-page title="Cliniche" [loading]="loading() || checkingWorkflow()">
+<app-medbook-page title="Cliniche" [loading]="loading()">
   @if (isAdmin()) {
-    <div pageActions class="page-actions-row">
-      <button mat-flat-button color="primary" (click)="newClinic()">
-        <mat-icon>add</mat-icon>
-        Aggiungi Clinica
-      </button>
-      <button mat-stroked-button (click)="openAssignDoctor()" [disabled]="!hasDoctors()"
-              [matTooltip]="!hasDoctors() ? 'Aggiungi prima almeno un medico' : ''">
-        <mat-icon>person_add</mat-icon>
-        Assegna Medico a Clinica
-      </button>
-    </div>
+    <button pageActions mat-flat-button color="primary" (click)="newClinic()">
+      <mat-icon>add</mat-icon>
+      Aggiungi Clinica
+    </button>
   }
 
   <!-- Filtri con MedBookForm -->

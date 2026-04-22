@@ -7,6 +7,7 @@ import it.pegaso.projectwork.medbook.commons.api.model.MedBookContext;
 import it.pegaso.projectwork.medbook.commons.context.MedBookContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -17,6 +18,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/bff/v1/doctors/me")
+@PreAuthorize("hasAuthority('ROLE_DOCTOR')")
 @RequiredArgsConstructor
 public class DoctorConsentBffController {
 

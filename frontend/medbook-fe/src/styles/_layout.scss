@@ -1,8 +1,5 @@
 // =============================================================================
 // LAYOUT — unica fonte di verità per dimensioni form, input e messaggi.
-//
-// I CSS custom properties (--medbook-*) sono esportati in :root così i
-// componenti possono usarli con var() senza importare questo file.
 // =============================================================================
 
 // ---------- Larghezze ----------
@@ -10,23 +7,19 @@ $form-max-width: 720px;
 $profile-max-width: 760px;
 
 // ---------- Form field ----------
-$form-field-height: 44px;
-$form-field-padding-y: 8px;
-$form-field-font-size: 0.88rem;
-$form-field-radius: 10px;
+$form-field-font-size: 0.9rem;
+$form-field-radius: 8px;
 
 // ---------- Messaggi errore ----------
-$error-font-size: 0.72rem;
+$error-font-size: 0.75rem;
 
 // ---------- Section label ----------
-$section-label-font: 0.72rem;
+$section-label-font: 0.75rem;
 $section-label-color: #7b1fa2;
 
 :root {
   --medbook-form-max-width:      #{$form-max-width};
   --medbook-profile-max-width:   #{$profile-max-width};
-  --medbook-form-field-height:   #{$form-field-height};
-  --medbook-form-field-padding:  #{$form-field-padding-y};
   --medbook-form-field-font:     #{$form-field-font-size};
   --medbook-form-field-radius:   #{$form-field-radius};
   --medbook-error-font:          #{$error-font-size};

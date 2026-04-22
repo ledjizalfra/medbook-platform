@@ -1,0 +1,30 @@
+<app-medbook-page title="Assegnazioni Medico — Clinica" [loading]="loading()" backLabel="Torna ai medici" (backClick)="goBack()">
+
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="mb-field" style="max-width: 400px;">
+        <mat-label>Seleziona medico</mat-label>
+        <mat-select (selectionChange)="onDoctorSelected($event.value)">
+          @for (d of doctors(); track d.value) {
+            <mat-option [value]="d.value">{{ d.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
+
+  @if (selectedDoctor()) {
+    <app-medbook-table
+      [columns]="columns"
+      [data]="assignments()"
+      emptyMessage="Nessuna assegnazione. Aggiungi disponibilita per assegnare il medico a una clinica."
+      emptyIcon="assignment_ind" />
+
+    <p class="info-hint">
+      <mat-icon>info_outline</mat-icon>
+      Le assegnazioni vengono create e aggiornate automaticamente con le disponibilita.
+      Per modificarle, usa "Gestisci Disponibilita".
+    </p>
+  }
+
+</app-medbook-page>

@@ -75,8 +75,17 @@ export class DoctorFormComponent implements OnInit {
   // Opzioni specializzazioni caricate dal backend
   protected specializationOptions = signal<{ value: string; label: string }[]>([]);
 
-  // Opzioni sedi caricate dal backend
+  // Opzioni cliniche caricate dal backend (tutte le cliniche attive)
   protected clinicOptions = signal<{ value: string; label: string }[]>([]);
+
+  // Assegnazioni medico-clinica aggiunte dall'admin (in memoria fino al submit)
+  protected assignmentItems = signal<{ clinicId: string; clinicName: string; validFrom: string; validTo: string }[]>([]);
+
+  /** Cliniche disponibili nello step Disponibilita — solo quelle assegnate allo step precedente */
+  protected get assignedClinicOptions(): { value: string; label: string }[] {
+    const assignedIds = this.assignmentItems().map(a => a.clinicId);
+    return this.clinicOptions().filter(c => assignedIds.includes(c.value));
+  }
 
   // Template disponibilita aggiunti dall'admin (in memoria fino al submit)
   protected availabilityItems = signal<{ clinicId: string; clinicName: string; dayOfWeek: string; startTime: string; endTime: string }[]>([]);
@@ -90,6 +99,51 @@ export class DoctorFormComponent implements OnInit {
     { value: 'VENERDI', label: 'Venerdi' },
     { value: 'SABATO', label: 'Sabato' }
   ];
+
+  // Form temporaneo per aggiungere una assegnazione clinica
+  protected assignForm = this.fb.group({
+    clinicId:  ['', Validators.required],
+    validFrom: ['' as string, Validators.required],
+    validTo:   ['' as string]
+  });
+
+  /** Cliniche non ancora assegnate */
+  protected get availableClinicOptions(): { value: string; label: string }[] {
+    const assignedIds = this.assignmentItems().map(a => a.clinicId);
+    return this.clinicOptions().filter(c => !assignedIds.includes(c.value));
+  }
+
+  protected addAssignment(): void {
+    this.assignForm.markAllAsTouched();
+    if (this.assignForm.invalid) return;
+    const val = this.assignForm.getRawValue();
+    const clinicId = val.clinicId ?? '';
+    const clinicName = this.clinicOptions().find(c => c.value === clinicId)?.label ?? clinicId;
+    this.assignmentItems.update(items => [...items, {
+      clinicId,
+      clinicName,
+      validFrom: val.validFrom ?? new Date().toISOString().split('T')[0],
+      validTo: val.validTo ?? ''
+    }]);
+    this.assignForm.reset({ clinicId: '', validFrom: '', validTo: '' });
+    // Rimuove disponibilita per cliniche non piu assegnate
+    this.syncAvailabilitiesWithAssignments();
+  }
+
+  protected removeAssignment(index: number): void {
+    const removed = this.assignmentItems()[index];
+    this.assignmentItems.update(items => items.filter((_, i) => i !== index));
+    // Rimuove disponibilita per la clinica rimossa
+    if (removed) {
+      this.availabilityItems.update(items => items.filter(a => a.clinicId !== removed.clinicId));
+    }
+  }
+
+  /** Sincronizza disponibilita: rimuove quelle per cliniche non piu assegnate */
+  private syncAvailabilitiesWithAssignments(): void {
+    const assignedIds = new Set(this.assignmentItems().map(a => a.clinicId));
+    this.availabilityItems.update(items => items.filter(a => assignedIds.has(a.clinicId)));
+  }
 
   // Form temporaneo per aggiungere un singolo template di disponibilita
   protected availForm = this.fb.group({
@@ -376,6 +430,14 @@ export class DoctorFormComponent implements OnInit {
       items.push({ label: 'Canali di notifica', value: ch.length > 0 ? ch.join(', ') : 'Nessuno' });
     }
 
+    // Assegnazioni cliniche (solo creazione)
+    if (this.isCreateMode && this.assignmentItems().length > 0) {
+      const assigns = this.assignmentItems().map(a =>
+        `${a.clinicName} (dal ${a.validFrom}${a.validTo ? ' al ' + a.validTo : ''})`
+      ).join('; ');
+      items.push({ label: 'Assegnazioni cliniche', value: assigns });
+    }
+
     // Disponibilita (solo creazione)
     if (this.isCreateMode && this.availabilityItems().length > 0) {
       const avails = this.availabilityItems().map(a =>
@@ -425,10 +487,14 @@ export class DoctorFormComponent implements OnInit {
       };
       this.doctorService.create(payload).subscribe({
         next: (resp: unknown) => {
-          // Salva le availability se presenti
           const data = (resp as Record<string, unknown>)['data'] as Record<string, unknown>;
           const createdDoctorId = data?.['doctorId'] as string;
-          if (createdDoctorId && this.availabilityItems().length > 0) {
+          if (!createdDoctorId) {
+            this.onSuccess('Operazione completata', 'Medico creato con successo!');
+            return;
+          }
+          // Salva availability (che auto-crea anche le assignments per le cliniche con disponibilita)
+          if (this.availabilityItems().length > 0) {
             const availPayload = {
               availabilities: this.availabilityItems().map(a => ({
                 clinicId: a.clinicId,
@@ -438,9 +504,13 @@ export class DoctorFormComponent implements OnInit {
               }))
             };
             this.doctorService.createAvailability(createdDoctorId, availPayload).subscribe({
-              next: () => this.onSuccess('Operazione completata', 'Medico creato con specializzazioni e disponibilita!'),
-              error: () => this.onSuccess('Medico creato', 'Medico creato ma errore nel salvataggio delle disponibilita. Aggiungile manualmente.')
+              next: () => this.onSuccess('Operazione completata', 'Medico creato con assegnazioni e disponibilita!'),
+              error: () => this.onSuccess('Medico creato', 'Medico creato ma errore nel salvataggio delle disponibilita.')
             });
+          } else if (this.assignmentItems().length > 0) {
+            // Assegnazioni senza disponibilita: crea un template fittizio per attivare ensureAssignmentExists
+            // Oppure semplicemente mostra successo (le assegnazioni senza disponibilita non hanno senso operativo)
+            this.onSuccess('Operazione completata', 'Medico creato con successo! Aggiungi disponibilita per attivare le assegnazioni.');
           } else {
             this.onSuccess('Operazione completata', 'Medico creato con successo!');
           }

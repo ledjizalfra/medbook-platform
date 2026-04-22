@@ -9,16 +9,21 @@ import it.pegaso.projectwork.medbook.doctor.mapper.availability.AvailabilityMapp
 import it.pegaso.projectwork.medbook.doctor.model.entity.AvailabilityEntity;
 import it.pegaso.projectwork.medbook.doctor.model.enums.AvailabilityStatusEnum;
 import it.pegaso.projectwork.medbook.doctor.model.enums.DayOfWeekEnum;
+import it.pegaso.projectwork.medbook.doctor.model.entity.DoctorAssignmentEntity;
+import it.pegaso.projectwork.medbook.doctor.model.enums.DoctorAssignmentStatusEnum;
+import it.pegaso.projectwork.medbook.doctor.repository.assignment.DoctorAssignmentRepository;
 import it.pegaso.projectwork.medbook.doctor.repository.availability.AvailabilityRepository;
 import it.pegaso.projectwork.medbook.doctor.repository.availability.AvailabilityWithSpecProjection;
 import it.pegaso.projectwork.medbook.doctor.server.model.*;
 import it.pegaso.projectwork.medbook.doctor.validator.availability.AvailabilityValidator;
 import it.pegaso.projectwork.medbook.doctor.validator.availability.dto.AvailabilityValidationRequest;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -38,6 +43,8 @@ public class DoctorAvailabilityServiceImpl implements DoctorAvailabilityService 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     private final AvailabilityRepository availabilityRepository;
+    private final DoctorAssignmentRepository assignmentRepository;
+    private final EntityManager entityManager;
     private final DoctorDomainHelper doctorDomainHelper;
     private final AvailabilityDomainHelper availabilityDomainHelper;
     private final AvailabilityValidator availabilityValidator;
@@ -65,7 +72,32 @@ public class DoctorAvailabilityServiceImpl implements DoctorAvailabilityService 
             availability.setStatus(AvailabilityStatusEnum.ATTIVO);
 
             availabilityRepository.save(availability);
+
+            // Auto-create assignment medico-clinica se non esiste già
+            ensureAssignmentExists(doctorId, item.getClinicId());
         }
+    }
+
+    /**
+     * Crea automaticamente un'assegnazione medico-clinica se non esiste già.
+     * Chiamato ogni volta che si aggiunge una disponibilità per una clinica.
+     */
+    private void ensureAssignmentExists(String doctorId, String clinicId) {
+        if (assignmentRepository.findByDoctorIdAndClinicId(doctorId, clinicId).isPresent()) {
+            return; // già assegnato
+        }
+        long seq = ((Number) entityManager
+                .createNativeQuery("SELECT nextval('seq_doctor_assignment_id')")
+                .getSingleResult()).longValue();
+
+        DoctorAssignmentEntity assignment = new DoctorAssignmentEntity();
+        assignment.setAssignmentId("DASG-" + seq);
+        assignment.setDoctorId(doctorId);
+        assignment.setClinicId(clinicId);
+        assignment.setValidFrom(LocalDate.now());
+        assignment.setStatus(DoctorAssignmentStatusEnum.ATTIVO);
+        assignmentRepository.save(assignment);
+        log.info("Auto-created assignment DASG-{} for doctor {} -> clinic {}", seq, doctorId, clinicId);
     }
 
 

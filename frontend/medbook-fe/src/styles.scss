@@ -22,7 +22,7 @@ html {
         medium-weight: 500,
         regular-weight: 400,
       ),
-      density: -1,
+      density: -2,
     )
   );
 }
@@ -43,27 +43,19 @@ body {
 }
 
 // =============================================================================
-// Override globale form — design moderno e compatto (_layout.scss per i valori)
+// Override globale form — stile moderno Material 3
+// Nessun override di altezza o transform — lasciamo Material gestire il label.
+// Solo font-size e border-radius personalizzati.
 // =============================================================================
 
-// Input e select: altezza ridotta, bordi arrotondati, font compatto
 .mat-mdc-form-field {
-  .mat-mdc-text-field-wrapper {
-    .mat-mdc-form-field-flex {
-      height: var(--medbook-form-field-height);
-      align-items: center;
-    }
-  }
-  .mdc-text-field--outlined .mdc-floating-label,
+  // Font uniforme su input, select e label
   .mat-mdc-input-element,
-  .mat-mdc-select-value {
+  .mat-mdc-select-value,
+  .mdc-floating-label {
     font-size: var(--medbook-form-field-font) !important;
   }
-  .mdc-text-field--outlined {
-    padding-top: var(--medbook-form-field-padding);
-    padding-bottom: var(--medbook-form-field-padding);
-  }
-  // Bordi arrotondati per design moderno
+  // Bordi arrotondati
   .mdc-notched-outline .mdc-notched-outline__leading {
     border-radius: var(--medbook-form-field-radius) 0 0 var(--medbook-form-field-radius) !important;
     width: var(--medbook-form-field-radius) !important;
@@ -73,13 +65,12 @@ body {
   }
 }
 
-// Option panel: altezza ridotta e font compatto
+// Option panel
 .mat-mdc-option {
-  min-height: 40px !important;
   font-size: var(--medbook-form-field-font) !important;
 }
 
-// Checkbox: font allineato
+// Checkbox
 .mat-mdc-checkbox .mdc-form-field {
   font-size: var(--medbook-form-field-font);
 }

@@ -1,5 +1,6 @@
 package it.pegaso.projectwork.medbook.bff.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import it.pegaso.projectwork.medbook.bff.server.api.AppointmentsApi;
 import it.pegaso.projectwork.medbook.bff.server.model.BookBffAppointmentRequest;
 import it.pegaso.projectwork.medbook.bff.server.model.CancelBffAppointmentRequest;
@@ -22,7 +23,7 @@ public class AppointmentBffController implements AppointmentsApi {
     private final AppointmentBffService appointmentBffService;
 
     /** Prenota un appuntamento (ROLE_PATIENT, ROLE_ADMIN, ROLE_RECEPTIONIST). */
-    // @PreAuthorize("hasAnyAuthority('ROLE_PATIENT', 'ROLE_ADMIN', 'ROLE_RECEPTIONIST')")
+    @PreAuthorize("hasAnyAuthority('ROLE_PATIENT', 'ROLE_ADMIN', 'ROLE_RECEPTIONIST')")
     @Override
     public ResponseEntity<MedBookApiResponse> postBookAppointment(
             MedBookContext context, BookBffAppointmentRequest bookBffAppointmentRequest) {
@@ -30,7 +31,7 @@ public class AppointmentBffController implements AppointmentsApi {
     }
 
     /** Lista appuntamenti con filtri (autorizzazione dipende dal ruolo). */
-    // @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiResponse> getListAppointments(
             MedBookContext context, Integer page, Integer size, String sort,
@@ -41,7 +42,7 @@ public class AppointmentBffController implements AppointmentsApi {
     }
 
     /** Dettaglio appuntamento. */
-    // @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiResponse> getAppointmentById(
             MedBookContext context, String appointmentId) {
@@ -49,7 +50,7 @@ public class AppointmentBffController implements AppointmentsApi {
     }
 
     /** Cancella un appuntamento. */
-    // @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiResponse> patchCancelAppointment(
             MedBookContext context, String appointmentId,

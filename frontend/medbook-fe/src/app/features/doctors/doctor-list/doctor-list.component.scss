@@ -1,1 +1,5 @@
-/* Stili gestiti globalmente in styles.scss (.mb-page) */
+.page-actions-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

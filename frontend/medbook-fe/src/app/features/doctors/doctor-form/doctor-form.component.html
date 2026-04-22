@@ -192,13 +192,74 @@
         }
 
         <!-- ============================================================ -->
-        <!-- STEP 4: Disponibilita settimanale (solo creazione)          -->
+        <!-- STEP 4: Assegnazioni cliniche (solo creazione)              -->
+        <!-- ============================================================ -->
+        @if (isCreateMode) {
+          <mat-step label="Assegnazioni cliniche">
+            <div class="step-hint">
+              <mat-icon>info_outline</mat-icon>
+              Assegna il medico a una o piu cliniche. Le cliniche assegnate saranno disponibili nello step Disponibilita.
+            </div>
+
+            <form [formGroup]="assignForm">
+              <div class="mb-grid" style="--cols: 3">
+                <mat-form-field appearance="outline" class="mb-field">
+                  <mat-label>Clinica *</mat-label>
+                  <mat-select formControlName="clinicId">
+                    @for (opt of availableClinicOptions; track opt.value) {
+                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="mb-field">
+                  <mat-label>Valido dal *</mat-label>
+                  <input matInput [matDatepicker]="assignFromPicker" formControlName="validFrom" placeholder="gg/mm/aaaa" />
+                  <mat-datepicker-toggle matIconSuffix [for]="assignFromPicker" />
+                  <mat-datepicker #assignFromPicker />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="mb-field">
+                  <mat-label>Valido al (facoltativo)</mat-label>
+                  <input matInput [matDatepicker]="assignToPicker" formControlName="validTo" placeholder="gg/mm/aaaa" />
+                  <mat-datepicker-toggle matIconSuffix [for]="assignToPicker" />
+                  <mat-datepicker #assignToPicker />
+                </mat-form-field>
+              </div>
+              <button mat-stroked-button type="button" (click)="addAssignment()">
+                <mat-icon>add</mat-icon> Aggiungi assegnazione
+              </button>
+            </form>
+
+            @if (assignmentItems().length > 0) {
+              <p class="section-label" style="margin-top: 16px;">Cliniche assegnate</p>
+              @for (item of assignmentItems(); track $index) {
+                <div class="spec-chip">
+                  <span>{{ item.clinicName }} — dal {{ item.validFrom }}{{ item.validTo ? ' al ' + item.validTo : '' }}</span>
+                  <button mat-icon-button type="button" (click)="removeAssignment($index)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              }
+            }
+
+            <div class="step-actions">
+              <button mat-stroked-button (click)="stepper.previous()">
+                <mat-icon>arrow_back</mat-icon> Indietro
+              </button>
+              <button mat-flat-button color="primary" (click)="stepper.next()">
+                Avanti <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </mat-step>
+        }
+
+        <!-- ============================================================ -->
+        <!-- STEP 5: Disponibilita settimanale (solo creazione)          -->
         <!-- ============================================================ -->
         @if (isCreateMode) {
           <mat-step label="Disponibilita" [optional]="true">
             <div class="step-hint">
               <mat-icon>info_outline</mat-icon>
-              Aggiungi le fasce orarie in cui il medico riceve pazienti (facoltativo — puoi aggiungerle dopo).
+              Aggiungi le fasce orarie settimanali. Le cliniche disponibili sono quelle assegnate allo step precedente.
             </div>
 
             <form [formGroup]="availForm">
@@ -206,10 +267,13 @@
                 <mat-form-field appearance="outline" class="mb-field">
                   <mat-label>Clinica *</mat-label>
                   <mat-select formControlName="clinicId">
-                    @for (opt of clinicOptions(); track opt.value) {
+                    @for (opt of assignedClinicOptions; track opt.value) {
                       <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
                     }
                   </mat-select>
+                  @if (assignedClinicOptions.length === 0) {
+                    <mat-hint>Assegna prima il medico a una clinica nello step precedente</mat-hint>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="mb-field">
                   <mat-label>Giorno *</mat-label>

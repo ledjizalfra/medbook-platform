@@ -13,6 +13,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { InfoDialogComponent } from '../../../shared/components/info-dialog/info-dialog.component';
+import { ManageAvailabilityDialogComponent } from '../manage-availability-dialog/manage-availability-dialog.component';
+import { ManageAssignmentDialogComponent } from '../manage-assignment-dialog/manage-assignment-dialog.component';
 import { PageEvent } from '@angular/material/paginator';
 import { DoctorService } from '../../../core/services/doctor.service';
 import { ClinicService } from '../../../core/services/clinic.service';
@@ -65,8 +67,9 @@ export class DoctorListComponent implements OnInit {
   private kc = inject(KeycloakService);
   private fb = inject(FormBuilder);
 
-  /** Stato workflow: il tasto "Aggiungi Medico" si abilita solo se ci sono cliniche */
+  /** Stato workflow: tasti abilitati/disabilitati in base ai dati esistenti */
   protected hasClinics = signal(false);
+  protected hasDoctors = signal(false);
   protected checkingWorkflow = signal(true);
   protected loading = signal(false);
   protected doctors = signal<unknown[]>([]);
@@ -143,13 +146,24 @@ export class DoctorListComponent implements OnInit {
   ngOnInit(): void {
     this.loadSpecializations();
     this.checkingWorkflow.set(true);
+    let checksRemaining = 2;
+    const onCheckDone = () => { if (--checksRemaining === 0) this.checkingWorkflow.set(false); };
+
     this.clinicService.getAll({ size: 1, status: 'ATTIVO' }).subscribe({
       next: (resp: unknown) => {
         const data = (resp as Record<string, unknown>)['data'];
         this.hasClinics.set(Array.isArray(data) && data.length > 0);
-        this.checkingWorkflow.set(false);
+        onCheckDone();
       },
-      error: () => this.checkingWorkflow.set(false)
+      error: () => onCheckDone()
+    });
+    this.doctorService.getAll({ size: 1, status: 'ATTIVO' }).subscribe({
+      next: (resp: unknown) => {
+        const data = (resp as Record<string, unknown>)['data'];
+        this.hasDoctors.set(Array.isArray(data) && data.length > 0);
+        onCheckDone();
+      },
+      error: () => onCheckDone()
     });
   }
 
@@ -177,6 +191,14 @@ export class DoctorListComponent implements OnInit {
 
   protected newDoctor(): void {
     this.router.navigate([this.kc.getDoctorsRoute(), 'new']);
+  }
+
+  protected manageAvailabilities(): void {
+    this.router.navigate([this.kc.getDoctorsRoute(), 'availabilities']);
+  }
+
+  protected manageAssignments(): void {
+    this.router.navigate([this.kc.getDoctorsRoute(), 'assignments']);
   }
 
   protected isAdmin(): boolean {

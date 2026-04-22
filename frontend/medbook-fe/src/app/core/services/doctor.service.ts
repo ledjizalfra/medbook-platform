@@ -92,8 +92,6 @@ export class DoctorService {
     dayOfWeek: string,
     startTime: string
   ): Observable<unknown> {
-    return this.http.delete(`${this.base}/${doctorId}/availabilities`, {
-      params: { clinicId, dayOfWeek, startTime }
-    });
+    return this.http.delete(`${this.base}/${doctorId}/availabilities/${clinicId}/${dayOfWeek}/${startTime}`);
   }
 }

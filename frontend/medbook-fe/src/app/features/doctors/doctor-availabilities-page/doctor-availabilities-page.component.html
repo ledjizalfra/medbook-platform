@@ -1,0 +1,67 @@
+<app-medbook-page title="Gestisci Disponibilita" [loading]="loading()" backLabel="Torna ai medici" (backClick)="goBack()">
+
+  <!-- Select medico -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="mb-field" style="max-width: 400px;">
+        <mat-label>Seleziona medico</mat-label>
+        <mat-select (selectionChange)="onDoctorSelected($event.value)">
+          @for (d of doctors(); track d.value) {
+            <mat-option [value]="d.value">{{ d.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
+
+  @if (selectedDoctor()) {
+    <!-- Form aggiunta -->
+    <mat-card class="filter-card">
+      <mat-card-content>
+        <p class="section-label">Aggiungi disponibilita</p>
+        <form [formGroup]="addForm">
+          <div class="mb-grid" style="--cols: 5">
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Clinica</mat-label>
+              <mat-select formControlName="clinicId">
+                @for (c of clinicOptions(); track c.value) {
+                  <mat-option [value]="c.value">{{ c.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Giorno</mat-label>
+              <mat-select formControlName="dayOfWeek">
+                @for (d of dayOptions; track d.value) {
+                  <mat-option [value]="d.value">{{ d.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Inizio</mat-label>
+              <input matInput appTimeInput formControlName="startTime" placeholder="09:00" maxlength="5" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Fine</mat-label>
+              <input matInput appTimeInput formControlName="endTime" placeholder="13:00" maxlength="5" />
+            </mat-form-field>
+            <div class="mb-filter-actions">
+              <button mat-flat-button color="primary" type="button" (click)="addAvailability()" [disabled]="addForm.invalid || saving()">
+                <mat-icon>add</mat-icon> Aggiungi
+              </button>
+            </div>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Tabella risultati -->
+    <app-medbook-table
+      [columns]="columns"
+      [actions]="tableActions"
+      [data]="availabilities()"
+      emptyMessage="Nessuna disponibilita per questo medico"
+      emptyIcon="schedule" />
+  }
+
+</app-medbook-page>

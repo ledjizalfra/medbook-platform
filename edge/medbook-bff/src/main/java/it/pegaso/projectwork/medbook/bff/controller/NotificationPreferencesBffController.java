@@ -7,6 +7,7 @@ import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyAuthority('ROLE_PATIENT', 'ROLE_DOCTOR')")
 public class NotificationPreferencesBffController implements NotificationPreferencesApi {
 
     private final NotificationPreferencesBffService preferencesService;
