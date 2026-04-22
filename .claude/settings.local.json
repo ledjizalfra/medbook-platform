@@ -42,7 +42,9 @@
       "Bash(find . -type f \\\\\\( -name \"*.ts\" -o -name \"*.html\" \\\\\\) ! -path \"*/node_modules/*\" ! -name \"*.spec.ts\" -exec grep -l -i \"sede\" {} \\\\;)",
       "Bash(find . -name \"*.java\" -exec sed -i 's|// @PreAuthorize|@PreAuthorize|g' {} +)",
       "Bash(grep -l \"http.get\" *.ts)",
-      "Bash(grep -A2 \"getSpecializations\\\\|getAllClinics\\\\|postCreatePatient\" it/pegaso/projectwork/medbook/bff/controller/*.java)"
+      "Bash(grep -A2 \"getSpecializations\\\\|getAllClinics\\\\|postCreatePatient\" it/pegaso/projectwork/medbook/bff/controller/*.java)",
+      "Bash(grep -rn \"@PreAuthorize\" edge/medbook-bff/src/main/java/it/pegaso/projectwork/medbook/bff/controller/*.java)",
+      "Bash(find . -name \"*.java\" -path \"*/controller/*\" -exec sed -i 's|    @PreAuthorize|    // @PreAuthorize|g' {} +)"
     ]
   }
 }

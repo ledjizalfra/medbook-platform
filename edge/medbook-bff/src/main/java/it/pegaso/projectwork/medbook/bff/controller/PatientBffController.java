@@ -21,8 +21,7 @@ public class PatientBffController implements PatientsApi {
 
     private final PatientBffService patientBffService;
 
-    /** Registra un nuovo paziente — pubblico per la registrazione autonoma. */
-    @PreAuthorize("permitAll()")
+    /** Registra un nuovo paziente — pubblico (SecurityFilterChain permitAll). */
     @Override
     public ResponseEntity<MedBookApiResponse> postCreatePatient(
             MedBookContext context, CreatePatientBffRequest createPatientBffRequest) {
@@ -30,7 +29,7 @@ public class PatientBffController implements PatientsApi {
     }
 
     /** Lista pazienti con filtri (ROLE_ADMIN, ROLE_RECEPTIONIST). */
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_RECEPTIONIST')")
+    // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_RECEPTIONIST')")
     @Override
     public ResponseEntity<MedBookApiResponse> getAllPatients(
             MedBookContext context, Integer page, Integer size, String sort,
@@ -44,7 +43,7 @@ public class PatientBffController implements PatientsApi {
     }
 
     /** Dettaglio paziente. */
-    @PreAuthorize("isAuthenticated()")
+    // @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiResponse> getPatientById(
             MedBookContext context, String patientId) {
@@ -58,7 +57,7 @@ public class PatientBffController implements PatientsApi {
     }
 
     /** Aggiorna dati paziente. */
-    @PreAuthorize("isAuthenticated()")
+    // @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> patchUpdatePatient(
             MedBookContext context, String patientId, UpdatePatientBffRequest updatePatientBffRequest) {
@@ -73,7 +72,7 @@ public class PatientBffController implements PatientsApi {
     }
 
     /** Elimina logicamente un paziente (ROLE_ADMIN). */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> deletePatient(
             MedBookContext context, String patientId) {
@@ -81,7 +80,7 @@ public class PatientBffController implements PatientsApi {
     }
 
     /** Ripristina un paziente eliminato logicamente (ROLE_ADMIN). */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> patchRestorePatient(
             MedBookContext context, String patientId) {

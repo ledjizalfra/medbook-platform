@@ -18,7 +18,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/bff/v1/doctors/me")
-@PreAuthorize("hasAuthority('ROLE_DOCTOR')")
+// @PreAuthorize("hasAuthority('ROLE_DOCTOR')")
 @RequiredArgsConstructor
 public class DoctorConsentBffController {
 

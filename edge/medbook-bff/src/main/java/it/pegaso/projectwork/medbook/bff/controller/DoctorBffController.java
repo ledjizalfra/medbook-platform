@@ -36,14 +36,14 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     // === DOCTORS ===
 
     /** Profilo del medico autenticato — risolto via ActorLookupHelper (L1+L2 cache). */
-    @PreAuthorize("hasAuthority('ROLE_DOCTOR')")
+    // @PreAuthorize("hasAuthority('ROLE_DOCTOR')")
     @Override
     public ResponseEntity<MedBookApiResponse> getMyDoctor(MedBookContext context) {
         return doctorBffService.getMyDoctor(context);
     }
 
     /** Crea un nuovo medico (ROLE_ADMIN). */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiResponse> postCreateDoctor(
             MedBookContext context, CreateDoctorBffRequest createDoctorBffRequest) {
@@ -51,7 +51,7 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     }
 
     /** Lista medici con filtri. */
-    @PreAuthorize("isAuthenticated()")
+    // @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiResponse> getAllDoctors(
             MedBookContext context, Integer page, Integer size, String sort,
@@ -65,7 +65,7 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     }
 
     /** Dettaglio medico. */
-    @PreAuthorize("isAuthenticated()")
+    // @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiResponse> getDoctorById(
             MedBookContext context, String doctorId) {
@@ -73,7 +73,7 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     }
 
     /** Aggiorna dati medico (ROLE_ADMIN). */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> patchUpdateDoctor(
             MedBookContext context, String doctorId, UpdateDoctorBffRequest updateDoctorBffRequest) {
@@ -81,7 +81,7 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     }
 
     /** Elimina logicamente un medico (ROLE_ADMIN). */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> deleteDoctor(
             MedBookContext context, String doctorId) {
@@ -90,8 +90,7 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
 
     // === SPECIALIZATIONS ===
 
-    /** Catalogo specializzazioni — pubblico per l'area vetrina. */
-    @PreAuthorize("permitAll()")
+    /** Catalogo specializzazioni — pubblico (SecurityFilterChain permitAll). */
     @Override
     public ResponseEntity<MedBookApiResponse> getSpecializations(MedBookContext context) {
         return doctorBffService.getSpecializations(context);
@@ -100,7 +99,7 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     // === AVAILABILITIES (template per medico) ===
 
     /** Aggiunge template di disponibilita al medico (ROLE_ADMIN). */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> postCreateAvailability(
             MedBookContext context, String doctorId, CreateAvailabilityBffRequest createAvailabilityBffRequest) {
@@ -108,7 +107,7 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     }
 
     /** Lista template disponibilita del medico. */
-    @PreAuthorize("isAuthenticated()")
+    // @PreAuthorize("isAuthenticated()")
     @Override
     public ResponseEntity<MedBookApiResponse> getAllAvailabilities(
             MedBookContext context, String doctorId) {
@@ -116,7 +115,7 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     }
 
     /** Rimuove logicamente un template di disponibilita (ROLE_ADMIN). */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> deleteAvailability(
             MedBookContext context, String doctorId, String clinicId,
@@ -125,7 +124,7 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     }
 
     /** Ripristina un medico eliminato logicamente (ROLE_ADMIN). */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> patchRestoreDoctor(
             MedBookContext context, String doctorId) {
@@ -133,7 +132,7 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     }
 
     /** Ripristina un template di disponibilita eliminato logicamente (ROLE_ADMIN). */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Override
     public ResponseEntity<MedBookApiVoidResponse> patchRestoreAvailability(
             MedBookContext context, String doctorId, String clinicId,

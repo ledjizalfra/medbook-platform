@@ -3,7 +3,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MedbookLogoComponent } from '../medbook-logo/medbook-logo.component';
+
 
 /**
  * Componente layout wrapper leggero per le pagine della piattaforma MedBook.
@@ -15,8 +15,7 @@ import { MedbookLogoComponent } from '../medbook-logo/medbook-logo.component';
   imports: [
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule,
-    MedbookLogoComponent
+    MatProgressSpinnerModule
   ],
   templateUrl: './medbook-page.component.html',
   styleUrl: './medbook-page.component.scss'

@@ -106,9 +106,11 @@ export class DoctorListComponent implements OnInit {
     { key: 'email',          header: 'Email' },
     { key: 'phone',          header: 'Telefono' },
     { key: 'licenseNumber',  header: 'N. Iscrizione' },
+    { key: '_specialization', header: 'Specializzazione' },
     { key: 'gender',         header: 'Sesso' },
     { key: 'dateOfBirth',    header: 'Data nascita', type: 'date' },
     { key: 'status',         header: 'Stato', type: 'badge' },
+    { key: 'consentStatus',  header: 'Consenso', type: 'badge' },
     { key: 'createdAt',      header: 'Creato il', type: 'date', dateFormat: 'dd/MM/yyyy HH:mm' },
     { key: 'updatedAt',      header: 'Aggiornato il', type: 'date', dateFormat: 'dd/MM/yyyy HH:mm' },
     { key: 'createdBy',      header: 'Creato da' }
@@ -247,6 +249,12 @@ export class DoctorListComponent implements OnInit {
         const page = r['page'] as Record<string, unknown> ?? {};
         this.doctors.set(list.map(d => {
           const row = d as Record<string, unknown>;
+          // Estrae la specializzazione primaria per la colonna tabella
+          const specs = row['specializations'] as Record<string, unknown>[] | undefined;
+          if (specs && specs.length > 0) {
+            const primary = specs.find(s => s['isPrimary'] === true) ?? specs[0];
+            row['_specialization'] = primary['specialization'] as string ?? '';
+          }
           return row;
         }));
         this.totalElements.set(page['totalElements'] as number ?? list.length);
