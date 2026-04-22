@@ -21,8 +21,8 @@ public class PatientBffController implements PatientsApi {
 
     private final PatientBffService patientBffService;
 
-    /** Registra un nuovo paziente (ROLE_ADMIN, ROLE_RECEPTIONIST). */
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_RECEPTIONIST')")
+    /** Registra un nuovo paziente — pubblico per la registrazione autonoma. */
+    @PreAuthorize("permitAll()")
     @Override
     public ResponseEntity<MedBookApiResponse> postCreatePatient(
             MedBookContext context, CreatePatientBffRequest createPatientBffRequest) {

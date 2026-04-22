@@ -43,8 +43,8 @@ public class ClinicBffController implements ClinicsApi, AssignmentsApi {
         return clinicBffService.createClinic(context, createClinicBffRequest);
     }
 
-    /** Lista sedi cliniche. */
-    @PreAuthorize("isAuthenticated()")
+    /** Lista cliniche — pubblico per l'area vetrina. */
+    @PreAuthorize("permitAll()")
     @Override
     public ResponseEntity<MedBookApiResponse> getAllClinics(
             MedBookContext context, Integer page, Integer size, String sort,

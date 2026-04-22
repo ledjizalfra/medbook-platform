@@ -90,8 +90,8 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
 
     // === SPECIALIZATIONS ===
 
-    /** Lista specializzazioni disponibili. */
-    @PreAuthorize("isAuthenticated()")
+    /** Catalogo specializzazioni — pubblico per l'area vetrina. */
+    @PreAuthorize("permitAll()")
     @Override
     public ResponseEntity<MedBookApiResponse> getSpecializations(MedBookContext context) {
         return doctorBffService.getSpecializations(context);
