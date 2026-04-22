@@ -20,6 +20,8 @@ import { InfoDialogComponent } from '../../../shared/components/info-dialog/info
 import { DoctorService } from '../../../core/services/doctor.service';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { SpecializationService } from '../../../core/services/specialization.service';
+import { SpecializationStore } from '../../../core/store/specialization.store';
+import { ClinicStore } from '../../../core/store/clinic.store';
 import { MedBookValidators } from '../../../core/validators/medbook.validators';
 import { SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
 import { TimeInputDirective } from '../../../shared/directives/time-input.directive';
@@ -61,6 +63,8 @@ export class DoctorFormComponent implements OnInit {
   private doctorService = inject(DoctorService);
   private clinicService = inject(ClinicService);
   private specializationService = inject(SpecializationService);
+  private specStore = inject(SpecializationStore);
+  private clinicStore = inject(ClinicStore);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private destroyRef = inject(DestroyRef);
@@ -242,13 +246,10 @@ export class DoctorFormComponent implements OnInit {
     }
   }
 
-  /** Carica le specializzazioni dal backend per popolare il multiselect */
+  /** Carica le specializzazioni tramite store (cache TTL) */
   private loadSpecializations(): void {
-    this.specializationService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (data: unknown) => {
-        const inner = (data as Record<string, unknown>)['data'];
-        const specs = (inner as Record<string, unknown>)?.['specializations'];
-        const list = Array.isArray(specs) ? specs as unknown[] : [];
+    this.specStore.loadAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (list: unknown[]) => {
         this.specializationOptions.set(
           list.map(s => {
             const id   = (s as Record<string, unknown>)['specializationId'] as string;
@@ -291,13 +292,10 @@ export class DoctorFormComponent implements OnInit {
     });
   }
 
-  /** Carica le cliniche attive per popolare il select delle disponibilita */
+  /** Carica le cliniche attive tramite store (cache TTL) */
   private loadClinics(): void {
-    this.clinicService.getAll({ status: 'ATTIVO', size: 100 }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (data: unknown) => {
-        const r = data as Record<string, unknown>;
-        const inner = r['data'];
-        const list = Array.isArray(inner) ? inner as unknown[] : [];
+    this.clinicStore.loadAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (list: unknown[]) => {
         this.clinicOptions.set(
           list.map(c => {
             const clinic = c as Record<string, unknown>;
