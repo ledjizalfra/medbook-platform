@@ -1,7 +1,4 @@
-/* Stili notification-list — max-width override per lista */
-:host ::ng-deep .mb-page {
-  max-width: 1200px;
-}
+/* Stili gestiti globalmente in styles.scss (.mb-page) */
 
 .preferences-card {
   margin-bottom: 24px;

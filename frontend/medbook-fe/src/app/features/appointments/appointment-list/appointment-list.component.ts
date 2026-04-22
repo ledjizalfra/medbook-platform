@@ -31,7 +31,7 @@ import { MbFormGroup } from '../../../shared/components/medbook-form/medbook-for
 import { TableColumn, TableAction } from '../../../shared/components/medbook-table/medbook-table.models';
 
 /**
- * Componente lista appuntamenti con filtri per stato, sede e intervallo di date.
+ * Componente lista appuntamenti con filtri per stato, clinica e intervallo di date.
  * Filtri con MedBookForm (customTemplate), tabella con MedBookTable.
  * I nomi medico/clinica vengono arricchiti nei dati prima di passarli alla tabella.
  */
@@ -99,7 +99,7 @@ export class AppointmentListComponent implements OnInit {
     { key: '_patientName',   header: 'Paziente' },
     { key: '_doctorName',    header: 'Medico' },
     { key: '_specName',      header: 'Specializzazione' },
-    { key: '_clinicName',    header: 'Sede' },
+    { key: '_clinicName',    header: 'Clinica' },
     { key: 'status',         header: 'Stato', type: 'badge' }
   ];
 

@@ -1,8 +1,10 @@
-<app-medbook-page title="Medici" [loading]="loading()">
+<app-medbook-page title="Medici" [loading]="loading() || checkingWorkflow()">
   @if (isAdmin()) {
-    <button pageActions mat-flat-button color="primary" (click)="newDoctor()">
+    <button pageActions mat-flat-button color="primary" (click)="newDoctor()"
+            [disabled]="!hasClinics()"
+            [matTooltip]="!hasClinics() ? 'Aggiungi prima almeno una clinica' : ''">
       <mat-icon>add</mat-icon>
-      Nuovo medico
+      Aggiungi Medico
     </button>
   }
 

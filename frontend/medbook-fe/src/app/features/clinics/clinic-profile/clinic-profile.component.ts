@@ -10,7 +10,7 @@ import { SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
 
 /**
  * Profilo della clinica — vista per il gestore clinica.
- * Mostra i dati della sede in sola lettura (nome, email, telefono, indirizzo, T&C).
+ * Mostra i dati della clinica in sola lettura (nome, email, telefono, indirizzo, T&C).
  * Il clinicId viene letto dal route param `:id` oppure dal query param `clinicId`.
  */
 @Component({

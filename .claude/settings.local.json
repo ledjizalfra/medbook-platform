@@ -38,7 +38,8 @@
       "Bash(grep -r \"operationId:\" dmn/*/src/main/resources/openapi/*.yaml edge/*/src/main/resources/openapi/*.yaml)",
       "Bash(grep -E \"\\\\.\\(html|scss|ts\\)$\")",
       "Bash(ls docker*)",
-      "Bash(ls -d docker/)"
+      "Bash(ls -d docker/)",
+      "Bash(find . -type f \\\\\\( -name \"*.ts\" -o -name \"*.html\" \\\\\\) ! -path \"*/node_modules/*\" ! -name \"*.spec.ts\" -exec grep -l -i \"sede\" {} \\\\;)"
     ]
   }
 }

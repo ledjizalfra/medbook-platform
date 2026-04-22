@@ -6,7 +6,12 @@
         <mat-icon>arrow_back</mat-icon>
         Torna ai medici
       </button>
-      <h1 class="card-header-title">{{ pageTitle }}</h1>
+      <div class="title-row">
+        <h1 class="card-header-title">{{ pageTitle }}</h1>
+        @if (currentStepLabel()) {
+          <span class="step-badge">{{ currentStepLabel() }}</span>
+        }
+      </div>
     </div>
 
     <div class="card-body">
@@ -26,7 +31,7 @@
         </div>
       }
 
-      <mat-stepper linear #stepper (selectionChange)="onStepChange()">
+      <mat-stepper linear #stepper (selectionChange)="onStepChange($event)">
 
         <!-- ============================================================ -->
         <!-- STEP 1: Anagrafica                                          -->
@@ -102,15 +107,42 @@
               </mat-form-field>
             </div>
 
-            <p class="section-label">Specializzazioni</p>
+            <p class="section-label">Specializzazioni (max 3 — una principale obbligatoria)</p>
+
             <mat-form-field appearance="outline" class="mb-field">
-              <mat-label>Specializzazioni</mat-label>
-              <mat-select formControlName="specializations" multiple>
+              <mat-label>Specializzazione principale *</mat-label>
+              <mat-select formControlName="primarySpecialization">
                 @for (opt of specializationOptions(); track opt.value) {
                   <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
+
+            @if (step2.get('primarySpecialization')?.value) {
+              <div class="secondary-specs">
+                <p class="section-sublabel">Specializzazioni secondarie (facoltative, max 2)</p>
+
+                @for (secId of step2.get('secondarySpecializations')?.value ?? []; track secId) {
+                  <div class="spec-chip">
+                    <span>{{ getSpecLabel(secId) }}</span>
+                    <button mat-icon-button type="button" (click)="removeSecondary(secId)">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                }
+
+                @if (canAddSecondary) {
+                  <mat-form-field appearance="outline" class="mb-field">
+                    <mat-label>Aggiungi specializzazione secondaria</mat-label>
+                    <mat-select (selectionChange)="addSecondary($event.value); secondarySelect.value = '';" #secondarySelect>
+                      @for (opt of secondaryOptions; track opt.value) {
+                        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                }
+              </div>
+            }
           </form>
 
           <div class="step-actions">
@@ -153,6 +185,73 @@
                 <mat-icon>arrow_back</mat-icon> Indietro
               </button>
               <button mat-flat-button color="primary" (click)="validateStep(step3) && stepper.next()">
+                Avanti <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </mat-step>
+        }
+
+        <!-- ============================================================ -->
+        <!-- STEP 4: Disponibilita settimanale (solo creazione)          -->
+        <!-- ============================================================ -->
+        @if (isCreateMode) {
+          <mat-step label="Disponibilita" [optional]="true">
+            <div class="step-hint">
+              <mat-icon>info_outline</mat-icon>
+              Aggiungi le fasce orarie in cui il medico riceve pazienti (facoltativo — puoi aggiungerle dopo).
+            </div>
+
+            <form [formGroup]="availForm">
+              <div class="mb-grid" style="--cols: 4">
+                <mat-form-field appearance="outline" class="mb-field">
+                  <mat-label>Clinica *</mat-label>
+                  <mat-select formControlName="clinicId">
+                    @for (opt of clinicOptions(); track opt.value) {
+                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="mb-field">
+                  <mat-label>Giorno *</mat-label>
+                  <mat-select formControlName="dayOfWeek">
+                    @for (day of dayOptions; track day.value) {
+                      <mat-option [value]="day.value">{{ day.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="mb-field">
+                  <mat-label>Ora inizio *</mat-label>
+                  <input matInput appTimeInput formControlName="startTime" placeholder="09:00" maxlength="5" />
+                  <mat-icon matSuffix>schedule</mat-icon>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="mb-field">
+                  <mat-label>Ora fine *</mat-label>
+                  <input matInput appTimeInput formControlName="endTime" placeholder="13:00" maxlength="5" />
+                  <mat-icon matSuffix>schedule</mat-icon>
+                </mat-form-field>
+              </div>
+              <button mat-stroked-button type="button" (click)="addAvailability()">
+                <mat-icon>add</mat-icon> Aggiungi fascia
+              </button>
+            </form>
+
+            @if (availabilityItems().length > 0) {
+              <p class="section-label" style="margin-top: 16px;">Fasce aggiunte</p>
+              @for (item of availabilityItems(); track $index) {
+                <div class="spec-chip">
+                  <span>{{ item.clinicName }} — {{ item.dayOfWeek }} {{ item.startTime }}-{{ item.endTime }}</span>
+                  <button mat-icon-button type="button" (click)="removeAvailability($index)">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              }
+            }
+
+            <div class="step-actions">
+              <button mat-stroked-button (click)="stepper.previous()">
+                <mat-icon>arrow_back</mat-icon> Indietro
+              </button>
+              <button mat-flat-button color="primary" (click)="stepper.next()">
                 Avanti <mat-icon>arrow_forward</mat-icon>
               </button>
             </div>

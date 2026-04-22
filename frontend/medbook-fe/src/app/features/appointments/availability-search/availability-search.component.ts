@@ -46,7 +46,7 @@ interface ClinicFilter {
  * Componente per la ricerca delle disponibilita e prenotazione appuntamenti.
  *
  * Cascata filtri:
- * Specializzazione (obbligatorio) → Medico → Provincia → Citta → Sede
+ * Specializzazione (obbligatorio) → Medico → Provincia → Citta → Clinica
  * Ogni filtro a valle mostra solo valori coerenti con le selezioni a monte.
  */
 @Component({
@@ -148,7 +148,7 @@ export class AvailabilitySearchComponent {
     return [...new Set(list.map(c => c.city).filter(ci => ci && ci.length > 0))].sort();
   });
 
-  /** Sedi disponibili — filtrate per provincia + citta */
+  /** Cliniche disponibili — filtrate per provincia + citta */
   protected filteredClinics = computed(() => {
     const prov = this.provinceSelected();
     const city = this.citySelected();
@@ -174,17 +174,17 @@ export class AvailabilitySearchComponent {
     dateTo:   [this.maxDate as Date | null]
   });
 
-  /** Gruppi MedBookForm — ordine: specializzazione/medico, sede, periodo */
+  /** Gruppi MedBookForm — ordine: specializzazione/medico, clinica, periodo */
   protected readonly filterGroups: MbFormGroup[] = [
     { id: 'medico', label: 'Specializzazione e medico', customTemplate: true },
-    { id: 'sede', label: 'Sede clinica', customTemplate: true },
+    { id: 'clinica', label: 'Clinica', customTemplate: true },
     { id: 'periodo', label: 'Periodo di ricerca', customTemplate: true }
   ];
 
   protected readonly resultColumns: TableColumn[] = [
     { key: '_specName',       header: 'Specializzazione' },
     { key: 'doctorFullName',  header: 'Medico' },
-    { key: 'clinicName',      header: 'Sede' },
+    { key: 'clinicName',      header: 'Clinica' },
     { key: 'clinicProvince',  header: 'Provincia' },
     { key: 'clinicCity',      header: 'Città' },
     { key: 'slotDate',        header: 'Data', type: 'date' },
@@ -208,7 +208,7 @@ export class AvailabilitySearchComponent {
 
   // --- EVENTI CASCATA ---
 
-  /** Specializzazione cambiata → resetta medico e sede */
+  /** Specializzazione cambiata → resetta medico e clinica */
   protected onSpecializationChange(): void {
     this.specSelected.set(this.filterForm.get('specialization')?.value ?? '');
     this.filterForm.patchValue({ doctorId: '', province: '', city: '', clinicId: '' });
@@ -217,7 +217,7 @@ export class AvailabilitySearchComponent {
     this.citySelected.set('');
   }
 
-  /** Medico cambiato → resetta sede */
+  /** Medico cambiato → resetta clinica */
   protected onDoctorChange(): void {
     this.doctorSelected.set(this.filterForm.get('doctorId')?.value ?? '');
     this.filterForm.patchValue({ province: '', city: '', clinicId: '' });
@@ -225,14 +225,14 @@ export class AvailabilitySearchComponent {
     this.citySelected.set('');
   }
 
-  /** Provincia cambiata → resetta citta e sede */
+  /** Provincia cambiata → resetta citta e clinica */
   protected onProvinceChange(): void {
     this.provinceSelected.set(this.filterForm.get('province')?.value ?? '');
     this.filterForm.patchValue({ city: '', clinicId: '' });
     this.citySelected.set('');
   }
 
-  /** Citta cambiata → resetta sede */
+  /** Citta cambiata → resetta clinica */
   protected onCityChange(): void {
     this.citySelected.set(this.filterForm.get('city')?.value ?? '');
     this.filterForm.patchValue({ clinicId: '' });
@@ -321,7 +321,7 @@ export class AvailabilitySearchComponent {
           return { ...r, _specName: String(r['specialization'] ?? '') };
         });
 
-        // Filtro client-side per provincia/citta quando non e stata selezionata una sede specifica
+        // Filtro client-side per provincia/citta quando non e stata selezionata una clinica specifica
         const prov = val.province;
         const city = val.city;
         const filtered = (!val.clinicId && (prov || city))

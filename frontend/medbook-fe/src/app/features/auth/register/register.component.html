@@ -5,7 +5,12 @@
 
     <div class="card-hero">
       <div class="card-hero-icon"><app-medbook-logo [size]="56"></app-medbook-logo></div>
-      <h1 class="card-hero-title">Crea il tuo account</h1>
+      <div class="title-row">
+        <h1 class="card-hero-title">Crea il tuo account</h1>
+        @if (currentStepLabel()) {
+          <span class="step-badge">{{ currentStepLabel() }}</span>
+        }
+      </div>
       <p class="card-hero-subtitle">Registrati su MedBook e prenota le tue visite online</p>
     </div>
 
@@ -26,7 +31,7 @@
         </div>
       }
 
-      <mat-stepper linear #stepper (selectionChange)="onStepChange()">
+      <mat-stepper linear #stepper (selectionChange)="onStepChange($event)">
 
         <!-- ============================================================ -->
         <!-- STEP 1: Anagrafica e Codice Fiscale                         -->

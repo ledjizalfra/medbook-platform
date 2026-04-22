@@ -4,9 +4,14 @@
     <div class="card-header">
       <button mat-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
-        Torna alle sedi
+        Torna alle cliniche
       </button>
-      <h1 class="card-header-title">{{ pageTitle }}</h1>
+      <div class="title-row">
+        <h1 class="card-header-title">{{ pageTitle }}</h1>
+        @if (currentStepLabel()) {
+          <span class="step-badge">{{ currentStepLabel() }}</span>
+        }
+      </div>
     </div>
 
     <div class="card-body">
@@ -26,7 +31,7 @@
         </div>
       }
 
-      <mat-stepper linear #stepper (selectionChange)="onStepChange()">
+      <mat-stepper linear #stepper (selectionChange)="onStepChange($event)">
 
         <!-- ============================================================ -->
         <!-- STEP 1: Informazioni generali                               -->
@@ -34,12 +39,12 @@
         <mat-step [stepControl]="step1" label="Informazioni generali">
           <div class="step-hint">
             <mat-icon>info_outline</mat-icon>
-            Inserisci le informazioni generali della sede clinica.
+            Inserisci le informazioni generali della clinica.
           </div>
 
           <form [formGroup]="step1">
             <mat-form-field appearance="outline" class="mb-field">
-              <mat-label>Nome sede *</mat-label>
+              <mat-label>Nome clinica *</mat-label>
               <input matInput formControlName="name" />
             </mat-form-field>
 
@@ -71,7 +76,7 @@
         <mat-step [stepControl]="step2" label="Indirizzo">
           <div class="step-hint">
             <mat-icon>info_outline</mat-icon>
-            Inserisci l'indirizzo della sede. La provincia determina la lista dei comuni.
+            Inserisci l'indirizzo della clinica. La provincia determina la lista dei comuni.
           </div>
 
           <form [formGroup]="step2">
@@ -110,7 +115,7 @@
         <mat-step [stepControl]="step3" label="Riepilogo">
           <div class="step-hint">
             <mat-icon>info_outline</mat-icon>
-            Verifica i dati inseriti e conferma per salvare la sede.
+            Verifica i dati inseriti e conferma per salvare la clinica.
           </div>
 
           <div class="summary-table">

@@ -67,6 +67,7 @@ export class RegisterComponent implements OnInit {
   protected geoService = inject(GeoService);
 
   protected loading = signal(false);
+  protected currentStepLabel = signal('Anagrafica');
   protected natoEstero = signal(false);
   protected showPassword = signal(false);
   protected showConfirmPassword = signal(false);
@@ -198,9 +199,12 @@ export class RegisterComponent implements OnInit {
     return errors;
   }
 
-  /** Pulisce gli errori quando si cambia step */
-  protected onStepChange(): void {
+  /** Pulisce gli errori e aggiorna il label dello step corrente */
+  protected onStepChange(event?: { selectedStep?: { label?: string } }): void {
     this.stepErrors.set([]);
+    if (event?.selectedStep?.label) {
+      this.currentStepLabel.set(event.selectedStep.label);
+    }
   }
 
   // --- GEO NASCITA ---

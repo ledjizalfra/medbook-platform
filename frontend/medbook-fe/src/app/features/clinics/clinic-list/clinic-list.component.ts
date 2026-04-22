@@ -8,13 +8,17 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { InfoDialogComponent } from '../../../shared/components/info-dialog/info-dialog.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { AssignDoctorDialogComponent } from '../assign-doctor-dialog/assign-doctor-dialog.component';
 import { PageEvent } from '@angular/material/paginator';
 import { ClinicService } from '../../../core/services/clinic.service';
+import { DoctorService } from '../../../core/services/doctor.service';
 import { KeycloakService } from '../../../core/auth/keycloak.service';
 import { MedBookFormComponent } from '../../../shared/components/medbook-form/medbook-form.component';
 import { MedBookFormSlotDirective } from '../../../shared/components/medbook-form/medbook-form-slot.directive';
@@ -26,7 +30,7 @@ import { TableColumn, TableAction } from '../../../shared/components/medbook-tab
 /**
  * Componente lista sedi cliniche - accessibile solo agli ADMIN.
  *
- * Mostra tutte le sedi registrate nel sistema con filtri per nome, citta,
+ * Mostra tutte le cliniche registrate nel sistema con filtri per nome, citta,
  * provincia, email, stato e date di creazione/aggiornamento. Paginazione server-side.
  */
 @Component({
@@ -40,6 +44,8 @@ import { TableColumn, TableAction } from '../../../shared/components/medbook-tab
     MatInputModule,
     MatSelectModule,
     MatDatepickerModule,
+    MatTooltipModule,
+    MatProgressSpinnerModule,
     MatSnackBarModule,
     MedBookFormComponent,
     MedBookFormSlotDirective,
@@ -51,12 +57,16 @@ import { TableColumn, TableAction } from '../../../shared/components/medbook-tab
 })
 export class ClinicListComponent implements OnInit {
   private clinicService = inject(ClinicService);
+  private doctorService = inject(DoctorService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private kc = inject(KeycloakService);
   private fb = inject(FormBuilder);
 
+  /** Stato workflow: il tasto "Assegna medico" si abilita solo se ci sono medici */
+  protected hasDoctors = signal(false);
+  protected checkingWorkflow = signal(true);
   protected loading = signal(false);
   protected clinics = signal<unknown[]>([]);
   protected pageIndex = signal(0);
@@ -136,7 +146,15 @@ export class ClinicListComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Non caricare dati automaticamente: l'utente deve inserire almeno un filtro
+    this.checkingWorkflow.set(true);
+    this.doctorService.getAll({ size: 1, status: 'ATTIVO' }).subscribe({
+      next: (resp: unknown) => {
+        const data = (resp as Record<string, unknown>)['data'];
+        this.hasDoctors.set(Array.isArray(data) && data.length > 0);
+        this.checkingWorkflow.set(false);
+      },
+      error: () => this.checkingWorkflow.set(false)
+    });
   }
 
   protected onPageChange(event: PageEvent): void {
@@ -163,6 +181,18 @@ export class ClinicListComponent implements OnInit {
 
   protected newClinic(): void {
     this.router.navigate([this.kc.getClinicsRoute(), 'new']);
+  }
+
+  /** Apre il dialog per assegnare un medico a una clinica con form select. */
+  protected openAssignDoctor(): void {
+    this.dialog.open(AssignDoctorDialogComponent, { width: '450px' })
+      .afterClosed().subscribe((success: boolean) => {
+        if (success) {
+          this.dialog.open(InfoDialogComponent, {
+            data: { title: 'Assegnazione completata', message: 'Il medico e stato assegnato alla clinica.' }
+          });
+        }
+      });
   }
 
   protected isAdmin(): boolean {
@@ -214,20 +244,20 @@ export class ClinicListComponent implements OnInit {
     this.router.navigate([this.kc.getClinicsRoute(), id, 'edit']);
   }
 
-  // Naviga alla pagina di gestione delle assegnazioni medici per questa sede
+  // Naviga alla pagina di gestione delle assegnazioni medici per questa clinica
   private viewAssignments(clinic: unknown): void {
     const id = (clinic as Record<string, unknown>)['clinicId'];
     this.router.navigate([this.kc.getClinicsRoute(), id, 'assignments']);
   }
 
-  // Disattiva (soft delete) una sede previa conferma
+  // Disattiva (soft delete) una clinica previa conferma
   private deactivateClinic(clinic: unknown): void {
     const row = clinic as Record<string, unknown>;
     const id = row['clinicId'] as string;
     const name = row['name'] as string;
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: { title: 'Disattiva sede', message: `Confermi la disattivazione della sede "${name}"?` }
+      data: { title: 'Disattiva clinica', message: `Confermi la disattivazione della clinica "${name}"?` }
     });
 
     dialogRef.afterClosed().subscribe((confirmed: boolean) => {
@@ -235,25 +265,25 @@ export class ClinicListComponent implements OnInit {
       this.clinicService.delete(id).subscribe({
         next: () => {
           this.dialog.open(InfoDialogComponent, {
-            data: { title: 'Operazione completata', message: `La sede "${name}" è stata disattivata.`, icon: 'check_circle' }
+            data: { title: 'Operazione completata', message: `La clinica "${name}" è stata disattivata.`, icon: 'check_circle' }
           });
           this.loadClinics();
         },
         error: () => {
-          this.snackBar.open('Errore durante la disattivazione della sede.', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
+          this.snackBar.open('Errore durante la disattivazione della clinica.', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
         }
       });
     });
   }
 
-  // Ripristina una sede inattiva previa conferma
+  // Ripristina una clinica inattiva previa conferma
   private restoreClinic(clinic: unknown): void {
     const row = clinic as Record<string, unknown>;
     const id = row['clinicId'] as string;
     const name = row['name'] as string;
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      data: { title: 'Ripristina sede', message: `Confermi il ripristino della sede "${name}"?` }
+      data: { title: 'Ripristina clinica', message: `Confermi il ripristino della clinica "${name}"?` }
     });
 
     dialogRef.afterClosed().subscribe((confirmed: boolean) => {
@@ -261,12 +291,12 @@ export class ClinicListComponent implements OnInit {
       this.clinicService.restore(id).subscribe({
         next: () => {
           this.dialog.open(InfoDialogComponent, {
-            data: { title: 'Operazione completata', message: `La sede "${name}" è stata ripristinata.`, icon: 'check_circle' }
+            data: { title: 'Operazione completata', message: `La clinica "${name}" è stata ripristinata.`, icon: 'check_circle' }
           });
           this.loadClinics();
         },
         error: () => {
-          this.snackBar.open('Errore durante il ripristino della sede.', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
+          this.snackBar.open('Errore durante il ripristino della clinica.', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
         }
       });
     });

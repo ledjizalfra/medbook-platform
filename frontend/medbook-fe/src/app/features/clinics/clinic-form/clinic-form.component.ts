@@ -21,7 +21,7 @@ import { SearchableSelectComponent } from '../../../shared/components/searchable
 import { SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
 
 /**
- * Componente form a step per la creazione e modifica di una sede clinica.
+ * Componente form a step per la creazione e modifica di una clinica.
  *
  * 3 step con validazione progressiva:
  * 1. Informazioni generali (nome, email, telefono)
@@ -64,6 +64,7 @@ export class ClinicFormComponent implements OnInit {
   protected clinicId = signal<string | null>(null);
   protected loading = signal(false);
   protected stepErrors = signal<string[]>([]);
+  protected currentStepLabel = signal('Informazioni generali');
 
   // Opzioni per searchable-select
   protected provinceOpts = signal<{ value: string; label: string }[]>([]);
@@ -93,7 +94,7 @@ export class ClinicFormComponent implements OnInit {
       this.provinceOpts.set(p.map(v => ({ value: v.nome.toUpperCase(), label: `${v.nome.toUpperCase()} (${v.sigla})` })))
     );
 
-    // Se in modalita modifica, carica i dati della sede
+    // Se in modalita modifica, carica i dati della clinica
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.clinicId.set(id);
@@ -151,7 +152,7 @@ export class ClinicFormComponent implements OnInit {
   private collectStepErrors(stepForm: FormGroup): string[] {
     const errors: string[] = [];
     const labels: Record<string, string> = {
-      name: 'Nome sede', email: 'Email', phone: 'Telefono',
+      name: 'Nome clinica', email: 'Email', phone: 'Telefono',
       address: 'Indirizzo', province: 'Provincia', city: 'Comune', postalCode: 'CAP'
     };
 
@@ -168,9 +169,12 @@ export class ClinicFormComponent implements OnInit {
     return errors;
   }
 
-  /** Pulisce gli errori quando si cambia step */
-  protected onStepChange(): void {
+  /** Pulisce gli errori e aggiorna il label dello step corrente */
+  protected onStepChange(event?: { selectedStep?: { label?: string } }): void {
     this.stepErrors.set([]);
+    if (event?.selectedStep?.label) {
+      this.currentStepLabel.set(event.selectedStep.label);
+    }
   }
 
   // --- GEO INDIRIZZO ---
@@ -195,7 +199,7 @@ export class ClinicFormComponent implements OnInit {
     const s1 = this.step1.getRawValue();
     const s2 = this.step2.getRawValue();
     return [
-      { label: 'Nome sede', value: s1.name || '-' },
+      { label: 'Nome clinica', value: s1.name || '-' },
       { label: 'Email', value: s1.email || '-' },
       { label: 'Telefono', value: s1.phone || '-' },
       { label: 'Indirizzo', value: s2.address || '-' },
@@ -215,7 +219,7 @@ export class ClinicFormComponent implements OnInit {
     const payload: Record<string, unknown> = { ...s1, ...s2 };
 
     const id = this.clinicId();
-    // In creazione l'admin accetta i T&C implicitamente registrando la sede
+    // In creazione l'admin accetta i T&C implicitamente registrando la clinica
     if (!id) {
       payload['termsAccepted'] = true;
     }
@@ -228,14 +232,14 @@ export class ClinicFormComponent implements OnInit {
       next: () => {
         this.loading.set(false);
         const title = id ? 'Aggiornamento completato' : 'Operazione completata';
-        const msg = id ? 'Sede aggiornata con successo!' : 'Sede creata con successo!';
+        const msg = id ? 'Clinica aggiornata con successo!' : 'Clinica creata con successo!';
         this.dialog.open(InfoDialogComponent, { data: { title, message: msg } });
         this.router.navigate([this.kc.getClinicsRoute()]);
       },
       error: (err: HttpErrorResponse) => {
         this.loading.set(false);
         if (err.status === 409) {
-          this.stepErrors.set(['Questa sede risulta gia registrata. Verifica i dati inseriti.']);
+          this.stepErrors.set(['Questa clinica risulta gia registrata. Verifica i dati inseriti.']);
         } else {
           this.snackBar.open('Errore durante il salvataggio. Riprova.', 'Chiudi',
             { duration: SNACKBAR_DURATION.LONG });
@@ -249,6 +253,6 @@ export class ClinicFormComponent implements OnInit {
   }
 
   protected get pageTitle(): string {
-    return this.clinicId() ? 'Modifica sede' : 'Nuova sede';
+    return this.clinicId() ? 'Modifica clinica' : 'Aggiungi Clinica';
   }
 }

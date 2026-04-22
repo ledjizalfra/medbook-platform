@@ -131,9 +131,9 @@ public class ClinicBffServiceImpl implements ClinicBffService {
     @Override
     public ResponseEntity<MedBookApiResponse> createAssignment(MedBookContext context, String clinicId,
             CreateAssignmentBffRequest bffReq) {
-        // CreateAssignmentRequest clinic-dmn accetta solo doctorId e validFrom - specialization non supportata.
         CreateAssignmentRequest req = new CreateAssignmentRequest();
         req.setDoctorId(bffReq.getDoctorId());
+        req.setValidFrom(java.time.LocalDate.now());
         return assignmentsClient.postCreateAssignment(context, clinicId, req);
     }
 

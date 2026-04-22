@@ -27,8 +27,24 @@
   color: #1b5e20;
 }
 .card-hero-icon { display: flex; justify-content: center; margin-bottom: 10px; }
-.card-hero-title { margin: 0 0 4px; font-size: 1.5rem; font-weight: 700; }
-.card-hero-subtitle { margin: 0; font-size: 0.85rem; color: #37474f; }
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.card-hero-title { margin: 0; font-size: 1.5rem; font-weight: 700; }
+.step-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.3);
+  color: #1b5e20;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.card-hero-subtitle { margin: 4px 0 0; font-size: 0.85rem; color: #37474f; }
 
 .card-body { padding: 24px 28px 28px; }
 

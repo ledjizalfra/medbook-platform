@@ -18,9 +18,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { InfoDialogComponent } from '../../../shared/components/info-dialog/info-dialog.component';
 import { DoctorService } from '../../../core/services/doctor.service';
+import { ClinicService } from '../../../core/services/clinic.service';
 import { SpecializationService } from '../../../core/services/specialization.service';
 import { MedBookValidators } from '../../../core/validators/medbook.validators';
 import { SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
+import { TimeInputDirective } from '../../../shared/directives/time-input.directive';
 
 /**
  * Componente form stepper per la creazione e modifica di un medico.
@@ -46,7 +48,8 @@ import { SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    MatDatepickerModule
+    MatDatepickerModule,
+    TimeInputDirective
   ],
   templateUrl: './doctor-form.component.html',
   styleUrl: './doctor-form.component.scss'
@@ -56,6 +59,7 @@ export class DoctorFormComponent implements OnInit {
   private router = inject(Router);
   private fb = inject(FormBuilder);
   private doctorService = inject(DoctorService);
+  private clinicService = inject(ClinicService);
   private specializationService = inject(SpecializationService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
@@ -66,9 +70,34 @@ export class DoctorFormComponent implements OnInit {
   protected doctorId = signal<string | null>(null);
   protected loading = signal(false);
   protected stepErrors = signal<string[]>([]);
+  protected currentStepLabel = signal('Anagrafica');
 
   // Opzioni specializzazioni caricate dal backend
   protected specializationOptions = signal<{ value: string; label: string }[]>([]);
+
+  // Opzioni sedi caricate dal backend
+  protected clinicOptions = signal<{ value: string; label: string }[]>([]);
+
+  // Template disponibilita aggiunti dall'admin (in memoria fino al submit)
+  protected availabilityItems = signal<{ clinicId: string; clinicName: string; dayOfWeek: string; startTime: string; endTime: string }[]>([]);
+
+  // Giorni della settimana
+  protected readonly dayOptions = [
+    { value: 'LUNEDI', label: 'Lunedi' },
+    { value: 'MARTEDI', label: 'Martedi' },
+    { value: 'MERCOLEDI', label: 'Mercoledi' },
+    { value: 'GIOVEDI', label: 'Giovedi' },
+    { value: 'VENERDI', label: 'Venerdi' },
+    { value: 'SABATO', label: 'Sabato' }
+  ];
+
+  // Form temporaneo per aggiungere un singolo template di disponibilita
+  protected availForm = this.fb.group({
+    clinicId:  ['', Validators.required],
+    dayOfWeek: ['', Validators.required],
+    startTime: ['', Validators.required],
+    endTime:   ['', Validators.required]
+  });
 
   // --- STEP 1: Anagrafica ---
   protected step1 = this.fb.group({
@@ -80,29 +109,78 @@ export class DoctorFormComponent implements OnInit {
 
   // --- STEP 2: Dati professionali ---
   protected step2 = this.fb.group({
-    licenseNumber:   ['', Validators.required],
-    email:           ['', [Validators.required, MedBookValidators.email()]],
-    phone:           ['', MedBookValidators.telefono()],
-    specializations: [[] as string[]]
+    licenseNumber:        ['', Validators.required],
+    email:                ['', [Validators.required, MedBookValidators.email()]],
+    phone:                ['', MedBookValidators.telefono()],
+    primarySpecialization:   ['', Validators.required],
+    secondarySpecializations: [[] as string[]]
   });
+
+  /** Max 2 specializzazioni secondarie (3 totali inclusa la primaria) */
+  protected readonly MAX_SECONDARY = 2;
+
+  /** Opzioni per la select secondaria: esclude la primaria e quelle già scelte */
+  protected get secondaryOptions(): { value: string; label: string }[] {
+    const primary = this.step2.get('primarySpecialization')?.value;
+    const selected = this.step2.get('secondarySpecializations')?.value ?? [];
+    return this.specializationOptions().filter(
+      o => o.value !== primary && !selected.includes(o.value)
+    );
+  }
+
+  /** Indica se si possono aggiungere altre secondarie */
+  protected get canAddSecondary(): boolean {
+    return (this.step2.get('secondarySpecializations')?.value?.length ?? 0) < this.MAX_SECONDARY;
+  }
+
+  /** Rimuove una specializzazione secondaria */
+  protected removeSecondary(specId: string): void {
+    const current = this.step2.get('secondarySpecializations')?.value ?? [];
+    this.step2.get('secondarySpecializations')?.setValue(current.filter((s: string) => s !== specId));
+  }
+
+  /** Aggiunge una specializzazione secondaria dalla select temporanea */
+  protected addSecondary(specId: string): void {
+    if (!specId) return;
+    const current = this.step2.get('secondarySpecializations')?.value ?? [];
+    if (current.length >= this.MAX_SECONDARY) return;
+    this.step2.get('secondarySpecializations')?.setValue([...current, specId]);
+  }
+
+  /** Label leggibile per un ID specializzazione */
+  protected getSpecLabel(specId: string): string {
+    return this.specializationOptions().find(o => o.value === specId)?.label ?? specId;
+  }
 
   // --- STEP 3: Notifiche (solo creazione) ---
   protected step3 = this.fb.group({
     notificationChannels: this.fb.group({
       email: [true],
       sms:   [false]
-    })
+    }),
+    // Campo nascosto che replica il valore del telefono dallo step2 per il validator cross-field
+    phone: ['']
   }, { validators: [MedBookValidators.canaleDiNotificaValido()] });
 
   constructor() {
-    // Se il telefono viene svuotato, disabilita SMS
+    // Sincronizza il telefono dallo step2 allo step3 (per il validator cross-field)
     this.step2.get('phone')!.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(val => {
+      this.step3.get('phone')?.setValue(val ?? '', { emitEvent: false });
       if (!val) this.step3.get('notificationChannels.sms')?.setValue(false);
+    });
+
+    // Se cambia la primaria, rimuove dalle secondarie se era gia selezionata
+    this.step2.get('primarySpecialization')!.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(primary => {
+      const secondary = this.step2.get('secondarySpecializations')?.value ?? [];
+      if (primary && secondary.includes(primary)) {
+        this.step2.get('secondarySpecializations')?.setValue(secondary.filter((s: string) => s !== primary));
+      }
     });
   }
 
   ngOnInit(): void {
     this.loadSpecializations();
+    this.loadClinics();
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.doctorId.set(id);
@@ -139,11 +217,16 @@ export class DoctorFormComponent implements OnInit {
           dateOfBirth: doctor['dateOfBirth'] ? new Date(doctor['dateOfBirth'] as string) : null,
           gender:      doctor['gender']      as string
         });
+        // Mappa le specializzazioni in primaria + secondarie
+        const specs = (doctor['specializations'] as Record<string, unknown>[]) ?? [];
+        const primarySpec = specs.find(s => s['isPrimary'] === true);
+        const secondarySpecs = specs.filter(s => s['isPrimary'] !== true);
         this.step2.patchValue({
-          licenseNumber:   doctor['licenseNumber']   as string,
-          email:           doctor['email']           as string,
-          phone:           doctor['phone']           as string,
-          specializations: (doctor['specializations'] as string[]) ?? []
+          licenseNumber:           doctor['licenseNumber']   as string,
+          email:                   doctor['email']           as string,
+          phone:                   doctor['phone']           as string,
+          primarySpecialization:   primarySpec ? primarySpec['specializationId'] as string : '',
+          secondarySpecializations: secondarySpecs.map(s => s['specializationId'] as string)
         });
       },
       error: () => {
@@ -152,6 +235,45 @@ export class DoctorFormComponent implements OnInit {
         });
       }
     });
+  }
+
+  /** Carica le cliniche attive per popolare il select delle disponibilita */
+  private loadClinics(): void {
+    this.clinicService.getAll({ status: 'ATTIVO', size: 100 }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (data: unknown) => {
+        const r = data as Record<string, unknown>;
+        const inner = r['data'];
+        const list = Array.isArray(inner) ? inner as unknown[] : [];
+        this.clinicOptions.set(
+          list.map(c => {
+            const clinic = c as Record<string, unknown>;
+            return { value: clinic['clinicId'] as string, label: `${clinic['name']} (${clinic['clinicId']})` };
+          })
+        );
+      }
+    });
+  }
+
+  /** Aggiunge un template di disponibilita alla lista in memoria */
+  protected addAvailability(): void {
+    this.availForm.markAllAsTouched();
+    if (this.availForm.invalid) return;
+    const val = this.availForm.getRawValue();
+    const clinicId = val.clinicId ?? '';
+    const clinicName = this.clinicOptions().find(c => c.value === clinicId)?.label ?? clinicId;
+    this.availabilityItems.update(items => [...items, {
+      clinicId,
+      clinicName,
+      dayOfWeek: val.dayOfWeek ?? '',
+      startTime: val.startTime ?? '',
+      endTime: val.endTime ?? ''
+    }]);
+    this.availForm.reset({ clinicId: '', dayOfWeek: '', startTime: '', endTime: '' });
+  }
+
+  /** Rimuove un template di disponibilita dalla lista */
+  protected removeAvailability(index: number): void {
+    this.availabilityItems.update(items => items.filter((_, i) => i !== index));
   }
 
   // --- VALIDAZIONE STEP ---
@@ -173,7 +295,7 @@ export class DoctorFormComponent implements OnInit {
     const labels: Record<string, string> = {
       firstName: 'Nome', lastName: 'Cognome', email: 'Email',
       phone: 'Telefono', dateOfBirth: 'Data di nascita', gender: 'Sesso',
-      licenseNumber: 'Numero di licenza', specializations: 'Specializzazioni'
+      licenseNumber: 'Numero di licenza', primarySpecialization: 'Specializzazione principale'
     };
 
     for (const [key, ctrl] of Object.entries(stepForm.controls)) {
@@ -194,9 +316,12 @@ export class DoctorFormComponent implements OnInit {
     return errors;
   }
 
-  /** Pulisce gli errori quando si cambia step */
-  protected onStepChange(): void {
+  /** Pulisce gli errori e aggiorna il label dello step corrente */
+  protected onStepChange(event?: { selectedStep?: { label?: string } }): void {
     this.stepErrors.set([]);
+    if (event?.selectedStep?.label) {
+      this.currentStepLabel.set(event.selectedStep.label);
+    }
   }
 
   /** Indica se lo step notifiche e visibile (solo in creazione) */
@@ -231,13 +356,15 @@ export class DoctorFormComponent implements OnInit {
     ];
 
     // Specializzazioni
-    const specIds = s2.specializations ?? [];
-    if (specIds.length > 0) {
-      const opts = this.specializationOptions();
-      const names = specIds.map(id => opts.find(o => o.value === id)?.label ?? id).join(', ');
-      items.push({ label: 'Specializzazioni', value: names });
+    const primary = s2.primarySpecialization;
+    const secondary = s2.secondarySpecializations ?? [];
+    if (primary) {
+      items.push({ label: 'Specializzazione principale', value: this.getSpecLabel(primary) });
     } else {
-      items.push({ label: 'Specializzazioni', value: '-' });
+      items.push({ label: 'Specializzazione principale', value: '-' });
+    }
+    if (secondary.length > 0) {
+      items.push({ label: 'Specializzazioni secondarie', value: secondary.map((id: string) => this.getSpecLabel(id)).join(', ') });
     }
 
     // Notifiche (solo creazione)
@@ -247,6 +374,14 @@ export class DoctorFormComponent implements OnInit {
       if (channels?.email) ch.push('Email');
       if (channels?.sms)   ch.push('SMS');
       items.push({ label: 'Canali di notifica', value: ch.length > 0 ? ch.join(', ') : 'Nessuno' });
+    }
+
+    // Disponibilita (solo creazione)
+    if (this.isCreateMode && this.availabilityItems().length > 0) {
+      const avails = this.availabilityItems().map(a =>
+        `${a.clinicName} — ${this.dayOptions.find(d => d.value === a.dayOfWeek)?.label ?? a.dayOfWeek} ${a.startTime}-${a.endTime}`
+      ).join('; ');
+      items.push({ label: 'Disponibilita', value: avails });
     }
 
     return items;
@@ -260,11 +395,20 @@ export class DoctorFormComponent implements OnInit {
     const s1 = this.step1.getRawValue();
     const s2 = this.step2.getRawValue();
 
+    // Costruisce l'array specializations con isPrimary
+    const primary = s2.primarySpecialization;
+    const secondary = s2.secondarySpecializations ?? [];
+    const specializations = [
+      ...(primary ? [{ specializationId: primary, isPrimary: true }] : []),
+      ...secondary.map((id: string) => ({ specializationId: id, isPrimary: false }))
+    ];
+
     const id = this.doctorId();
 
     if (id) {
       // Modalita modifica: PATCH
-      const payload = { ...s1, ...s2 };
+      const { primarySpecialization: _p, secondarySpecializations: _s, ...restS2 } = s2;
+      const payload = { ...s1, ...restS2, specializations };
       this.doctorService.update(id, payload).subscribe({
         next: () => this.onSuccess('Aggiornamento completato', 'Medico aggiornato con successo!'),
         error: (err: HttpErrorResponse) => this.onError(err)
@@ -272,13 +416,35 @@ export class DoctorFormComponent implements OnInit {
     } else {
       // Modalita creazione: POST
       const channels = this.step3.getRawValue().notificationChannels;
+      const { primarySpecialization: _p2, secondarySpecializations: _s2, ...restS2Create } = s2;
       const payload = {
-        ...s1, ...s2,
+        ...s1, ...restS2Create,
+        specializations,
         emailEnabled: channels?.email ?? false,
         smsEnabled:   channels?.sms   ?? false
       };
       this.doctorService.create(payload).subscribe({
-        next: () => this.onSuccess('Operazione completata', 'Medico creato con successo!'),
+        next: (resp: unknown) => {
+          // Salva le availability se presenti
+          const data = (resp as Record<string, unknown>)['data'] as Record<string, unknown>;
+          const createdDoctorId = data?.['doctorId'] as string;
+          if (createdDoctorId && this.availabilityItems().length > 0) {
+            const availPayload = {
+              availabilities: this.availabilityItems().map(a => ({
+                clinicId: a.clinicId,
+                dayOfWeek: a.dayOfWeek,
+                startTime: a.startTime,
+                endTime: a.endTime
+              }))
+            };
+            this.doctorService.createAvailability(createdDoctorId, availPayload).subscribe({
+              next: () => this.onSuccess('Operazione completata', 'Medico creato con specializzazioni e disponibilita!'),
+              error: () => this.onSuccess('Medico creato', 'Medico creato ma errore nel salvataggio delle disponibilita. Aggiungile manualmente.')
+            });
+          } else {
+            this.onSuccess('Operazione completata', 'Medico creato con successo!');
+          }
+        },
         error: (err: HttpErrorResponse) => this.onError(err)
       });
     }

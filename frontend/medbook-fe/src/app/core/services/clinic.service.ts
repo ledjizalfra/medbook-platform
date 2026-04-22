@@ -5,10 +5,10 @@ import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 
 /**
- * Servizio per la gestione delle sedi cliniche e delle assegnazioni medici.
+ * Servizio per la gestione delle cliniche cliniche e delle assegnazioni medici.
  *
- * Oltre alle operazioni CRUD sulle sedi, gestisce le assegnazioni che collegano
- * un medico a una sede con una specializzazione. Le assegnazioni sono necessarie
+ * Oltre alle operazioni CRUD sulle cliniche, gestisce le assegnazioni che collegano
+ * un medico a una clinica con una specializzazione. Le assegnazioni sono necessarie
  * perché un medico possa comparire nella ricerca disponibilità per una specifica
  * clinica e specializzazione.
  *
@@ -35,7 +35,7 @@ export class ClinicService {
     return this.http.patch(`${this.base}/${id}`, body);
   }
 
-  // Soft delete: la sede viene disattivata ma non rimossa fisicamente
+  // Soft delete: la clinica viene disattivata ma non rimossa fisicamente
   delete(id: string): Observable<unknown> {
     return this.http.delete(`${this.base}/${id}`);
   }
@@ -46,14 +46,14 @@ export class ClinicService {
 
   // --- Gestione assegnazioni medici ---
 
-  // Recupera tutte le assegnazioni attive per la sede indicata
+  // Recupera tutte le assegnazioni attive per la clinica indicata
   getAssignments(clinicId: string, params?: Record<string, unknown>): Observable<unknown> {
     return this.http.get(`${this.base}/${clinicId}/assignments`, {
       params: params as Record<string, string>
     });
   }
 
-  // Crea una nuova assegnazione (medico + specializzazione) per la sede
+  // Crea una nuova assegnazione (medico + specializzazione) per la clinica
   createAssignment(clinicId: string, body: unknown): Observable<unknown> {
     return this.http.post(`${this.base}/${clinicId}/assignments`, body);
   }
@@ -63,7 +63,7 @@ export class ClinicService {
     return this.http.patch(`${this.base}/${clinicId}/assignments/${assignmentId}`, body);
   }
 
-  // Rimuove l'assegnazione di un medico dalla sede
+  // Rimuove l'assegnazione di un medico dalla clinica
   deleteAssignment(clinicId: string, assignmentId: string): Observable<unknown> {
     return this.http.delete(`${this.base}/${clinicId}/assignments/${assignmentId}`);
   }

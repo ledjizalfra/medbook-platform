@@ -60,75 +60,33 @@
       </mat-card-header>
     </mat-card>
 
-    <div class="stats-grid">
-      <mat-card class="stat-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>group</mat-icon>
-          <mat-card-title>Pazienti</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="stat-placeholder">Funzionalità in arrivo</p>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class="stat-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>calendar_today</mat-icon>
-          <mat-card-title>Appuntamenti di oggi</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="stat-placeholder">Funzionalità in arrivo</p>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class="stat-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>medical_services</mat-icon>
-          <mat-card-title>Medici attivi</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="stat-placeholder">Funzionalità in arrivo</p>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class="stat-card">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>business</mat-icon>
-          <mat-card-title>Sedi operative</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="stat-placeholder">Funzionalità in arrivo</p>
-        </mat-card-content>
-      </mat-card>
-    </div>
-
     <mat-card class="action-card">
       <mat-card-header>
         <mat-card-title>Azioni rapide</mat-card-title>
       </mat-card-header>
       <mat-card-actions>
-        <button mat-flat-button color="primary" [routerLink]="kc.getAppointmentsRoute()">
+        <button mat-flat-button class="action-btn action-appointments" [routerLink]="kc.getAppointmentsRoute()">
           <mat-icon>list_alt</mat-icon>
           Gestisci appuntamenti
         </button>
         @if (kc.hasRole('RECEPTIONIST')) {
-          <button mat-button routerLink="/receptionist/patients">
+          <button mat-flat-button class="action-btn action-patients" routerLink="/receptionist/patients">
             <mat-icon>group</mat-icon>
             Gestisci pazienti
           </button>
         }
         @if (kc.hasRole('ADMIN')) {
-          <button mat-button routerLink="/admin/patients">
+          <button mat-flat-button class="action-btn action-patients" routerLink="/admin/patients">
             <mat-icon>group</mat-icon>
             Gestisci pazienti
           </button>
-          <button mat-button routerLink="/admin/doctors">
+          <button mat-flat-button class="action-btn action-doctors" routerLink="/admin/doctors">
             <mat-icon>medical_services</mat-icon>
             Gestisci medici
           </button>
-          <button mat-button routerLink="/admin/clinics">
+          <button mat-flat-button class="action-btn action-clinics" routerLink="/admin/clinics">
             <mat-icon>business</mat-icon>
-            Gestisci sedi
+            Gestisci cliniche
           </button>
         }
       </mat-card-actions>

@@ -1767,6 +1767,23 @@ components:
           type: boolean
           description: true se il canale SMS è abilitato
           example: false
+        specializations:
+          type: array
+          description: Specializzazioni del medico (max 3 - una principale obbligatoria)
+          items:
+            $ref: '#/components/schemas/DoctorSpecializationItemBff'
+
+    DoctorSpecializationItemBff:
+      type: object
+      properties:
+        specializationId:
+          type: string
+          description: Business key della specializzazione (es. SPC-1)
+          example: SPC-1
+        isPrimary:
+          type: boolean
+          description: true se questa è la specializzazione principale
+          example: true
 
     UpdateDoctorBffRequest:
       type: object
@@ -1916,17 +1933,13 @@ components:
 
     CreateAssignmentBffRequest:
       type: object
-      description: Dati per l'assegnazione di un medico a una sede
+      description: Dati per l'assegnazione di un medico a una clinica
       required:
         - doctorId
-        - specialization
       properties:
         doctorId:
           type: string
           example: DOC-1
-        specialization:
-          type: string
-          example: CARDIOLOGIA
 
     UpdateAssignmentBffRequest:
       type: object

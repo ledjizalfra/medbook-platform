@@ -23,11 +23,27 @@
   padding: 20px 28px 16px;
   border-bottom: 1px solid #e0e0e0;
 }
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
 .card-header-title {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
   color: #1b5e20;
+}
+.step-badge {
+  display: inline-block;
+  background: #e3f2fd;
+  color: #1565c0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
 }
 
 .card-body { padding: 24px 28px 28px; }

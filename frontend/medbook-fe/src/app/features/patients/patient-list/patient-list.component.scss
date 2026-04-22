@@ -1,4 +1,1 @@
-/* Stili patient-list — max-width override per lista (più larga dei form) */
-:host ::ng-deep .mb-page {
-  max-width: 1200px;
-}
+/* Stili gestiti globalmente in styles.scss (.mb-page) */

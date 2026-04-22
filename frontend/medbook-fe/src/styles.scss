@@ -125,24 +125,36 @@ body {
 
 // =============================================================================
 // Allineamento width filtri / tabella / paginazione
-// La tabella puo essere piu larga del viewport quando ha molte colonne.
-// Usiamo un wrapper scrollabile per tutta la pagina cosi che filtri,
-// tabella e paginazione abbiano sempre la stessa larghezza.
+// Filtri, tabella e paginazione occupano il 100% dello spazio disponibile.
+// La tabella si adatta al container — le colonne si comprimono se necessario.
 // =============================================================================
 .mb-page {
-  // Il contenuto scrollabile contiene sia filtri che tabella
-  overflow-x: auto;
-
-  // Tutti i figli diretti: stessa larghezza minima della tabella
-  > .filter-card,
-  > app-medbook-table,
-  > .action-card,
-  > .preferences-card {
-    min-width: fit-content;
-  }
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 
   .filter-card {
-    margin-bottom: 24px;
+    width: 100%;
+  }
+
+  app-medbook-table {
+    display: block;
+    width: 100%;
+
+    // La tabella si adatta al container senza debordare
+    .mb-table-full {
+      width: 100%;
+      table-layout: auto;
+    }
+
+    // Celle: testo lungo troncato con ellipsis
+    td.mat-mdc-cell {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 }
 

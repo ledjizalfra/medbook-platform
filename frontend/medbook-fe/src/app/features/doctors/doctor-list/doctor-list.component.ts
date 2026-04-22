@@ -15,8 +15,11 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { InfoDialogComponent } from '../../../shared/components/info-dialog/info-dialog.component';
 import { PageEvent } from '@angular/material/paginator';
 import { DoctorService } from '../../../core/services/doctor.service';
+import { ClinicService } from '../../../core/services/clinic.service';
 import { SpecializationService } from '../../../core/services/specialization.service';
 import { KeycloakService } from '../../../core/auth/keycloak.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MedBookFormComponent } from '../../../shared/components/medbook-form/medbook-form.component';
 import { MedBookFormSlotDirective } from '../../../shared/components/medbook-form/medbook-form-slot.directive';
 import { MedBookTableComponent } from '../../../shared/components/medbook-table/medbook-table.component';
@@ -41,6 +44,8 @@ import { TableColumn, TableAction } from '../../../shared/components/medbook-tab
     MatInputModule,
     MatSelectModule,
     MatDatepickerModule,
+    MatTooltipModule,
+    MatProgressSpinnerModule,
     MatSnackBarModule,
     MedBookFormComponent,
     MedBookFormSlotDirective,
@@ -52,6 +57,7 @@ import { TableColumn, TableAction } from '../../../shared/components/medbook-tab
 })
 export class DoctorListComponent implements OnInit {
   private doctorService = inject(DoctorService);
+  private clinicService = inject(ClinicService);
   private specializationService = inject(SpecializationService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
@@ -59,6 +65,9 @@ export class DoctorListComponent implements OnInit {
   private kc = inject(KeycloakService);
   private fb = inject(FormBuilder);
 
+  /** Stato workflow: il tasto "Aggiungi Medico" si abilita solo se ci sono cliniche */
+  protected hasClinics = signal(false);
+  protected checkingWorkflow = signal(true);
   protected loading = signal(false);
   protected doctors = signal<unknown[]>([]);
   protected pageIndex = signal(0);
@@ -133,7 +142,15 @@ export class DoctorListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadSpecializations();
-    // Non caricare medici automaticamente: l'utente deve inserire almeno un filtro
+    this.checkingWorkflow.set(true);
+    this.clinicService.getAll({ size: 1, status: 'ATTIVO' }).subscribe({
+      next: (resp: unknown) => {
+        const data = (resp as Record<string, unknown>)['data'];
+        this.hasClinics.set(Array.isArray(data) && data.length > 0);
+        this.checkingWorkflow.set(false);
+      },
+      error: () => this.checkingWorkflow.set(false)
+    });
   }
 
   protected onPageChange(event: PageEvent): void {

@@ -22,18 +22,18 @@ import { MbFormGroup } from '../../../shared/components/medbook-form/medbook-for
 import { TableColumn } from '../../../shared/components/medbook-table/medbook-table.models';
 
 /**
- * Componente per la gestione delle assegnazioni medici a una sede clinica.
+ * Componente per la gestione delle assegnazioni medici a una clinica.
  *
- * Un'assegnazione collega un medico a una sede con una specializzazione specifica.
+ * Un'assegnazione collega un medico a una clinica con una specializzazione specifica.
  * È il prerequisito affinché il medico compaia nei risultati di ricerca disponibilità.
  *
  * Funzionalità:
- * - Visualizza le assegnazioni esistenti per la sede (ID preso dalla rotta)
+ * - Visualizza le assegnazioni esistenti per la clinica (ID preso dalla rotta)
  * - Permette di creare una nuova assegnazione tramite un form inline
  *   che appare/scompare tramite il signal `showForm`
  * - Carica la lista dei medici all'inizializzazione per popolare il select
  *
- * La sede di riferimento è identificata dal path param `:id` della rotta
+ * La clinica di riferimento è identificata dal path param `:id` della rotta
  * `/clinics/:id/assignments`. Accessibile solo agli ADMIN.
  */
 @Component({
@@ -65,7 +65,7 @@ export class AssignmentListComponent implements OnInit {
   private fb = inject(FormBuilder);
   protected kc = inject(KeycloakService);
 
-  // ID della sede corrente, letto dalla rotta e usato in tutte le chiamate API
+  // ID della clinica corrente, letto dalla rotta e usato in tutte le chiamate API
   protected clinicId = signal('');
 
   protected loading = signal(true);

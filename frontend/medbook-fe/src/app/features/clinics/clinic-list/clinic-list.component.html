@@ -1,9 +1,16 @@
-<app-medbook-page title="Sedi" [loading]="loading()">
+<app-medbook-page title="Cliniche" [loading]="loading() || checkingWorkflow()">
   @if (isAdmin()) {
-    <button pageActions mat-flat-button color="primary" (click)="newClinic()">
-      <mat-icon>add</mat-icon>
-      Nuova sede
-    </button>
+    <div pageActions class="page-actions-row">
+      <button mat-flat-button color="primary" (click)="newClinic()">
+        <mat-icon>add</mat-icon>
+        Aggiungi Clinica
+      </button>
+      <button mat-stroked-button (click)="openAssignDoctor()" [disabled]="!hasDoctors()"
+              [matTooltip]="!hasDoctors() ? 'Aggiungi prima almeno un medico' : ''">
+        <mat-icon>person_add</mat-icon>
+        Assegna Medico a Clinica
+      </button>
+    </div>
   }
 
   <!-- Filtri con MedBookForm -->
@@ -108,7 +115,7 @@
     [actions]="tableActions"
     [data]="clinics()"
     [pagination]="{ pageIndex: pageIndex(), pageSize: pageSize(), totalElements: totalElements(), pageSizeOptions: [10, 25, 50] }"
-    [emptyMessage]="searchPerformed() ? 'Nessuna sede trovata' : 'Inserisci almeno un filtro e clicca Cerca per visualizzare i risultati.'"
+    [emptyMessage]="searchPerformed() ? 'Nessuna clinica trovata' : 'Inserisci almeno un filtro e clicca Cerca per visualizzare i risultati.'"
     [emptyIcon]="searchPerformed() ? 'location_off' : 'search'"
     (pageChange)="onPageChange($event)" />
 </app-medbook-page>

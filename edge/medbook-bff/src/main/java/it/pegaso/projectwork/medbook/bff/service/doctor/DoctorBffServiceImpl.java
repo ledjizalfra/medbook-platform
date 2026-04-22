@@ -11,7 +11,9 @@ import it.pegaso.projectwork.medbook.bff.client.WelcomeNotificationFeignClient;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorAvailabilitiesFeignClient;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorConsentFeignClient;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorsFeignClient;
+import it.pegaso.projectwork.medbook.doctor.client.api.DoctorSpecializationsFeignClient;
 import it.pegaso.projectwork.medbook.doctor.client.api.SpecializationFeignClient;
+import it.pegaso.projectwork.medbook.doctor.client.model.CreateDoctorSpecializationRequest;
 import it.pegaso.projectwork.medbook.doctor.client.model.AcceptDoctorConsentRequest;
 import it.pegaso.projectwork.medbook.doctor.client.model.UpdateDoctorConsentRequest;
 import it.pegaso.projectwork.medbook.doctor.client.model.CreateAvailabilityItem;
@@ -46,6 +48,7 @@ public class DoctorBffServiceImpl implements DoctorBffService {
     private final DoctorsFeignClient doctorsClient;
     private final DoctorConsentFeignClient consentClient;
     private final DoctorAvailabilitiesFeignClient availabilitiesClient;
+    private final DoctorSpecializationsFeignClient specializationsClient;
     private final SpecializationFeignClient specializationClient;
     private final NotificationPreferencesFeignClient notificationPreferencesClient;
     private final WelcomeNotificationFeignClient welcomeNotificationClient;
@@ -73,15 +76,17 @@ public class DoctorBffServiceImpl implements DoctorBffService {
             }
         }
         ResponseEntity<MedBookApiResponse> response = doctorsClient.postCreateDoctor(context, req);
-
-        // Salva le preferenze di notifica in notification-dmn.
-        // Best-effort: il fallimento viene loggato ma non blocca la creazione del medico.
         String doctorId = extractDoctorId(response);
+
+        // Salva le specializzazioni — best-effort, il fallimento viene loggato
+        saveDoctorSpecializations(context, doctorId, bffReq);
+
+        // Salva le preferenze di notifica in notification-dmn — best-effort
         saveDoctorNotificationPreferences(context, doctorId,
                 Boolean.TRUE.equals(bffReq.getEmailEnabled()),
                 Boolean.TRUE.equals(bffReq.getSmsEnabled()));
 
-        // Invia notifica di benvenuto — best-effort, non blocca la creazione.
+        // Invia notifica di benvenuto — best-effort
         sendDoctorWelcomeNotification(doctorId, bffReq);
 
         return response;
@@ -223,6 +228,27 @@ public class DoctorBffServiceImpl implements DoctorBffService {
     private String extractDoctorId(ResponseEntity<MedBookApiResponse> response) {
         Object data = response.getBody().getData();
         return (String) ((java.util.Map<String, Object>) data).get("doctorId");
+    }
+
+    /** Salva le specializzazioni del medico in doctor-dmn dopo la creazione.
+     * Best-effort: il fallimento viene loggato ma non blocca la creazione del medico. */
+    private void saveDoctorSpecializations(MedBookContext context, String doctorId,
+            CreateDoctorBffRequest bffReq) {
+        if (bffReq.getSpecializations() == null || bffReq.getSpecializations().isEmpty()) return;
+
+        for (var specItem : bffReq.getSpecializations()) {
+            try {
+                CreateDoctorSpecializationRequest req = new CreateDoctorSpecializationRequest();
+                req.setSpecializationId(specItem.getSpecializationId());
+                req.setIsPrimary(Boolean.TRUE.equals(specItem.getIsPrimary()));
+                specializationsClient.postCreateDoctorSpecialization(context, doctorId, req);
+                log.info("Specializzazione {} (primary={}) salvata per doctorId={}",
+                        specItem.getSpecializationId(), specItem.getIsPrimary(), doctorId);
+            } catch (Exception e) {
+                log.error("Errore salvataggio specializzazione per doctorId={}: {}",
+                        doctorId, e.getMessage(), e);
+            }
+        }
     }
 
     /** Salva le preferenze di notifica del medico in notification-dmn.

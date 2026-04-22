@@ -1,34 +1,19 @@
 // Stili per la dashboard
 .dashboard-container {
-  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .page-title {
   font-size: 1.75rem;
   font-weight: 600;
-  margin-bottom: 24px;
+  margin: 0;
   color: var(--mat-sys-on-surface);
 }
 
 .welcome-card {
   max-width: 600px;
-  margin-bottom: 24px;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.stat-card {
-  min-height: 140px;
-}
-
-.stat-placeholder {
-  color: var(--mat-sys-on-surface-variant);
-  font-style: italic;
 }
 
 .action-card {
@@ -38,8 +23,18 @@
 mat-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
+
+// Colori distinti per ogni azione rapida
+.action-btn {
+  color: #fff !important;
+  --mdc-filled-button-label-text-color: #fff;
+}
+.action-appointments { background-color: #1565c0 !important; } // blu
+.action-patients     { background-color: #2e7d32 !important; } // verde
+.action-doctors      { background-color: #6a1b9a !important; } // viola
+.action-clinics      { background-color: #e65100 !important; } // arancione
 
 // Nome evidenziato nel messaggio di benvenuto
 .welcome-name {
