@@ -1,6 +1,6 @@
 <app-medbook-page [title]="pageTitle" [loading]="loading()" backLabel="Torna ai receptionist" (backClick)="goBack()">
 
-  <mat-card>
+  <mat-card class="form-card">
     <mat-card-content>
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
 
@@ -15,25 +15,47 @@
           </mat-form-field>
         </div>
 
-        <div class="mb-grid" style="--cols: 2">
-          <mat-form-field appearance="outline" class="mb-field">
-            <mat-label>Email *</mat-label>
-            <mat-icon matPrefix>email</mat-icon>
-            <input matInput type="email" formControlName="email" />
-          </mat-form-field>
-          @if (!isEditMode) {
+        <mat-form-field appearance="outline" class="mb-field">
+          <mat-label>Email *</mat-label>
+          <mat-icon matPrefix>email</mat-icon>
+          <input matInput type="email" formControlName="email" />
+        </mat-form-field>
+
+        @if (!isEditMode) {
+          <!-- Requisiti password -->
+          <div class="password-requirements">
+            <p>La password deve contenere:</p>
+            <ul>
+              <li [class.valid]="(form.get('password')?.value ?? '').length >= 8">Almeno 8 caratteri</li>
+              <li [class.valid]="/[A-Z]/.test(form.get('password')?.value ?? '')">Almeno una lettera maiuscola</li>
+              <li [class.valid]="/[0-9]/.test(form.get('password')?.value ?? '')">Almeno un numero</li>
+              <li [class.valid]="/[@#$%^&*!?._\-]/.test(form.get('password')?.value ?? '')">Almeno un carattere speciale: {{ PASSWORD_SPECIAL_CHARS }}</li>
+            </ul>
+          </div>
+
+          <div class="mb-grid" style="--cols: 2">
             <mat-form-field appearance="outline" class="mb-field">
               <mat-label>Password *</mat-label>
               <mat-icon matPrefix>lock</mat-icon>
-              <input matInput type="password" formControlName="password" />
-              <mat-hint>Minimo 8 caratteri</mat-hint>
+              <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password" />
+              <button mat-icon-button matSuffix type="button" (click)="showPassword.set(!showPassword())">
+                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
             </mat-form-field>
-          }
-        </div>
+            <mat-form-field appearance="outline" class="mb-field">
+              <mat-label>Conferma password *</mat-label>
+              <mat-icon matPrefix>lock</mat-icon>
+              <input matInput [type]="showConfirmPassword() ? 'text' : 'password'" formControlName="confirmPassword" />
+              <button mat-icon-button matSuffix type="button" (click)="showConfirmPassword.set(!showConfirmPassword())">
+                <mat-icon>{{ showConfirmPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+            </mat-form-field>
+          </div>
 
-        <mat-checkbox formControlName="enabled" class="mb-field">
-          Account abilitato
-        </mat-checkbox>
+          @if (form.errors?.['passwordNonCoincidono'] && form.get('confirmPassword')?.touched) {
+            <p class="field-error-hint">Le password non coincidono</p>
+          }
+        }
 
         <div class="form-actions">
           <button mat-stroked-button type="button" (click)="goBack()">
