@@ -135,11 +135,8 @@ body {
     display: block;
     width: 100%;
 
-    // Celle: testo lungo troncato con ellipsis
+    // Celle: testo mostrato per intero, la tabella scrolla se necessario
     td.mat-mdc-cell {
-      max-width: 200px;
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
     }
   }

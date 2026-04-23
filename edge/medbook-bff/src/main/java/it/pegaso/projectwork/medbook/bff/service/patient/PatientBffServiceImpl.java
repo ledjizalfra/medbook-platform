@@ -13,6 +13,10 @@ import it.pegaso.projectwork.medbook.commons.errors.exceptions.MedBookBusinessEx
 import it.pegaso.projectwork.medbook.notification.client.api.NotificationPreferencesFeignClient;
 import it.pegaso.projectwork.medbook.notification.client.model.NotificationActorTypeApiEnum;
 import it.pegaso.projectwork.medbook.notification.client.model.SaveNotificationPreferencesRequest;
+import it.pegaso.projectwork.medbook.appointment.client.api.AppointmentsFeignClient;
+import it.pegaso.projectwork.medbook.appointment.client.model.AppointmentStatusApiEnum;
+import it.pegaso.projectwork.medbook.appointment.client.model.CancelAppointmentRequest;
+import it.pegaso.projectwork.medbook.appointment.client.model.CancelledByApiEnum;
 import it.pegaso.projectwork.medbook.patient.client.api.PatientFeignClient;
 import it.pegaso.projectwork.medbook.patient.client.model.CreatePatientRequest;
 import it.pegaso.projectwork.medbook.patient.client.model.GenderApiEnum;
@@ -25,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,6 +45,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PatientBffServiceImpl implements PatientBffService {
 
+    private final AppointmentsFeignClient appointmentsClient;
     private final PatientFeignClient patientClient;
     private final KeycloakAdminService keycloakAdminService;
     private final PatientBffHelper patientBffHelper;
@@ -256,11 +262,21 @@ public class PatientBffServiceImpl implements PatientBffService {
         return patientClient.patchUpdatePatient(context, patientId, req);
     }
 
+    /**
+     * Cancellazione logica a cascata del paziente:
+     * 1. Annulla tutti gli appuntamenti PRENOTATO del paziente
+     * 2. Cancella il paziente (patient-dmn)
+     * 3. Disabilita l'utente Keycloak
+     */
     @Override
     public ResponseEntity<MedBookApiVoidResponse> deletePatient(MedBookContext context, String patientId) {
         // Recupera l'email prima del soft-delete: dopo, @SQLRestriction escluderebbe il paziente.
         String email = extractEmailFromPatient(context, patientId);
 
+        // 1. Annulla appuntamenti PRENOTATO del paziente
+        cancelBookedAppointments(context, patientId, "Paziente disattivato");
+
+        // 2. Cancella il paziente
         ResponseEntity<MedBookApiVoidResponse> response = patientClient.deletePatient(context, patientId);
 
         // Disabilita l'utente Keycloak (username = email) corrispondente al soft-delete.
@@ -297,8 +313,37 @@ public class PatientBffServiceImpl implements PatientBffService {
         return response;
     }
 
-    /** Recupera l'email del paziente da patient-dmn. Restituisce null in caso di errore. */
+    /** Annulla tutti gli appuntamenti PRENOTATO del paziente — best-effort. */
     @SuppressWarnings("unchecked")
+    private void cancelBookedAppointments(MedBookContext context, String patientId, String reason) {
+        try {
+            ResponseEntity<MedBookApiResponse> resp = appointmentsClient.getListAppointments(
+                    context, 0, 1000, null, patientId, null, null,
+                    AppointmentStatusApiEnum.PRENOTATO, null, null);
+            if (resp.getBody() == null || resp.getBody().getData() == null) return;
+            Object data = resp.getBody().getData();
+            List<?> appointments = data instanceof List ? (List<?>) data : List.of();
+            for (Object appt : appointments) {
+                if (appt instanceof Map) {
+                    String apptId = (String) ((Map<String, Object>) appt).get("appointmentId");
+                    if (apptId != null) {
+                        try {
+                            CancelAppointmentRequest cancelReq = new CancelAppointmentRequest();
+                            cancelReq.setCancellationReason(reason);
+                            cancelReq.setCancelledBy(CancelledByApiEnum.AMMINISTRATORE);
+                            appointmentsClient.patchCancelAppointment(context, apptId, cancelReq);
+                            log.info("Appuntamento {} annullato (cascata paziente {})", apptId, patientId);
+                        } catch (Exception e) {
+                            log.warn("Errore annullamento appuntamento {}: {}", apptId, e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Errore recupero appuntamenti paziente {}: {}", patientId, e.getMessage());
+        }
+    }
+
     private String extractEmailFromPatient(MedBookContext context, String patientId) {
         try {
             ResponseEntity<MedBookApiResponse> detail = patientClient.getPatientById(context, patientId);

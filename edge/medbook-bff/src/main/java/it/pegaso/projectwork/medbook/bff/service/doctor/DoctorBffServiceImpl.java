@@ -8,6 +8,10 @@ import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiVoidResponse;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookContext;
 import it.pegaso.projectwork.medbook.bff.client.WelcomeNotificationFeignClient;
+import it.pegaso.projectwork.medbook.appointment.client.api.AppointmentsFeignClient;
+import it.pegaso.projectwork.medbook.appointment.client.model.AppointmentStatusApiEnum;
+import it.pegaso.projectwork.medbook.appointment.client.model.CancelAppointmentRequest;
+import it.pegaso.projectwork.medbook.appointment.client.model.CancelledByApiEnum;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorAvailabilitiesFeignClient;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorConsentFeignClient;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorsFeignClient;
@@ -45,6 +49,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DoctorBffServiceImpl implements DoctorBffService {
 
+    private final AppointmentsFeignClient appointmentsClient;
     private final DoctorsFeignClient doctorsClient;
     private final DoctorConsentFeignClient consentClient;
     private final DoctorAvailabilitiesFeignClient availabilitiesClient;
@@ -132,8 +137,14 @@ public class DoctorBffServiceImpl implements DoctorBffService {
         return doctorsClient.patchUpdateDoctor(context, doctorId, req);
     }
 
+    /**
+     * Cancellazione logica a cascata del medico:
+     * 1. Annulla tutti gli appuntamenti PRENOTATO del medico (appointment-dmn)
+     * 2. Cancella il medico (doctor-dmn — cancella internamente disponibilita e assegnazioni)
+     */
     @Override
     public ResponseEntity<MedBookApiVoidResponse> deleteDoctor(MedBookContext context, String doctorId) {
+        cancelBookedAppointments(context, null, doctorId, "Medico disattivato");
         return doctorsClient.deleteDoctor(context, doctorId);
     }
 
@@ -363,6 +374,42 @@ public class DoctorBffServiceImpl implements DoctorBffService {
     // =========================================================================
 
     /** Invia notifica di benvenuto al medico — best-effort, non propaga eccezioni. */
+    /**
+     * Annulla tutti gli appuntamenti PRENOTATO per un paziente o un medico.
+     * Best-effort: eventuali errori non bloccano l'operazione principale.
+     */
+    @SuppressWarnings("unchecked")
+    private void cancelBookedAppointments(MedBookContext context, String patientId,
+            String doctorId, String reason) {
+        try {
+            ResponseEntity<MedBookApiResponse> resp = appointmentsClient.getListAppointments(
+                    context, 0, 1000, null, patientId, doctorId, null,
+                    AppointmentStatusApiEnum.PRENOTATO, null, null);
+            if (resp.getBody() == null || resp.getBody().getData() == null) return;
+
+            Object data = resp.getBody().getData();
+            List<?> appointments = data instanceof List ? (List<?>) data : List.of();
+            for (Object appt : appointments) {
+                if (appt instanceof Map) {
+                    String apptId = (String) ((Map<String, Object>) appt).get("appointmentId");
+                    if (apptId != null) {
+                        try {
+                            CancelAppointmentRequest cancelReq = new CancelAppointmentRequest();
+                            cancelReq.setCancellationReason(reason);
+                            cancelReq.setCancelledBy(CancelledByApiEnum.AMMINISTRATORE);
+                            appointmentsClient.patchCancelAppointment(context, apptId, cancelReq);
+                            log.info("Appuntamento {} annullato per cascata: {}", apptId, reason);
+                        } catch (Exception e) {
+                            log.warn("Errore annullamento appuntamento {}: {}", apptId, e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Errore recupero appuntamenti per cascata: {}", e.getMessage());
+        }
+    }
+
     private void sendDoctorWelcomeNotification(String doctorId, CreateDoctorBffRequest bffReq) {
         try {
             Map<String, String> body = Map.of(

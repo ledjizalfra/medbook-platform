@@ -4,6 +4,10 @@ import it.pegaso.projectwork.medbook.bff.server.model.CreateAssignmentBffRequest
 import it.pegaso.projectwork.medbook.bff.server.model.CreateClinicBffRequest;
 import it.pegaso.projectwork.medbook.bff.server.model.UpdateAssignmentBffRequest;
 import it.pegaso.projectwork.medbook.bff.server.model.UpdateClinicBffRequest;
+import it.pegaso.projectwork.medbook.appointment.client.api.AppointmentsFeignClient;
+import it.pegaso.projectwork.medbook.appointment.client.model.AppointmentStatusApiEnum;
+import it.pegaso.projectwork.medbook.appointment.client.model.CancelAppointmentRequest;
+import it.pegaso.projectwork.medbook.appointment.client.model.CancelledByApiEnum;
 import it.pegaso.projectwork.medbook.bff.client.WelcomeNotificationFeignClient;
 import it.pegaso.projectwork.medbook.clinic.client.api.AssignmentsFeignClient;
 import it.pegaso.projectwork.medbook.clinic.client.api.ClinicsFeignClient;
@@ -25,6 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 /** Implementazione proxy di ClinicBffService. Adatta i DTO BFF ai DTO clinic-dmn. */
 @Slf4j
@@ -32,6 +38,7 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class ClinicBffServiceImpl implements ClinicBffService {
 
+    private final AppointmentsFeignClient appointmentsClient;
     private final ClinicsFeignClient clinicsClient;
     private final AssignmentsFeignClient assignmentsClient;
     private final WelcomeNotificationFeignClient welcomeNotificationClient;
@@ -123,8 +130,43 @@ public class ClinicBffServiceImpl implements ClinicBffService {
         return clinicsClient.patchUpdateClinic(context, clinicId, req);
     }
 
+    /**
+     * Cancellazione logica a cascata della clinica:
+     * 1. Annulla tutti gli appuntamenti PRENOTATO per la clinica
+     * 2. Cancella la clinica (clinic-dmn)
+     */
     @Override
+    @SuppressWarnings("unchecked")
     public ResponseEntity<MedBookApiVoidResponse> deleteClinic(MedBookContext context, String clinicId) {
+        // Annulla appuntamenti PRENOTATO per questa clinica
+        try {
+            ResponseEntity<MedBookApiResponse> resp = appointmentsClient.getListAppointments(
+                    context, 0, 1000, null, null, null, clinicId,
+                    AppointmentStatusApiEnum.PRENOTATO, null, null);
+            if (resp.getBody() != null && resp.getBody().getData() != null) {
+                Object data = resp.getBody().getData();
+                List<?> appointments = data instanceof List ? (List<?>) data : List.of();
+                for (Object appt : appointments) {
+                    if (appt instanceof Map) {
+                        String apptId = (String) ((Map<String, Object>) appt).get("appointmentId");
+                        if (apptId != null) {
+                            try {
+                                CancelAppointmentRequest cancelReq = new CancelAppointmentRequest();
+                                cancelReq.setCancellationReason("Clinica disattivata");
+                                cancelReq.setCancelledBy(CancelledByApiEnum.AMMINISTRATORE);
+                                appointmentsClient.patchCancelAppointment(context, apptId, cancelReq);
+                                log.info("Appuntamento {} annullato (cascata clinica {})", apptId, clinicId);
+                            } catch (Exception e) {
+                                log.warn("Errore annullamento appuntamento {}: {}", apptId, e.getMessage());
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Errore recupero appuntamenti clinica {}: {}", clinicId, e.getMessage());
+        }
+
         return clinicsClient.deleteClinic(context, clinicId);
     }
 
