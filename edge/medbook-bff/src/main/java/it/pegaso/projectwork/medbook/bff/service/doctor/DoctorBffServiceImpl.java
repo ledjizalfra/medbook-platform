@@ -191,36 +191,68 @@ public class DoctorBffServiceImpl implements DoctorBffService {
         return response;
     }
 
-    /** Aggiunge doctorFullName a ogni medico nella lista (data e una List di Map). */
+    /** Aggiunge doctorFullName e specializzazioni a ogni medico nella lista. */
     @SuppressWarnings("unchecked")
     private void enrichDoctorList(ResponseEntity<MedBookApiResponse> response) {
         if (response.getBody() == null || response.getBody().getData() == null) return;
         Object data = response.getBody().getData();
-        if (data instanceof List<?> list) {
-            list.forEach(item -> {
-                if (item instanceof Map<?, ?> map) {
-                    enrichDoctorMap((Map<String, Object>) map);
-                }
-            });
+        // La risposta puo essere una List diretta o un oggetto con campo "doctors"
+        List<?> list = null;
+        if (data instanceof List<?>) {
+            list = (List<?>) data;
+        } else if (data instanceof Map<?, ?> dataMap) {
+            Object doctors = ((Map<String, Object>) dataMap).get("doctors");
+            if (doctors instanceof List<?>) list = (List<?>) doctors;
         }
+        if (list == null) return;
+        MedBookContext context = it.pegaso.projectwork.medbook.commons.context.MedBookContextHolder.get();
+        list.forEach(item -> {
+            if (item instanceof Map<?, ?> map) {
+                enrichDoctorMap(context, (Map<String, Object>) map);
+            }
+        });
     }
 
-    /** Aggiunge doctorFullName al dettaglio medico (data e una singola Map). */
+    /** Aggiunge doctorFullName e specializzazioni al dettaglio medico. */
     @SuppressWarnings("unchecked")
     private void enrichDoctorDetail(ResponseEntity<MedBookApiResponse> response) {
         if (response.getBody() == null || response.getBody().getData() == null) return;
         Object data = response.getBody().getData();
+        MedBookContext context = it.pegaso.projectwork.medbook.commons.context.MedBookContextHolder.get();
         if (data instanceof Map<?, ?> map) {
-            enrichDoctorMap((Map<String, Object>) map);
+            enrichDoctorMap(context, (Map<String, Object>) map);
         }
     }
 
-    /** Arricchisce una mappa medico con il campo doctorFullName formattato. */
-    private void enrichDoctorMap(Map<String, Object> doctor) {
+    /** Arricchisce una mappa medico con doctorFullName e specializzazioni. */
+    @SuppressWarnings("unchecked")
+    private void enrichDoctorMap(MedBookContext context, Map<String, Object> doctor) {
         String firstName = (String) doctor.get("firstName");
         String lastName = (String) doctor.get("lastName");
         String gender = doctor.get("gender") != null ? doctor.get("gender").toString() : null;
         doctor.put("doctorFullName", formatter.formatDoctorCompleteName(firstName, lastName, gender));
+
+        // Carica le specializzazioni del medico da doctor-dmn
+        String doctorId = (String) doctor.get("doctorId");
+        if (doctorId != null && !doctor.containsKey("specializations")) {
+            try {
+                ResponseEntity<MedBookApiResponse> specResp =
+                        specializationsClient.getAllDoctorSpecializations(context, doctorId);
+                if (specResp.getBody() != null && specResp.getBody().getData() != null) {
+                    Object specData = specResp.getBody().getData();
+                    if (specData instanceof Map<?, ?> specMap) {
+                        Object specs = ((Map<String, Object>) specMap).get("specializations");
+                        if (specs instanceof List<?>) {
+                            doctor.put("specializations", specs);
+                        }
+                    } else if (specData instanceof List<?>) {
+                        doctor.put("specializations", specData);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Impossibile caricare specializzazioni per {}: {}", doctorId, e.getMessage());
+            }
+        }
     }
 
     /** Estrae il doctorId dal body della risposta di doctor-dmn. */

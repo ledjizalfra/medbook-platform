@@ -19,6 +19,9 @@ import { PageEvent } from '@angular/material/paginator';
 import { DoctorService } from '../../../core/services/doctor.service';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { SpecializationService } from '../../../core/services/specialization.service';
+import { SpecializationStore } from '../../../core/store/specialization.store';
+import { ClinicStore } from '../../../core/store/clinic.store';
+import { DoctorStore } from '../../../core/store/doctor.store';
 import { KeycloakService } from '../../../core/auth/keycloak.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -61,6 +64,9 @@ export class DoctorListComponent implements OnInit {
   private doctorService = inject(DoctorService);
   private clinicService = inject(ClinicService);
   private specializationService = inject(SpecializationService);
+  private specStore = inject(SpecializationStore);
+  private clinicStore = inject(ClinicStore);
+  private doctorStore = inject(DoctorStore);
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -151,20 +157,12 @@ export class DoctorListComponent implements OnInit {
     let checksRemaining = 2;
     const onCheckDone = () => { if (--checksRemaining === 0) this.checkingWorkflow.set(false); };
 
-    this.clinicService.getAll({ size: 1, status: 'ATTIVO' }).subscribe({
-      next: (resp: unknown) => {
-        const data = (resp as Record<string, unknown>)['data'];
-        this.hasClinics.set(Array.isArray(data) && data.length > 0);
-        onCheckDone();
-      },
+    this.clinicStore.loadAll().subscribe({
+      next: (list) => { this.hasClinics.set(list.length > 0); onCheckDone(); },
       error: () => onCheckDone()
     });
-    this.doctorService.getAll({ size: 1, status: 'ATTIVO' }).subscribe({
-      next: (resp: unknown) => {
-        const data = (resp as Record<string, unknown>)['data'];
-        this.hasDoctors.set(Array.isArray(data) && data.length > 0);
-        onCheckDone();
-      },
+    this.doctorStore.loadAll().subscribe({
+      next: (list) => { this.hasDoctors.set(list.length > 0); onCheckDone(); },
       error: () => onCheckDone()
     });
   }
@@ -212,12 +210,8 @@ export class DoctorListComponent implements OnInit {
   }
 
   private loadSpecializations(): void {
-    this.specializationService.getAll().subscribe({
-      next: (resp: unknown) => {
-        const inner = (resp as Record<string, unknown>)['data'];
-        const list = (inner as Record<string, unknown>)?.['specializations'];
-        this.specializations.set(Array.isArray(list) ? list as unknown[] : []);
-      }
+    this.specStore.loadAll().subscribe({
+      next: (list) => this.specializations.set(list)
     });
   }
 

@@ -5,6 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { KeycloakService } from '../../../core/auth/keycloak.service';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { DoctorService } from '../../../core/services/doctor.service';
+import { ClinicStore } from '../../../core/store/clinic.store';
+import { DoctorStore } from '../../../core/store/doctor.store';
 
 interface MenuItem {
   icon: string;
@@ -29,6 +31,8 @@ export class SidebarComponent implements OnInit {
   protected kc = inject(KeycloakService);
   private clinicService = inject(ClinicService);
   private doctorService = inject(DoctorService);
+  private clinicStore = inject(ClinicStore);
+  private doctorStore = inject(DoctorStore);
 
   /** Stato workflow ADMIN — usato dai componenti per abilitare/disabilitare tasti */
   hasClinics = signal(false);
@@ -57,19 +61,13 @@ export class SidebarComponent implements OnInit {
     this.checkWorkflowState();
   }
 
-  /** Verifica se esistono cliniche e medici — chiamato all'avvio e dopo creazioni */
+  /** Verifica se esistono cliniche e medici — usa gli store con cache TTL */
   checkWorkflowState(): void {
-    this.clinicService.getAll({ size: 1, status: 'ATTIVO' }).subscribe({
-      next: (resp: unknown) => {
-        const data = (resp as Record<string, unknown>)['data'];
-        this.hasClinics.set(Array.isArray(data) && data.length > 0);
-      }
+    this.clinicStore.loadAll().subscribe({
+      next: (list) => this.hasClinics.set(list.length > 0)
     });
-    this.doctorService.getAll({ size: 1, status: 'ATTIVO' }).subscribe({
-      next: (resp: unknown) => {
-        const data = (resp as Record<string, unknown>)['data'];
-        this.hasDoctors.set(Array.isArray(data) && data.length > 0);
-      }
+    this.doctorStore.loadAll().subscribe({
+      next: (list) => this.hasDoctors.set(list.length > 0)
     });
   }
 }

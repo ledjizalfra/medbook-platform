@@ -19,6 +19,7 @@ import { AssignDoctorDialogComponent } from '../assign-doctor-dialog/assign-doct
 import { PageEvent } from '@angular/material/paginator';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { DoctorService } from '../../../core/services/doctor.service';
+import { DoctorStore } from '../../../core/store/doctor.store';
 import { KeycloakService } from '../../../core/auth/keycloak.service';
 import { MedBookFormComponent } from '../../../shared/components/medbook-form/medbook-form.component';
 import { MedBookFormSlotDirective } from '../../../shared/components/medbook-form/medbook-form-slot.directive';
@@ -58,6 +59,7 @@ import { TableColumn, TableAction } from '../../../shared/components/medbook-tab
 export class ClinicListComponent implements OnInit {
   private clinicService = inject(ClinicService);
   private doctorService = inject(DoctorService);
+  private doctorStore = inject(DoctorStore);
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -147,12 +149,8 @@ export class ClinicListComponent implements OnInit {
 
   ngOnInit(): void {
     this.checkingWorkflow.set(true);
-    this.doctorService.getAll({ size: 1, status: 'ATTIVO' }).subscribe({
-      next: (resp: unknown) => {
-        const data = (resp as Record<string, unknown>)['data'];
-        this.hasDoctors.set(Array.isArray(data) && data.length > 0);
-        this.checkingWorkflow.set(false);
-      },
+    this.doctorStore.loadAll().subscribe({
+      next: (list) => { this.hasDoctors.set(list.length > 0); this.checkingWorkflow.set(false); },
       error: () => this.checkingWorkflow.set(false)
     });
   }

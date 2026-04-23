@@ -129,15 +129,11 @@ body {
     width: 100%;
   }
 
+  // La tabella ha uno scroll orizzontale interno (mb-table-scroll-wrapper).
+  // Filtri e paginazione restano al 100% del container.
   app-medbook-table {
     display: block;
     width: 100%;
-
-    // La tabella si adatta al container senza debordare
-    .mb-table-full {
-      width: 100%;
-      table-layout: auto;
-    }
 
     // Celle: testo lungo troncato con ellipsis
     td.mat-mdc-cell {

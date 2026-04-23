@@ -7,6 +7,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { DoctorService } from '../../../core/services/doctor.service';
 import { ClinicService } from '../../../core/services/clinic.service';
+import { DoctorStore } from '../../../core/store/doctor.store';
+import { ClinicStore } from '../../../core/store/clinic.store';
 import { KeycloakService } from '../../../core/auth/keycloak.service';
 import { MedBookPageComponent } from '../../../shared/components/medbook-page/medbook-page.component';
 import { MedBookTableComponent } from '../../../shared/components/medbook-table/medbook-table.component';
@@ -22,6 +24,8 @@ import { TableColumn } from '../../../shared/components/medbook-table/medbook-ta
 export class DoctorAssignmentsPageComponent implements OnInit {
   private doctorService = inject(DoctorService);
   private clinicService = inject(ClinicService);
+  private doctorStore = inject(DoctorStore);
+  private clinicStore = inject(ClinicStore);
   private router = inject(Router);
   private kc = inject(KeycloakService);
 
@@ -42,17 +46,21 @@ export class DoctorAssignmentsPageComponent implements OnInit {
     let checks = 2;
     const done = () => { if (--checks === 0) this.loading.set(false); };
 
-    this.doctorService.getAll({ size: 100, status: 'ATTIVO' }).subscribe({
-      next: (r: unknown) => {
-        const list = ((r as Record<string, unknown>)['data'] as Record<string, unknown>[]) ?? [];
-        this.doctors.set(list.map(d => ({ value: d['doctorId'] as string, label: `${d['lastName']} ${d['firstName']} (${d['doctorId']})` })));
+    this.doctorStore.loadAll().subscribe({
+      next: (list) => {
+        this.doctors.set(list.map(d => {
+          const doc = d as Record<string, unknown>;
+          return { value: doc['doctorId'] as string, label: `${doc['lastName']} ${doc['firstName']} (${doc['doctorId']})` };
+        }));
         done();
       }, error: done
     });
-    this.clinicService.getAll({ size: 100, status: 'ATTIVO' }).subscribe({
-      next: (r: unknown) => {
-        const list = ((r as Record<string, unknown>)['data'] as Record<string, unknown>[]) ?? [];
-        list.forEach(c => this.clinicMap.set(c['clinicId'] as string, `${c['name']} (${c['clinicId']})`));
+    this.clinicStore.loadAll().subscribe({
+      next: (list) => {
+        list.forEach(c => {
+          const cli = c as Record<string, unknown>;
+          this.clinicMap.set(cli['clinicId'] as string, `${cli['name']} (${cli['clinicId']})`);
+        });
         done();
       }, error: done
     });
