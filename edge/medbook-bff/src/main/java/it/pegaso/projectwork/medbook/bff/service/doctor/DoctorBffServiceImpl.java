@@ -57,6 +57,7 @@ public class DoctorBffServiceImpl implements DoctorBffService {
     private final SpecializationFeignClient specializationClient;
     private final NotificationPreferencesFeignClient notificationPreferencesClient;
     private final WelcomeNotificationFeignClient welcomeNotificationClient;
+    private final it.pegaso.projectwork.medbook.bff.service.keycloak.KeycloakAdminService keycloakAdminService;
     private final it.pegaso.projectwork.medbook.bff.context.ActorLookupHelper actorLookupHelper;
     private final MedBookFormatter formatter;
 
@@ -82,6 +83,9 @@ public class DoctorBffServiceImpl implements DoctorBffService {
         }
         ResponseEntity<MedBookApiResponse> response = doctorsClient.postCreateDoctor(context, req);
         String doctorId = extractDoctorId(response);
+
+        // Crea l'utenza Keycloak con password temporanea — best-effort
+        registerDoctorKeycloakUser(bffReq, doctorId);
 
         // Salva le specializzazioni — best-effort, il fallimento viene loggato
         saveDoctorSpecializations(context, doctorId, bffReq);
@@ -139,13 +143,38 @@ public class DoctorBffServiceImpl implements DoctorBffService {
 
     /**
      * Cancellazione logica a cascata del medico:
-     * 1. Annulla tutti gli appuntamenti PRENOTATO del medico (appointment-dmn)
-     * 2. Cancella il medico (doctor-dmn — cancella internamente disponibilita e assegnazioni)
+     * 1. Recupera email prima del soft delete
+     * 2. Annulla tutti gli appuntamenti PRENOTATO del medico (appointment-dmn)
+     * 3. Cancella il medico (doctor-dmn — cancella internamente disponibilita e assegnazioni)
+     * 4. Disabilita l'utenza Keycloak
      */
     @Override
+    @SuppressWarnings("unchecked")
     public ResponseEntity<MedBookApiVoidResponse> deleteDoctor(MedBookContext context, String doctorId) {
+        // Recupera email prima del soft delete
+        String email = null;
+        try {
+            ResponseEntity<MedBookApiResponse> detailResp = doctorsClient.getDoctorById(context, doctorId);
+            if (detailResp.getBody() != null && detailResp.getBody().getData() instanceof Map) {
+                email = (String) ((Map<String, Object>) detailResp.getBody().getData()).get("email");
+            }
+        } catch (Exception e) {
+            log.warn("Impossibile recuperare email medico {}: {}", doctorId, e.getMessage());
+        }
+
         cancelBookedAppointments(context, null, doctorId, "Medico disattivato");
-        return doctorsClient.deleteDoctor(context, doctorId);
+        ResponseEntity<MedBookApiVoidResponse> response = doctorsClient.deleteDoctor(context, doctorId);
+
+        // Disabilita l'utenza Keycloak — best-effort
+        if (email != null) {
+            try {
+                keycloakAdminService.disableUserByEmail(email);
+                log.info("Utenza Keycloak disabilitata per medico {} (email={})", doctorId, email);
+            } catch (Exception e) {
+                log.error("Errore disabilitazione Keycloak medico {}: {}", doctorId, e.getMessage());
+            }
+        }
+        return response;
     }
 
     @Override
@@ -180,8 +209,24 @@ public class DoctorBffServiceImpl implements DoctorBffService {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public ResponseEntity<MedBookApiVoidResponse> restoreDoctor(MedBookContext context, String doctorId) {
-        return doctorsClient.patchRestoreDoctor(context, doctorId);
+        ResponseEntity<MedBookApiVoidResponse> response = doctorsClient.patchRestoreDoctor(context, doctorId);
+
+        // Riabilita l'utenza Keycloak — best-effort
+        try {
+            ResponseEntity<MedBookApiResponse> detailResp = doctorsClient.getDoctorById(context, doctorId);
+            if (detailResp.getBody() != null && detailResp.getBody().getData() instanceof Map) {
+                String email = (String) ((Map<String, Object>) detailResp.getBody().getData()).get("email");
+                if (email != null) {
+                    keycloakAdminService.enableUserByEmail(email);
+                    log.info("Utenza Keycloak riabilitata per medico {} (email={})", doctorId, email);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Errore riabilitazione Keycloak medico {}: {}", doctorId, e.getMessage());
+        }
+        return response;
     }
 
     @Override
@@ -275,6 +320,28 @@ public class DoctorBffServiceImpl implements DoctorBffService {
 
     /** Salva le specializzazioni del medico in doctor-dmn dopo la creazione.
      * Best-effort: il fallimento viene loggato ma non blocca la creazione del medico. */
+    /**
+     * Crea l'utenza Keycloak per il medico con password temporanea.
+     * Username = email. Ruolo = ROLE_DOCTOR. Password temporanea generata.
+     * Best-effort: il fallimento viene loggato ma non blocca la creazione.
+     */
+    private void registerDoctorKeycloakUser(CreateDoctorBffRequest bffReq, String doctorId) {
+        try {
+            String tempPassword = java.util.UUID.randomUUID().toString().substring(0, 8);
+            keycloakAdminService.createUser(
+                    null,
+                    bffReq.getEmail(),
+                    bffReq.getFirstName(),
+                    bffReq.getLastName(),
+                    tempPassword,
+                    "ROLE_DOCTOR",
+                    doctorId);
+            log.info("Utenza Keycloak creata per medico {} (email={})", doctorId, bffReq.getEmail());
+        } catch (Exception e) {
+            log.error("Errore creazione utenza Keycloak per medico {}: {}", doctorId, e.getMessage(), e);
+        }
+    }
+
     private void saveDoctorSpecializations(MedBookContext context, String doctorId,
             CreateDoctorBffRequest bffReq) {
         if (bffReq.getSpecializations() == null || bffReq.getSpecializations().isEmpty()) return;
