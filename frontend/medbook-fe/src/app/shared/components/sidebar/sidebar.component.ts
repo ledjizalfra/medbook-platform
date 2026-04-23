@@ -47,6 +47,7 @@ export class SidebarComponent implements OnInit {
     { icon: 'business',         label: 'Cliniche',              route: '/clinics',      roles: ['ADMIN'] },
     { icon: 'medical_services', label: 'Medici',                route: '/doctors',      roles: ['ADMIN'] },
     { icon: 'group',            label: 'Pazienti',              route: '/patients',     roles: ['RECEPTIONIST', 'ADMIN'] },
+    { icon: 'badge',            label: 'Receptionist',          route: '/admin/receptionists', roles: ['ADMIN'] },
     { icon: 'notifications',    label: 'Notifiche',             route: '/notifications',roles: ['PATIENT', 'ADMIN'] }
   ];
 

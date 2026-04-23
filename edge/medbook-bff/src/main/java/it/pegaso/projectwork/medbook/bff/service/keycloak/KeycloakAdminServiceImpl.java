@@ -112,6 +112,88 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
         log.debug("Utente Keycloak {} per email={}", enabled ? "abilitato" : "disabilitato", email);
     }
 
+    // =========================================================================
+    // RECEPTIONIST
+    // =========================================================================
+
+    @Override
+    public String createReceptionist(String email, String firstName, String lastName,
+                                     String password, boolean enabled) {
+        Keycloak keycloak = buildKeycloakClient();
+        RealmResource realm = keycloak.realm(bffProperties.getKeycloakAdmin().getRealm());
+
+        UserRepresentation user = new UserRepresentation();
+        user.setUsername(email.toLowerCase());
+        user.setEmail(email);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setEnabled(enabled);
+        user.setEmailVerified(true);
+
+        CredentialRepresentation cred = new CredentialRepresentation();
+        cred.setType(CredentialRepresentation.PASSWORD);
+        cred.setValue(password);
+        cred.setTemporary(false);
+        user.setCredentials(List.of(cred));
+
+        Response response = realm.users().create(user);
+        String keycloakId = CreatedResponseUtil.getCreatedId(response);
+
+        RoleRepresentation role = realm.roles().get("ROLE_RECEPTIONIST").toRepresentation();
+        realm.users().get(keycloakId).roles().realmLevel().add(List.of(role));
+        log.info("Receptionist creato: keycloakId={}, email={}", keycloakId, email);
+        return keycloakId;
+    }
+
+    @Override
+    public List<UserRepresentation> findReceptionists(String search, int first, int max) {
+        Keycloak keycloak = buildKeycloakClient();
+        RealmResource realm = keycloak.realm(bffProperties.getKeycloakAdmin().getRealm());
+
+        List<UserRepresentation> members = new java.util.ArrayList<>(
+                realm.roles().get("ROLE_RECEPTIONIST").getRoleUserMembers(first, max));
+
+        if (search != null && !search.isBlank()) {
+            String lower = search.toLowerCase();
+            members = members.stream().filter(u ->
+                (u.getFirstName() != null && u.getFirstName().toLowerCase().contains(lower)) ||
+                (u.getLastName() != null && u.getLastName().toLowerCase().contains(lower)) ||
+                (u.getEmail() != null && u.getEmail().toLowerCase().contains(lower))
+            ).toList();
+        }
+        return members;
+    }
+
+    @Override
+    public long countReceptionists(String search) {
+        return findReceptionists(search, 0, Integer.MAX_VALUE).size();
+    }
+
+    @Override
+    public UserRepresentation findReceptionistById(String keycloakId) {
+        Keycloak keycloak = buildKeycloakClient();
+        RealmResource realm = keycloak.realm(bffProperties.getKeycloakAdmin().getRealm());
+        return realm.users().get(keycloakId).toRepresentation();
+    }
+
+    @Override
+    public void updateReceptionist(String keycloakId, String firstName, String lastName, Boolean enabled) {
+        Keycloak keycloak = buildKeycloakClient();
+        RealmResource realm = keycloak.realm(bffProperties.getKeycloakAdmin().getRealm());
+        UserRepresentation user = realm.users().get(keycloakId).toRepresentation();
+        if (firstName != null) user.setFirstName(firstName);
+        if (lastName != null) user.setLastName(lastName);
+        if (enabled != null) user.setEnabled(enabled);
+        realm.users().get(keycloakId).update(user);
+        log.info("Receptionist aggiornato: keycloakId={}", keycloakId);
+    }
+
+    @Override
+    public void deleteReceptionist(String keycloakId) {
+        deleteUser(keycloakId);
+        log.info("Receptionist eliminato: keycloakId={}", keycloakId);
+    }
+
     /** Costruisce il client Keycloak Admin con le credenziali configurate nel BffProperties. */
     private Keycloak buildKeycloakClient() {
         BffProperties.KeycloakAdmin cfg = bffProperties.getKeycloakAdmin();

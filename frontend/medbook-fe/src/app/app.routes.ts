@@ -183,6 +183,9 @@ export const routes: Routes = [
       { path: `${APP_ROUTES.CLINICS}/new`, loadComponent: () => import('./features/clinics/clinic-form/clinic-form.component').then(m => m.ClinicFormComponent) },
       { path: `${APP_ROUTES.CLINICS}/:id/edit`, loadComponent: () => import('./features/clinics/clinic-form/clinic-form.component').then(m => m.ClinicFormComponent) },
       { path: `${APP_ROUTES.CLINICS}/:id/assignments`, loadComponent: () => import('./features/clinics/assignment-list/assignment-list.component').then(m => m.AssignmentListComponent) },
+      { path: 'receptionists', loadComponent: () => import('./features/receptionists/receptionist-list/receptionist-list.component').then(m => m.ReceptionistListComponent) },
+      { path: 'receptionists/new', loadComponent: () => import('./features/receptionists/receptionist-form/receptionist-form.component').then(m => m.ReceptionistFormComponent) },
+      { path: 'receptionists/:keycloakId/edit', loadComponent: () => import('./features/receptionists/receptionist-form/receptionist-form.component').then(m => m.ReceptionistFormComponent) },
       { path: APP_ROUTES.NOTIFICATIONS, loadComponent: () => import('./features/notifications/notification-list/notification-list.component').then(m => m.NotificationListComponent) },
       { path: '', redirectTo: APP_ROUTES.DASHBOARD, pathMatch: 'full' }
     ]

@@ -50,6 +50,8 @@ tags:
     description: Proxy verso notification-dmn - registro notifiche
   - name: NotificationPreferences
     description: Preferenze di notifica dell'utente autenticato
+  - name: Receptionists
+    description: CRUD receptionist - dati solo su Keycloak (ROLE_ADMIN)
 
 # =============================================================================
 # ENDPOINTS
@@ -1411,6 +1413,117 @@ paths:
               schema:
                 $ref: '#/components/schemas/MedBookApiResponse'
 
+  # ===========================================================================
+  # RECEPTIONISTS (CRUD su Keycloak — solo ROLE_ADMIN)
+  # ===========================================================================
+
+  /bff/v1/receptionists:
+    post:
+      tags: [Receptionists]
+      operationId: postCreateReceptionist
+      summary: Crea un nuovo receptionist
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceptionistRequest'
+      responses:
+        '201':
+          description: Receptionist creato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+    get:
+      tags: [Receptionists]
+      operationId: getAllReceptionists
+      summary: Lista paginata receptionist
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Ricerca per nome o email
+      responses:
+        '200':
+          description: Lista receptionist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+  /bff/v1/receptionists/{keycloakId}:
+    get:
+      tags: [Receptionists]
+      operationId: getReceptionistById
+      summary: Dettaglio receptionist
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - name: keycloakId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dettaglio receptionist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiResponse'
+
+    put:
+      tags: [Receptionists]
+      operationId: putUpdateReceptionist
+      summary: Aggiorna receptionist
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - name: keycloakId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceptionistUpdateRequest'
+      responses:
+        '200':
+          description: Receptionist aggiornato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+
+    delete:
+      tags: [Receptionists]
+      operationId: deleteReceptionist
+      summary: Elimina receptionist
+      parameters:
+        - $ref: '#/components/parameters/MedBookContextParam'
+        - name: keycloakId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Receptionist eliminato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedBookApiVoidResponse'
+
 # =============================================================================
 # COMPONENTS
 # =============================================================================
@@ -2065,3 +2178,45 @@ components:
             - LIBERO
             - PRENOTATO
           description: Stato dello slot - LIBERO disponibile, PRENOTATO occupato
+
+    # =========================================================================
+    # RECEPTIONIST
+    # =========================================================================
+
+    ReceptionistRequest:
+      type: object
+      description: Dati per la creazione di un receptionist
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+      properties:
+        firstName:
+          type: string
+          example: Mario
+        lastName:
+          type: string
+          example: Rossi
+        email:
+          type: string
+          format: email
+          example: mario.rossi@medbook.it
+        password:
+          type: string
+          minLength: 8
+          example: Password1!
+        enabled:
+          type: boolean
+          default: true
+
+    ReceptionistUpdateRequest:
+      type: object
+      description: Dati per aggiornamento receptionist (solo nome, cognome, stato)
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        enabled:
+          type: boolean

@@ -1,0 +1,15 @@
+<app-medbook-page title="Receptionist" [loading]="loading()">
+  <button pageActions mat-flat-button color="primary" (click)="newReceptionist()">
+    <mat-icon>add</mat-icon>
+    Aggiungi Receptionist
+  </button>
+
+  <app-medbook-table
+    [columns]="columns"
+    [actions]="tableActions"
+    [data]="receptionists()"
+    [pagination]="{ pageIndex: pageIndex(), pageSize: pageSize(), totalElements: totalElements(), pageSizeOptions: [10, 25, 50] }"
+    emptyMessage="Nessun receptionist registrato"
+    emptyIcon="person_off"
+    (pageChange)="onPageChange($event)" />
+</app-medbook-page>

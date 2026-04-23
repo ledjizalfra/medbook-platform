@@ -41,4 +41,28 @@ public interface KeycloakAdminService {
      * Chiamato quando un paziente viene ripristinato in patient-dmn.
      */
     void enableUserByEmail(String email);
+
+    // =========================================================================
+    // RECEPTIONIST
+    // =========================================================================
+
+    /** Crea un receptionist con ruolo ROLE_RECEPTIONIST. */
+    String createReceptionist(String email, String firstName, String lastName,
+                              String password, boolean enabled);
+
+    /** Lista utenti con ruolo ROLE_RECEPTIONIST, con paginazione e ricerca opzionale. */
+    java.util.List<org.keycloak.representations.idm.UserRepresentation> findReceptionists(
+            String search, int first, int max);
+
+    /** Conta il totale dei receptionist. */
+    long countReceptionists(String search);
+
+    /** Recupera un receptionist per UUID Keycloak. */
+    org.keycloak.representations.idm.UserRepresentation findReceptionistById(String keycloakId);
+
+    /** Aggiorna dati anagrafici e stato di un receptionist. */
+    void updateReceptionist(String keycloakId, String firstName, String lastName, Boolean enabled);
+
+    /** Elimina definitivamente un receptionist da Keycloak. */
+    void deleteReceptionist(String keycloakId);
 }
