@@ -22,6 +22,7 @@ import { ClinicService } from '../../../core/services/clinic.service';
 import { SpecializationService } from '../../../core/services/specialization.service';
 import { SpecializationStore } from '../../../core/store/specialization.store';
 import { ClinicStore } from '../../../core/store/clinic.store';
+import { DoctorStore } from '../../../core/store/doctor.store';
 import { MedBookValidators } from '../../../core/validators/medbook.validators';
 import { SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
 import { TimeInputDirective } from '../../../shared/directives/time-input.directive';
@@ -65,6 +66,7 @@ export class DoctorFormComponent implements OnInit {
   private specializationService = inject(SpecializationService);
   private specStore = inject(SpecializationStore);
   private clinicStore = inject(ClinicStore);
+  private doctorStore = inject(DoctorStore);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private destroyRef = inject(DestroyRef);
@@ -520,6 +522,7 @@ export class DoctorFormComponent implements OnInit {
 
   private onSuccess(title: string, message: string): void {
     this.loading.set(false);
+    this.doctorStore.invalidate();
     this.dialog.open(InfoDialogComponent, { data: { title, message } });
     this.router.navigate([this.kc.getDoctorsRoute()]);
   }

@@ -282,6 +282,7 @@ export class DoctorListComponent implements OnInit {
       if (confirmed) {
         this.doctorService.delete(String(d['doctorId'])).subscribe({
           next: () => {
+            this.doctorStore.invalidate();
             this.dialog.open(InfoDialogComponent, {
               data: { title: 'Disattivazione completata', message: 'Medico disattivato con successo' }
             });
@@ -309,6 +310,7 @@ export class DoctorListComponent implements OnInit {
       if (confirmed) {
         this.doctorService.restore(String(d['doctorId'])).subscribe({
           next: () => {
+            this.doctorStore.invalidate();
             this.dialog.open(InfoDialogComponent, {
               data: { title: 'Ripristino completato', message: 'Medico ripristinato con successo' }
             });

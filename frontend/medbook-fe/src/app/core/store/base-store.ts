@@ -1,22 +1,21 @@
 import { signal, Signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, of, tap, catchError, finalize } from 'rxjs';
 
 /**
- * Store base con cache in-memory e TTL per una singola chiave.
- *
- * Ogni store concreto estende questa classe fornendo il TTL e la funzione
- * di caricamento HTTP. Il dato viene mantenuto in un Signal privato.
+ * Store base con cache in-memory e TTL.
  *
  * Regole:
- * - Cache hit: dato presente E TTL non scaduto → nessuna chiamata HTTP
- * - Cache miss: dato null OPPURE TTL scaduto → esegue la chiamata HTTP
- * - Invalidazione: reimposta segnale e timestamp → reload alla prossima load()
+ * - Cache hit: dato presente E TTL non scaduto → restituisce Observable sincrono
+ * - Cache miss: esegue la chiamata HTTP, aggiorna il signal e il timestamp
+ * - Errore HTTP: resetta lo stato loading, propaga l'errore
+ * - Invalidazione: forza il reload alla prossima load()
  */
 export abstract class BaseStore<T> {
 
   private readonly _data = signal<T | null>(null);
   private _loadedAt = 0;
   private _loading = false;
+  private _inflight$: Observable<T> | null = null;
 
   /** Segnale in sola lettura per i componenti */
   readonly data: Signal<T | null> = this._data.asReadonly();
@@ -25,43 +24,40 @@ export abstract class BaseStore<T> {
 
   /**
    * Carica il dato se non presente o se il TTL e scaduto.
-   * Restituisce un Observable che emette il dato (dalla cache o dal backend).
+   * Se una chiamata e gia in corso, condivide lo stesso Observable.
    */
   load(fetcher: () => Observable<T>): Observable<T> {
     const now = Date.now();
     const cached = this._data();
 
-    // Cache hit
+    // Cache hit — dato presente e TTL valido
     if (cached !== null && (now - this._loadedAt) < this.ttlMs) {
-      return new Observable<T>(subscriber => {
-        subscriber.next(cached);
-        subscriber.complete();
-      });
+      return of(cached);
     }
 
-    // Evita chiamate parallele
-    if (this._loading) {
-      return new Observable<T>(subscriber => {
-        const check = setInterval(() => {
-          const val = this._data();
-          if (val !== null) {
-            clearInterval(check);
-            subscriber.next(val);
-            subscriber.complete();
-          }
-        }, 50);
-      });
+    // Chiamata gia in corso — condividi lo stesso Observable
+    if (this._loading && this._inflight$) {
+      return this._inflight$;
     }
 
-    // Cache miss — carica dal backend
+    // Cache miss — esegui la chiamata HTTP
     this._loading = true;
-    return fetcher().pipe(
+    this._inflight$ = fetcher().pipe(
       tap(data => {
         this._data.set(data);
         this._loadedAt = Date.now();
+      }),
+      catchError(err => {
+        // In caso di errore, restituisci array vuoto per non bloccare i componenti
+        console.warn('[BaseStore] Errore caricamento:', err);
+        return of([] as unknown as T);
+      }),
+      finalize(() => {
         this._loading = false;
+        this._inflight$ = null;
       })
     );
+    return this._inflight$;
   }
 
   /** Forza il reload alla prossima chiamata load() */
@@ -69,10 +65,6 @@ export abstract class BaseStore<T> {
     this._data.set(null);
     this._loadedAt = 0;
     this._loading = false;
-  }
-
-  /** Restituisce true se il dato e presente e il TTL non e scaduto */
-  get isCached(): boolean {
-    return this._data() !== null && (Date.now() - this._loadedAt) < this.ttlMs;
+    this._inflight$ = null;
   }
 }

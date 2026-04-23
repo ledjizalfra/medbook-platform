@@ -20,6 +20,7 @@ import { PageEvent } from '@angular/material/paginator';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { DoctorService } from '../../../core/services/doctor.service';
 import { DoctorStore } from '../../../core/store/doctor.store';
+import { ClinicStore } from '../../../core/store/clinic.store';
 import { KeycloakService } from '../../../core/auth/keycloak.service';
 import { MedBookFormComponent } from '../../../shared/components/medbook-form/medbook-form.component';
 import { MedBookFormSlotDirective } from '../../../shared/components/medbook-form/medbook-form-slot.directive';
@@ -60,6 +61,7 @@ export class ClinicListComponent implements OnInit {
   private clinicService = inject(ClinicService);
   private doctorService = inject(DoctorService);
   private doctorStore = inject(DoctorStore);
+  private clinicStore = inject(ClinicStore);
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -262,6 +264,7 @@ export class ClinicListComponent implements OnInit {
       if (!confirmed) return;
       this.clinicService.delete(id).subscribe({
         next: () => {
+          this.clinicStore.invalidate();
           this.dialog.open(InfoDialogComponent, {
             data: { title: 'Operazione completata', message: `La clinica "${name}" è stata disattivata.`, icon: 'check_circle' }
           });
@@ -288,6 +291,7 @@ export class ClinicListComponent implements OnInit {
       if (!confirmed) return;
       this.clinicService.restore(id).subscribe({
         next: () => {
+          this.clinicStore.invalidate();
           this.dialog.open(InfoDialogComponent, {
             data: { title: 'Operazione completata', message: `La clinica "${name}" è stata ripristinata.`, icon: 'check_circle' }
           });
