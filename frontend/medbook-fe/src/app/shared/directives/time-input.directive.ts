@@ -52,6 +52,29 @@ export class TimeInputDirective {
     this.control?.control?.setValue(formatted, { emitEvent: true });
   }
 
+  /** Al blur completa il formato: "15" → "15:00", "9" → "09:00", "153" → "15:30" */
+  @HostListener('blur')
+  onBlur(): void {
+    const input = this.el.nativeElement;
+    let digits = input.value.replace(/\D/g, '');
+    if (!digits) return;
+
+    // Completa le cifre mancanti
+    if (digits.length === 1) digits = '0' + digits + '00';
+    else if (digits.length === 2) digits = digits + '00';
+    else if (digits.length === 3) digits = digits + '0';
+
+    // Validazione
+    let hh = parseInt(digits.substring(0, 2), 10);
+    let mm = parseInt(digits.substring(2, 4), 10);
+    if (hh > 23) hh = 23;
+    if (mm > 59) mm = 59;
+
+    const formatted = String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    input.value = formatted;
+    this.control?.control?.setValue(formatted, { emitEvent: true });
+  }
+
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
     // Permetti: backspace, delete, tab, escape, enter, frecce
