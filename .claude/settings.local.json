@@ -44,7 +44,14 @@
       "Bash(grep -l \"http.get\" *.ts)",
       "Bash(grep -A2 \"getSpecializations\\\\|getAllClinics\\\\|postCreatePatient\" it/pegaso/projectwork/medbook/bff/controller/*.java)",
       "Bash(grep -rn \"@PreAuthorize\" edge/medbook-bff/src/main/java/it/pegaso/projectwork/medbook/bff/controller/*.java)",
-      "Bash(find . -name \"*.java\" -path \"*/controller/*\" -exec sed -i 's|    @PreAuthorize|    // @PreAuthorize|g' {} +)"
+      "Bash(find . -name \"*.java\" -path \"*/controller/*\" -exec sed -i 's|    @PreAuthorize|    // @PreAuthorize|g' {} +)",
+      "Bash(sed -i 's|<button mat-flat-button color=\"primary\" \\(click\\)=\"validateStep\\(step2\\) && stepper.next\\(\\)\">|<button mat-flat-button color=\"primary\" [disabled]=\"step2.invalid\" \\(click\\)=\"validateStep\\(step2\\) \\\\&\\\\& stepper.next\\(\\)\">|' doctor-form.component.html)",
+      "Bash(sed -i 's|<button mat-flat-button color=\"primary\" \\(click\\)=\"validateStep\\(step3\\) && stepper.next\\(\\)\">|<button mat-flat-button color=\"primary\" [disabled]=\"step3.invalid\" \\(click\\)=\"validateStep\\(step3\\) \\\\&\\\\& stepper.next\\(\\)\">|' doctor-form.component.html)",
+      "Bash(sed -i 's|\\(click\\)=\"validateStep\\(step1\\) && stepper.next\\(\\)\">|[disabled]=\"step1.invalid\" \\(click\\)=\"validateStep\\(step1\\) \\\\&\\\\& stepper.next\\(\\)\">|g' features/auth/register/register.component.html)",
+      "Bash(sed -i 's|\\(click\\)=\"validateStep\\(step2\\) && stepper.next\\(\\)\">|[disabled]=\"step2.invalid\" \\(click\\)=\"validateStep\\(step2\\) \\\\&\\\\& stepper.next\\(\\)\">|g' features/auth/register/register.component.html)",
+      "Bash(sed -i 's|\\(click\\)=\"validateStep\\(step3\\) && stepper.next\\(\\)\">|[disabled]=\"step3.invalid\" \\(click\\)=\"validateStep\\(step3\\) \\\\&\\\\& stepper.next\\(\\)\">|g' features/auth/register/register.component.html)",
+      "Bash(sed -i 's|\\(click\\)=\"validateStep\\(step4\\) && stepper.next\\(\\)\">|[disabled]=\"step4.invalid\" \\(click\\)=\"validateStep\\(step4\\) \\\\&\\\\& stepper.next\\(\\)\">|g' features/auth/register/register.component.html)",
+      "Bash(sed -i 's|\\(click\\)=\"validateStep\\(step1\\) && stepper.next\\(\\)\">|[disabled]=\"step1.invalid\" \\(click\\)=\"validateStep\\(step1\\) \\\\&\\\\& stepper.next\\(\\)\">|g' features/clinics/clinic-form/clinic-form.component.html)"
     ]
   }
 }

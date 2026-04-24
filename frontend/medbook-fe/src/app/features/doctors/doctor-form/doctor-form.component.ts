@@ -109,8 +109,8 @@ export class DoctorFormComponent implements OnInit {
   // Form temporaneo per aggiungere una assegnazione clinica
   protected assignForm = this.fb.group({
     clinicId:  ['', Validators.required],
-    validFrom: ['' as string, Validators.required],
-    validTo:   ['' as string]
+    validFrom: [new Date() as Date | null, Validators.required],
+    validTo:   [null as Date | null]
   });
 
   /** Cliniche non ancora assegnate */
@@ -125,13 +125,18 @@ export class DoctorFormComponent implements OnInit {
     const val = this.assignForm.getRawValue();
     const clinicId = val.clinicId ?? '';
     const clinicName = this.clinicOptions().find(c => c.value === clinicId)?.label ?? clinicId;
+    const fmtDate = (d: Date | string | null) => {
+      if (!d) return '';
+      const dt = d instanceof Date ? d : new Date(d);
+      return dt.toISOString().split('T')[0];
+    };
     this.assignmentItems.update(items => [...items, {
       clinicId,
       clinicName,
-      validFrom: val.validFrom ?? new Date().toISOString().split('T')[0],
-      validTo: val.validTo ?? ''
+      validFrom: fmtDate(val.validFrom) || new Date().toISOString().split('T')[0],
+      validTo: fmtDate(val.validTo)
     }]);
-    this.assignForm.reset({ clinicId: '', validFrom: '', validTo: '' });
+    this.assignForm.reset({ clinicId: '', validFrom: new Date(), validTo: null });
     // Rimuove disponibilita per cliniche non piu assegnate
     this.syncAvailabilitiesWithAssignments();
   }

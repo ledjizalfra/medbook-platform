@@ -64,7 +64,7 @@
 
           <div class="step-actions">
             <span></span>
-            <button mat-flat-button color="primary" (click)="validateStep(step1) && stepper.next()">
+            <button mat-flat-button color="primary" [disabled]="step1.invalid" (click)="validateStep(step1) && stepper.next()">
               Avanti <mat-icon>arrow_forward</mat-icon>
             </button>
           </div>
@@ -103,7 +103,7 @@
             <button mat-stroked-button (click)="stepper.previous()">
               <mat-icon>arrow_back</mat-icon> Indietro
             </button>
-            <button mat-flat-button color="primary" (click)="validateStep(step2) && stepper.next()">
+            <button mat-flat-button color="primary" [disabled]="step2.invalid" (click)="validateStep(step2) && stepper.next()">
               Avanti <mat-icon>arrow_forward</mat-icon>
             </button>
           </div>
