@@ -12,6 +12,8 @@ import it.pegaso.projectwork.medbook.appointment.client.api.AppointmentsFeignCli
 import it.pegaso.projectwork.medbook.appointment.client.model.AppointmentStatusApiEnum;
 import it.pegaso.projectwork.medbook.appointment.client.model.CancelAppointmentRequest;
 import it.pegaso.projectwork.medbook.appointment.client.model.CancelledByApiEnum;
+import it.pegaso.projectwork.medbook.clinic.client.api.ClinicsFeignClient;
+import it.pegaso.projectwork.medbook.patient.client.api.PatientFeignClient;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorAvailabilitiesFeignClient;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorConsentFeignClient;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorsFeignClient;
@@ -39,8 +41,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /** Implementazione proxy di DoctorBffService. Adatta i DTO BFF ai DTO doctor-dmn. */
@@ -55,11 +62,32 @@ public class DoctorBffServiceImpl implements DoctorBffService {
     private final DoctorAvailabilitiesFeignClient availabilitiesClient;
     private final DoctorSpecializationsFeignClient specializationsClient;
     private final SpecializationFeignClient specializationClient;
+    private final ClinicsFeignClient clinicsClient;
+    private final PatientFeignClient patientsClient;
     private final NotificationPreferencesFeignClient notificationPreferencesClient;
     private final WelcomeNotificationFeignClient welcomeNotificationClient;
     private final it.pegaso.projectwork.medbook.bff.service.keycloak.KeycloakAdminService keycloakAdminService;
     private final it.pegaso.projectwork.medbook.bff.context.ActorLookupHelper actorLookupHelper;
     private final MedBookFormatter formatter;
+
+    /** Limite alto per leggere "tutto" in una sola chiamata — sufficiente per
+     * il volume tipico di un singolo medico (storico + futuri). */
+    private static final int APPOINTMENTS_PAGE_SIZE = 1000;
+
+    /** Etichette giorno settimana per l'output FE — ordine lun-dom per la vista calendar. */
+    private static final Map<String, String> DAY_LABEL = Map.of(
+            "MONDAY",    "Lunedì",
+            "TUESDAY",   "Martedì",
+            "WEDNESDAY", "Mercoledì",
+            "THURSDAY",  "Giovedì",
+            "FRIDAY",    "Venerdì",
+            "SATURDAY",  "Sabato",
+            "SUNDAY",    "Domenica"
+    );
+
+    private static final List<String> DAY_ORDER = List.of(
+            "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"
+    );
 
     @Override
     public ResponseEntity<MedBookApiResponse> createDoctor(MedBookContext context,
@@ -247,6 +275,260 @@ public class DoctorBffServiceImpl implements DoctorBffService {
         return response;
     }
 
+    // =========================================================================
+    // VISTE AGGREGATE PER IL MEDICO AUTENTICATO
+    // =========================================================================
+
+    /**
+     * Lista pazienti con almeno un appuntamento attivo (PRENOTATO o IN_CORSO)
+     * presso il medico autenticato.
+     *
+     * Strategia: una sola chiamata ad appointment-dmn con filtro doctorId,
+     * raggruppamento in memoria per patientId, calcolo stats e arricchimento
+     * anagrafico una sola volta per paziente. Best-effort: pazienti la cui
+     * lookup fallisce vengono comunque inclusi con i dati disponibili.
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<MedBookApiResponse> getMyPatients(MedBookContext context) {
+        String doctorId = actorLookupHelper.requireActorId(context);
+        log.debug("Recupero pazienti per doctorId={}", doctorId);
+
+        List<Map<String, Object>> appointments = fetchDoctorAppointments(context, doctorId, null);
+
+        // Raggruppa appuntamenti per paziente
+        Map<String, List<Map<String, Object>>> byPatient = appointments.stream()
+                .filter(a -> a.get("patientId") != null)
+                .collect(Collectors.groupingBy(a -> (String) a.get("patientId"),
+                        LinkedHashMap::new, Collectors.toList()));
+
+        // Filtra: tieni solo i pazienti con almeno un appuntamento attivo
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, List<Map<String, Object>>> entry : byPatient.entrySet()) {
+            String patientId = entry.getKey();
+            List<Map<String, Object>> apts = entry.getValue();
+
+            boolean hasActive = apts.stream().anyMatch(a -> {
+                String s = String.valueOf(a.get("status"));
+                return "PRENOTATO".equals(s) || "IN_CORSO".equals(s);
+            });
+            if (!hasActive) continue;
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("patientId", patientId);
+
+            // Lookup anagrafica paziente — best-effort
+            try {
+                ResponseEntity<MedBookApiResponse> resp = patientsClient.getPatientById(context, patientId);
+                if (resp.getBody() != null && resp.getBody().getData() instanceof Map) {
+                    Map<String, Object> p = (Map<String, Object>) resp.getBody().getData();
+                    row.put("firstName", p.get("firstName"));
+                    row.put("lastName", p.get("lastName"));
+                    row.put("fiscalCode", p.get("fiscalCode"));
+                    row.put("phone", p.get("phone"));
+                    row.put("email", p.get("email"));
+                }
+            } catch (Exception e) {
+                log.warn("Impossibile recuperare anagrafica paziente {}: {}", patientId, e.getMessage());
+            }
+
+            // Prossimo appuntamento attivo (PRENOTATO/IN_CORSO con data più vicina)
+            Optional<Map<String, Object>> next = apts.stream()
+                    .filter(a -> {
+                        String s = String.valueOf(a.get("status"));
+                        return "PRENOTATO".equals(s) || "IN_CORSO".equals(s);
+                    })
+                    .min(Comparator.comparing(a -> appointmentSortKey(a)));
+            next.ifPresent(a -> {
+                row.put("nextAppointmentDate", a.get("slotDate"));
+                row.put("nextAppointmentTime", a.get("startTime"));
+                row.put("nextAppointmentId", a.get("appointmentId"));
+                row.put("nextAppointmentStatus", a.get("status"));
+            });
+
+            // Statistiche storiche su tutti gli appuntamenti col medico
+            long totalAppointments = apts.size();
+            long activeCount = apts.stream()
+                    .filter(a -> "PRENOTATO".equals(String.valueOf(a.get("status")))
+                              || "IN_CORSO".equals(String.valueOf(a.get("status"))))
+                    .count();
+            row.put("totalAppointments", totalAppointments);
+            row.put("activeAppointments", activeCount);
+
+            result.add(row);
+        }
+
+        // Ordina per data del prossimo appuntamento ascendente (i più imminenti per primi)
+        result.sort(Comparator.comparing(r -> patientSortKey(r)));
+
+        return ResponseEntity.ok(new MedBookApiResponse()
+                .httpStatus(200).success(true).data(result));
+    }
+
+    /**
+     * Lista cliniche presso cui il medico autenticato ha disponibilità configurate.
+     * Per ogni clinica restituisce indirizzo, città e l'elenco di fasce orarie
+     * settimanali (gruppate per giorno) che il medico copre in quella sede.
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<MedBookApiResponse> getMyClinics(MedBookContext context) {
+        String doctorId = actorLookupHelper.requireActorId(context);
+        log.debug("Recupero cliniche per doctorId={}", doctorId);
+
+        // 1. Carica i template di disponibilità
+        List<Map<String, Object>> availabilities = fetchDoctorAvailabilities(context, doctorId);
+
+        // 2. Conta gli appuntamenti futuri per clinica (PRENOTATO da oggi in poi)
+        Map<String, Long> futureAppointmentsByClinic = countFutureAppointmentsByClinic(
+                fetchDoctorAppointments(context, doctorId, AppointmentStatusApiEnum.PRENOTATO));
+
+        // 3. Raggruppa le disponibilità per clinica
+        Map<String, List<Map<String, Object>>> byClinic = availabilities.stream()
+                .filter(a -> a.get("clinicId") != null)
+                .collect(Collectors.groupingBy(a -> (String) a.get("clinicId"),
+                        LinkedHashMap::new, Collectors.toList()));
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, List<Map<String, Object>>> entry : byClinic.entrySet()) {
+            String clinicId = entry.getKey();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("clinicId", clinicId);
+
+            // Lookup anagrafica clinica — best-effort
+            try {
+                ResponseEntity<MedBookApiResponse> resp = clinicsClient.getClinicById(context, clinicId);
+                if (resp.getBody() != null && resp.getBody().getData() instanceof Map) {
+                    Map<String, Object> c = (Map<String, Object>) resp.getBody().getData();
+                    row.put("clinicName", c.get("name"));
+                    row.put("address", c.get("address"));
+                    row.put("city", c.get("city"));
+                    row.put("province", c.get("province"));
+                    row.put("postalCode", c.get("postalCode"));
+                    row.put("phone", c.get("phone"));
+                    row.put("email", c.get("email"));
+                }
+            } catch (Exception e) {
+                log.warn("Impossibile recuperare anagrafica clinica {}: {}", clinicId, e.getMessage());
+            }
+
+            // Disponibilità formattate per giorno (es. {"Lunedì": ["09:00-12:00", "15:00-18:00"]})
+            row.put("availabilitySchedule", formatAvailabilitySchedule(entry.getValue()));
+            row.put("futureAppointments", futureAppointmentsByClinic.getOrDefault(clinicId, 0L));
+
+            result.add(row);
+        }
+
+        return ResponseEntity.ok(new MedBookApiResponse()
+                .httpStatus(200).success(true).data(result));
+    }
+
+    /** Recupera tutti gli appuntamenti del medico (eventualmente filtrati per stato).
+     * Best-effort: in caso di errore ritorna lista vuota per non rompere la vista. */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> fetchDoctorAppointments(MedBookContext context,
+            String doctorId, AppointmentStatusApiEnum status) {
+        try {
+            ResponseEntity<MedBookApiResponse> resp = appointmentsClient.getListAppointments(
+                    context, 0, APPOINTMENTS_PAGE_SIZE, null, null, doctorId, null,
+                    status, null, null);
+            if (resp.getBody() == null || resp.getBody().getData() == null) return List.of();
+            Object data = resp.getBody().getData();
+            if (data instanceof List<?> list) {
+                return list.stream()
+                        .filter(Map.class::isInstance)
+                        .map(o -> (Map<String, Object>) o)
+                        .collect(Collectors.toList());
+            }
+            return List.of();
+        } catch (Exception e) {
+            log.warn("Impossibile recuperare appuntamenti per doctorId={}: {}", doctorId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /** Recupera i template di disponibilità del medico. Best-effort. */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> fetchDoctorAvailabilities(MedBookContext context, String doctorId) {
+        try {
+            ResponseEntity<MedBookApiResponse> resp = availabilitiesClient.getAllAvailabilities(
+                    context, doctorId, null, null, null);
+            if (resp.getBody() == null || resp.getBody().getData() == null) return List.of();
+            Object data = resp.getBody().getData();
+            if (data instanceof List<?> list) {
+                return list.stream()
+                        .filter(Map.class::isInstance)
+                        .map(o -> (Map<String, Object>) o)
+                        .collect(Collectors.toList());
+            }
+            if (data instanceof Map<?, ?> m && ((Map<String, Object>) m).get("availabilities") instanceof List<?> inner) {
+                return inner.stream()
+                        .filter(Map.class::isInstance)
+                        .map(o -> (Map<String, Object>) o)
+                        .collect(Collectors.toList());
+            }
+            return List.of();
+        } catch (Exception e) {
+            log.warn("Impossibile recuperare disponibilità per doctorId={}: {}", doctorId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /** Conta gli appuntamenti futuri (slotDate >= oggi) per clinica. */
+    private Map<String, Long> countFutureAppointmentsByClinic(List<Map<String, Object>> appointments) {
+        LocalDate today = LocalDate.now();
+        Map<String, Long> counts = new HashMap<>();
+        for (Map<String, Object> a : appointments) {
+            String clinicId = (String) a.get("clinicId");
+            if (clinicId == null) continue;
+            LocalDate slotDate = parseLocalDate(a.get("slotDate"));
+            if (slotDate == null || slotDate.isBefore(today)) continue;
+            counts.merge(clinicId, 1L, Long::sum);
+        }
+        return counts;
+    }
+
+    /** Costruisce una mappa "giorno -> [orari]" ordinata da Lunedì a Domenica.
+     * Es: {"Lunedì": ["09:00-12:00", "15:00-18:00"], "Mercoledì": ["10:00-13:00"]} */
+    private Map<String, List<String>> formatAvailabilitySchedule(List<Map<String, Object>> avails) {
+        Map<String, List<String>> byDay = new LinkedHashMap<>();
+        // Inizializza con l'ordine settimanale per output stabile
+        for (String day : DAY_ORDER) {
+            String label = DAY_LABEL.get(day);
+            List<String> slots = avails.stream()
+                    .filter(a -> day.equals(String.valueOf(a.get("dayOfWeek"))))
+                    .sorted(Comparator.comparing(a -> String.valueOf(a.get("startTime"))))
+                    .map(a -> String.valueOf(a.get("startTime")) + " - " + String.valueOf(a.get("endTime")))
+                    .collect(Collectors.toList());
+            if (!slots.isEmpty()) byDay.put(label, slots);
+        }
+        return byDay;
+    }
+
+    /** Chiave di ordinamento per appuntamenti: data + ora (ascendente). */
+    private String appointmentSortKey(Map<String, Object> a) {
+        return String.valueOf(a.get("slotDate")) + "T" + String.valueOf(a.get("startTime"));
+    }
+
+    /** Chiave di ordinamento per pazienti: data prossimo appuntamento (ascendente, null in fondo). */
+    private String patientSortKey(Map<String, Object> p) {
+        Object date = p.get("nextAppointmentDate");
+        Object time = p.get("nextAppointmentTime");
+        if (date == null) return "9999-99-99";
+        return String.valueOf(date) + "T" + (time != null ? time : "");
+    }
+
+    /** Parsa un valore in LocalDate accettando sia LocalDate che String. */
+    private LocalDate parseLocalDate(Object value) {
+        if (value == null) return null;
+        if (value instanceof LocalDate d) return d;
+        try {
+            return LocalDate.parse(String.valueOf(value));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /** Aggiunge doctorFullName e specializzazioni a ogni medico nella lista. */
     @SuppressWarnings("unchecked")
     private void enrichDoctorList(ResponseEntity<MedBookApiResponse> response) {
@@ -334,7 +616,8 @@ public class DoctorBffServiceImpl implements DoctorBffService {
                     bffReq.getLastName(),
                     bffReq.getPassword(),
                     "ROLE_DOCTOR",
-                    doctorId);
+                    doctorId,
+                    true); // password assegnata dall'admin: cambio forzato al primo login
             log.info("Utenza Keycloak creata per medico {} (email={})", doctorId, bffReq.getEmail());
         } catch (Exception e) {
             log.error("Errore creazione utenza Keycloak per medico {}: {}", doctorId, e.getMessage(), e);

@@ -52,8 +52,8 @@ export class SidebarComponent implements OnInit {
     // Dashboard — tutti i ruoli
     items.push({ icon: 'dashboard', label: 'Dashboard', route: this.kc.getRoleDashboardRoute() });
 
-    // Prenota — PATIENT, RECEPTIONIST, ADMIN
-    if (this.kc.hasRole('PATIENT') || this.kc.hasRole('RECEPTIONIST') || this.kc.hasRole('ADMIN')) {
+    // Prenota — PATIENT, RECEPTIONIST (l'ADMIN non prenota visite a nome di pazienti)
+    if (this.kc.hasRole('PATIENT') || this.kc.hasRole('RECEPTIONIST')) {
       items.push({ icon: 'event_available', label: 'Prenota', route: this.kc.getAvailabilityRoute() });
     }
 
@@ -70,9 +70,11 @@ export class SidebarComponent implements OnInit {
       items.push({ icon: 'person', label: 'Il mio profilo', route: profileRoute });
     }
 
-    // Cliniche — ADMIN
+    // Cliniche — ADMIN (gestione completa), DOCTOR (lista delle proprie sedi)
     if (this.kc.hasRole('ADMIN')) {
       items.push({ icon: 'business', label: 'Cliniche', route: this.kc.getClinicsRoute() });
+    } else if (this.kc.hasRole('DOCTOR')) {
+      items.push({ icon: 'business', label: 'Le mie cliniche', route: this.kc.getClinicsRoute() });
     }
 
     // Medici — ADMIN
@@ -80,9 +82,11 @@ export class SidebarComponent implements OnInit {
       items.push({ icon: 'medical_services', label: 'Medici', route: this.kc.getDoctorsRoute() });
     }
 
-    // Pazienti — RECEPTIONIST, ADMIN
+    // Pazienti — RECEPTIONIST, ADMIN (gestione), DOCTOR (lista dei propri pazienti)
     if (this.kc.hasRole('RECEPTIONIST') || this.kc.hasRole('ADMIN')) {
       items.push({ icon: 'group', label: 'Pazienti', route: this.kc.getPatientsRoute() });
+    } else if (this.kc.hasRole('DOCTOR')) {
+      items.push({ icon: 'group', label: 'I miei pazienti', route: this.kc.getPatientsRoute() });
     }
 
     // Receptionist — ADMIN

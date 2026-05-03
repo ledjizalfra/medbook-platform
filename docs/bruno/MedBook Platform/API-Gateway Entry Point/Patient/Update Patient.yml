@@ -1,0 +1,38 @@
+info:
+  name: Update Patient
+  type: http
+  seq: 6
+
+http:
+  method: PATCH
+  url: "{{base_url_gateway}}/bff/v1/patients/:patientId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: patientId
+      value: PAT-1
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "email": "mario.rossi.updated@email.it",
+        "phone": "+393331234999"
+      }
+      /*
+      {
+        "phone": "+393334455699"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

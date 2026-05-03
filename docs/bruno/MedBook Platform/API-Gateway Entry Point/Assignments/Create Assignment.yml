@@ -1,0 +1,57 @@
+info:
+  name: Create Assignment
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_gateway}}/bff/v1/clinics/:clinicId/assignments"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: clinicId
+      value: CLN-1
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "doctorId": "DOC-1",
+        "specialization": "CARDIOLOGIA"
+      }
+      /*
+      {
+        "doctorId": "DOC-2",
+        "specialization": "DERMATOLOGIA"
+      }
+      */
+      /*
+      {
+        "doctorId": "DOC-3",
+        "specialization": "NEUROLOGIA"
+      }
+      */
+      /*
+      {
+        "doctorId": "DOC-4",
+        "specialization": "PEDIATRIA"
+      }
+      */
+      /*
+      {
+        "doctorId": "DOC-5",
+        "specialization": "MEDICINA_INTERNA"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

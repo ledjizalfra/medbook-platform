@@ -1,0 +1,24 @@
+info:
+  name: No Show Appointment
+  type: http
+  seq: 8
+
+http:
+  method: PATCH
+  url: "{{base_url_appointment}}/appointment/v1/appointments/:appointmentId/no-show"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: appointmentId
+      value: APT-1
+      type: path
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

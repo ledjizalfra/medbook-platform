@@ -1,0 +1,38 @@
+info:
+  name: Update Clinic
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{base_url_bff}}/bff/v1/clinics/:clinicId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: clinicId
+      value: CLN-1
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "name": "MedBook Milano Centro - Aggiornata",
+        "phone": "+390212345699"
+      }
+      /*
+      {
+        "status": "INATTIVO"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

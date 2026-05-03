@@ -1,0 +1,18 @@
+name: Local
+variables:
+  - name: base_url_doctor
+    value: http://localhost:8091
+  - name: base_url_keycloak
+    value: http://localhost:8082
+  - name: keycloak_realm
+    value: medbook
+  - name: client_id
+    value: medbook-client
+  - secret: true
+    name: client_secret
+  - name: username
+    value: mario.rossi
+  - name: password
+    value: Test1234!
+  - secret: true
+    name: access_token

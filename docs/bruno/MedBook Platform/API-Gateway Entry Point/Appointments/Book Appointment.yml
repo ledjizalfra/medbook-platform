@@ -1,0 +1,83 @@
+info:
+  name: Book Appointment
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_gateway}}/bff/v1/appointments"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "doctorId": "DOC-1",
+        "clinicId": "CLN-1",
+        "slotDate": "2026-04-14",
+        "startTime": "09:00",
+        "endTime": "09:30",
+        "specialization": "CARDIOLOGIA",
+        "notificationChannels": ["EMAIL"],
+        "notes": "Portare referti cardiologici precedenti"
+      }
+      /*
+      {
+        "doctorId": "DOC-2",
+        "clinicId": "CLN-1",
+        "slotDate": "2026-04-15",
+        "startTime": "10:00",
+        "endTime": "10:30",
+        "specialization": "DERMATOLOGIA",
+        "notificationChannels": ["EMAIL", "SMS"],
+        "notes": "Prima visita dermatologica"
+      }
+      */
+      /*
+      {
+        "doctorId": "DOC-3",
+        "clinicId": "CLN-2",
+        "slotDate": "2026-04-17",
+        "startTime": "11:00",
+        "endTime": "11:30",
+        "specialization": "NEUROLOGIA",
+        "notificationChannels": ["EMAIL"],
+        "notes": "Controllo post-operatorio"
+      }
+      */
+      /*
+      {
+        "doctorId": "DOC-4",
+        "clinicId": "CLN-2",
+        "slotDate": "2026-04-22",
+        "startTime": "14:00",
+        "endTime": "14:30",
+        "specialization": "PEDIATRIA",
+        "notificationChannels": ["EMAIL"],
+        "notes": "Visita pediatrica di routine"
+      }
+      */
+      /*
+      {
+        "doctorId": "DOC-5",
+        "clinicId": "CLN-1",
+        "slotDate": "2026-04-28",
+        "startTime": "15:30",
+        "endTime": "16:00",
+        "specialization": "MEDICINA_INTERNA",
+        "notificationChannels": ["EMAIL", "SMS"],
+        "notes": "Visita di medicina interna - esami ematici richiesti"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

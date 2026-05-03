@@ -1,0 +1,27 @@
+info:
+  name: Restore Doctor Specialization
+  type: http
+  seq: 11
+
+http:
+  method: PATCH
+  url: "{{base_url_doctor}}/api/v1/doctors/:doctorId/specializations/:specializationId/restore"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: doctorId
+      value: DOC-5
+      type: path
+    - name: specializationId
+      value: SPC-1
+      type: path
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

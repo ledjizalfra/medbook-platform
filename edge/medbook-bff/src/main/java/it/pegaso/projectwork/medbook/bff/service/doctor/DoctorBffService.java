@@ -45,6 +45,12 @@ public interface DoctorBffService {
     /** Restituisce il profilo del medico autenticato (risolto via ActorLookupHelper L1+L2 cache). */
     ResponseEntity<MedBookApiResponse> getMyDoctor(MedBookContext context);
 
+    /** Lista pazienti con almeno un appuntamento attivo (PRENOTATO o IN_CORSO) presso il medico autenticato. */
+    ResponseEntity<MedBookApiResponse> getMyPatients(MedBookContext context);
+
+    /** Lista cliniche presso cui il medico autenticato ha disponibilità configurate. */
+    ResponseEntity<MedBookApiResponse> getMyClinics(MedBookContext context);
+
     // =========================================================================
     // Consent
     // =========================================================================

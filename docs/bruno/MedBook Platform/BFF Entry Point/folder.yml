@@ -1,0 +1,6 @@
+info:
+  name: BFF Entry Point
+  type: folder
+  seq: 1
+
+request: {}

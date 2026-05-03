@@ -1,0 +1,24 @@
+info:
+  name: Delete Patient
+  type: http
+  seq: 10
+
+http:
+  method: DELETE
+  url: "{{base_url_bff}}/bff/v1/patients/:patientId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: patientId
+      value: PAT-1
+      type: path
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -9,9 +9,10 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MedBookPageComponent } from '../../../shared/components/medbook-page/medbook-page.component';
 import { AppointmentService } from '../../../core/services/appointment.service';
+import { KeycloakService } from '../../../core/auth/keycloak.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { InfoDialogComponent } from '../../../shared/components/info-dialog/info-dialog.component';
-import { NOTIFICATION_CHANNEL, APPOINTMENT_STATUS, SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
+import { APPOINTMENT_STATUS, SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
 
 /**
  * Componente per la visualizzazione del dettaglio di un singolo appuntamento.
@@ -19,10 +20,13 @@ import { NOTIFICATION_CHANNEL, APPOINTMENT_STATUS, SNACKBAR_DURATION } from '../
  * L'ID viene estratto dai path params della rotta (`/appointments/:id`)
  * e usato per caricare i dati completi dell'appuntamento all'inizializzazione.
  *
- * Offre la possibilità di cancellare l'appuntamento se è ancora nello stato
- * PRENOTATO. La cancellazione è irreversibile e scatena notifiche via Kafka.
+ * Azioni disponibili in base al ruolo e allo stato dell'appuntamento:
+ * - Paziente, ricevimento, admin (su PRENOTATO): cancellazione (notifica Kafka)
+ * - Medico (su PRENOTATO): avvia visita (-> IN_CORSO) o segna paziente non presentato
+ * - Medico (su IN_CORSO): completa visita (-> COMPLETATO)
  *
- * Dopo la cancellazione l'utente viene reindirizzato alla lista appuntamenti.
+ * Dopo cancellazione viene fatto redirect alla lista appuntamenti del ruolo.
+ * Dopo le transizioni di stato del medico la pagina viene ricaricata in-place.
  */
 @Component({
   selector: 'app-appointment-detail',
@@ -42,6 +46,7 @@ export class AppointmentDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private appointmentService = inject(AppointmentService);
+  private kc = inject(KeycloakService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
@@ -80,6 +85,73 @@ export class AppointmentDetailComponent implements OnInit {
     return this.appointment()?.['status'] === APPOINTMENT_STATUS.PRENOTATO;
   }
 
+  // Stato IN_CORSO — usato per mostrare il pulsante "Completa visita" al medico
+  protected isInCorso(): boolean {
+    return this.appointment()?.['status'] === APPOINTMENT_STATUS.IN_CORSO;
+  }
+
+  // Le azioni del medico sono disponibili solo a chi ha ruolo DOCTOR
+  protected isDoctor(): boolean {
+    return this.kc.hasRole('DOCTOR');
+  }
+
+  // Avvia la visita: PRENOTATO -> IN_CORSO. Solo medico, senza conferma per non rallentare il flusso clinico
+  protected startAppointment(): void {
+    this.appointmentService.start(this.appointmentId()).subscribe({
+      next: () => {
+        this.snackBar.open('Visita avviata', 'Chiudi', { duration: SNACKBAR_DURATION.SHORT });
+        this.loadAppointment(this.appointmentId());
+      },
+      error: () => {
+        this.snackBar.open('Errore durante l\'avvio della visita', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
+      }
+    });
+  }
+
+  // Completa la visita: IN_CORSO -> COMPLETATO. Conferma esplicita perché irreversibile
+  protected completeAppointment(): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Completa visita',
+        message: 'Confermi che la visita è stata effettuata? L\'operazione è irreversibile.'
+      }
+    });
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (!confirmed) return;
+      this.appointmentService.complete(this.appointmentId()).subscribe({
+        next: () => {
+          this.snackBar.open('Visita completata', 'Chiudi', { duration: SNACKBAR_DURATION.SHORT });
+          this.loadAppointment(this.appointmentId());
+        },
+        error: () => {
+          this.snackBar.open('Errore durante la chiusura della visita', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
+        }
+      });
+    });
+  }
+
+  // Segna il paziente come non presentato: PRENOTATO -> NON_PRESENTATO
+  protected noShowAppointment(): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Paziente non presentato',
+        message: 'Confermi che il paziente non si è presentato all\'appuntamento?'
+      }
+    });
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (!confirmed) return;
+      this.appointmentService.noShow(this.appointmentId()).subscribe({
+        next: () => {
+          this.snackBar.open('Appuntamento segnato come non presentato', 'Chiudi', { duration: SNACKBAR_DURATION.SHORT });
+          this.loadAppointment(this.appointmentId());
+        },
+        error: () => {
+          this.snackBar.open('Errore durante la segnalazione', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
+        }
+      });
+    });
+  }
+
   // Apre il dialog di conferma; se l'utente conferma, invia la richiesta di cancellazione
   protected cancelAppointment(): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
@@ -92,14 +164,13 @@ export class AppointmentDetailComponent implements OnInit {
     dialogRef.afterClosed().subscribe((confirmed: boolean) => {
       if (confirmed) {
         this.appointmentService.cancel(this.appointmentId(), {
-          cancellationReason: 'Cancellazione richiesta dall\'utente',
-          notificationChannels: [NOTIFICATION_CHANNEL.EMAIL]
+          cancellationReason: 'Cancellazione richiesta dall\'utente'
         }).subscribe({
           next: () => {
             this.dialog.open(InfoDialogComponent, {
               data: { title: 'Cancellazione completata', message: 'Appuntamento cancellato con successo' }
             });
-            this.router.navigate(['/appointments']);
+            this.router.navigateByUrl(this.kc.getAppointmentsRoute());
           },
           error: () => {
             this.snackBar.open('Errore durante la cancellazione', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
@@ -110,7 +181,7 @@ export class AppointmentDetailComponent implements OnInit {
   }
 
   protected goBack(): void {
-    this.router.navigate(['/appointments']);
+    this.router.navigateByUrl(this.kc.getAppointmentsRoute());
   }
 
   // Helper per leggere un campo dal payload dell'appuntamento nel template

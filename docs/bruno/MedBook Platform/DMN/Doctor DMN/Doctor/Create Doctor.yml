@@ -1,0 +1,77 @@
+info:
+  name: Create Doctor
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_doctor}}/api/v1/doctors"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "firstName": "Marco",
+        "lastName": "Bianchi",
+        "dateOfBirth": "1972-03-15",
+        "gender": "MASCHILE",
+        "email": "marco.bianchi@medbook.it",
+        "phone": "+393331234501",
+        "licenseNumber": "RM-10001"
+      }
+      /*
+      {
+        "firstName": "Laura",
+        "lastName": "Esposito",
+        "dateOfBirth": "1980-07-22",
+        "gender": "FEMMINILE",
+        "email": "laura.esposito@medbook.it",
+        "phone": "+393331234502",
+        "licenseNumber": "NA-20002"
+      }
+      */
+      /*
+      {
+        "firstName": "Giovanni",
+        "lastName": "Ferrara",
+        "dateOfBirth": "1968-11-08",
+        "gender": "MASCHILE",
+        "email": "giovanni.ferrara@medbook.it",
+        "phone": "+393331234503",
+        "licenseNumber": "MI-30003"
+      }
+      */
+      /*
+      {
+        "firstName": "Sofia",
+        "lastName": "Ricci",
+        "dateOfBirth": "1985-04-30",
+        "gender": "FEMMINILE",
+        "email": "sofia.ricci@medbook.it",
+        "phone": "+393331234504",
+        "licenseNumber": "TO-40004"
+      }
+      */
+      /*
+      {
+        "firstName": "Antonio",
+        "lastName": "Moretti",
+        "gender": "MASCHILE",
+        "email": "antonio.moretti@medbook.it",
+        "phone": "+393331234505",
+        "licenseNumber": "FI-50005"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

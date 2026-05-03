@@ -1,0 +1,24 @@
+info:
+  name: Get Clinic By Id
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{base_url_clinic}}/api/v1/clinics/:clinicId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: clinicId
+      value: CLN-1
+      type: path
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

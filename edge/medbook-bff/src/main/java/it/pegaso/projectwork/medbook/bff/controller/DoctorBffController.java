@@ -13,6 +13,8 @@ import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiVoidResponse;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.NativeWebRequest;
 
@@ -40,6 +42,20 @@ public class DoctorBffController implements DoctorsApi, SpecializationsApi, Avai
     @Override
     public ResponseEntity<MedBookApiResponse> getMyDoctor(MedBookContext context) {
         return doctorBffService.getMyDoctor(context);
+    }
+
+    /** Lista pazienti con appuntamenti attivi per il medico autenticato (ROLE_DOCTOR). */
+    @GetMapping(value = "/bff/v1/doctors/me/patients", produces = "application/json")
+    public ResponseEntity<MedBookApiResponse> getMyPatients(
+            @RequestHeader(value = "X-MedBook-Context", required = false) MedBookContext context) {
+        return doctorBffService.getMyPatients(context);
+    }
+
+    /** Lista cliniche presso cui il medico autenticato ha disponibilità (ROLE_DOCTOR). */
+    @GetMapping(value = "/bff/v1/doctors/me/clinics", produces = "application/json")
+    public ResponseEntity<MedBookApiResponse> getMyClinics(
+            @RequestHeader(value = "X-MedBook-Context", required = false) MedBookContext context) {
+        return doctorBffService.getMyClinics(context);
     }
 
     /** Crea un nuovo medico (ROLE_ADMIN). */

@@ -1,0 +1,38 @@
+info:
+  name: Update Doctor
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{base_url_bff}}/bff/v1/doctors/:doctorId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: doctorId
+      value: DOC-1
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "phone": "+393339990001",
+        "status": "SOSPESO"
+      }
+      /*
+      {
+        "email": "marco.bianchi.updated@medbook.it"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

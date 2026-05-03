@@ -1,0 +1,32 @@
+info:
+  name: Update My Patient
+  type: http
+  seq: 11
+
+http:
+  method: PATCH
+  url: "{{base_url_gateway}}/bff/v1/patients/me"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    value: |
+      {
+        "phone": "+39 333 1234567",
+        "residenceAddress": "Via Roma 1",
+        "residenceCity": "ROMA",
+        "residenceProvince": "Roma",
+        "residenceCap": "00100"
+      }
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

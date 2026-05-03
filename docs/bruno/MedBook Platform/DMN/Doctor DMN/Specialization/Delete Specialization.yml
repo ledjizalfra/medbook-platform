@@ -1,0 +1,29 @@
+info:
+  name: Delete Doctor Specialization
+  type: http
+  seq: 10
+
+http:
+  method: DELETE
+  url: "{{base_url_doctor}}/api/v1/doctors/:doctorId/specializations/:specializationId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: doctorId
+      value: DOC-5
+      type: path
+    - name: specializationId
+      value: SPC-1
+      type: path
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

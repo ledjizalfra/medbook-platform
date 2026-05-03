@@ -1,0 +1,35 @@
+info:
+  name: Delete Availability
+  type: http
+  seq: 10
+
+http:
+  method: DELETE
+  url: "{{base_url_doctor}}/api/v1/doctors/:doctorId/availabilities/:clinicId/:dayOfWeek/:startTime"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: doctorId
+      value: DOC-1
+      type: path
+    - name: clinicId
+      value: CLN-1
+      type: path
+    - name: dayOfWeek
+      value: LUNEDI
+      type: path
+    - name: startTime
+      value: "09:00"
+      type: path
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

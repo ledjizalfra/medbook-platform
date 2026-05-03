@@ -1,0 +1,82 @@
+<app-medbook-page title="Le mie cliniche" subtitle="Sedi presso cui ricevi pazienti" [loading]="loading()">
+
+  @if (!loading() && clinics().length === 0) {
+    <mat-card class="empty-state">
+      <mat-icon>business</mat-icon>
+      <p>Non hai ancora disponibilità configurate presso alcuna clinica.</p>
+      <p class="hint">Contatta l'amministratore per aggiungere fasce di disponibilità.</p>
+    </mat-card>
+  }
+
+  <div class="clinics-grid">
+    @for (clinic of clinics(); track $any(clinic)['clinicId']) {
+      <mat-card class="clinic-card">
+
+        <mat-card-header>
+          <mat-icon mat-card-avatar>business</mat-icon>
+          <mat-card-title>{{ getField(clinic, 'clinicName') }}</mat-card-title>
+          <mat-card-subtitle>{{ getField(clinic, 'clinicId') }}</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+
+          <div class="info-block">
+            <mat-icon class="info-icon">place</mat-icon>
+            <div>
+              <div>{{ getField(clinic, 'address') }}</div>
+              <div class="muted">
+                {{ getField(clinic, 'postalCode') }} {{ getField(clinic, 'city') }}
+                @if (getField(clinic, 'province')) { ({{ getField(clinic, 'province') }}) }
+              </div>
+            </div>
+          </div>
+
+          @if (getField(clinic, 'phone') || getField(clinic, 'email')) {
+            <div class="info-block">
+              <mat-icon class="info-icon">contact_phone</mat-icon>
+              <div>
+                @if (getField(clinic, 'phone')) {
+                  <div>{{ getField(clinic, 'phone') }}</div>
+                }
+                @if (getField(clinic, 'email')) {
+                  <div class="muted">{{ getField(clinic, 'email') }}</div>
+                }
+              </div>
+            </div>
+          }
+
+          <mat-card class="schedule-card" appearance="outlined">
+            <h4 class="schedule-title">
+              <mat-icon>schedule</mat-icon>
+              Disponibilità settimanali
+            </h4>
+            @if (getScheduleEntries(clinic).length === 0) {
+              <p class="muted">Nessuna fascia configurata.</p>
+            }
+            @for (entry of getScheduleEntries(clinic); track entry.day) {
+              <div class="schedule-row">
+                <span class="day">{{ entry.day }}</span>
+                <mat-chip-set>
+                  @for (slot of entry.slots; track slot) {
+                    <mat-chip>{{ slot }}</mat-chip>
+                  }
+                </mat-chip-set>
+              </div>
+            }
+          </mat-card>
+
+          <div class="stats">
+            <mat-icon>event</mat-icon>
+            <span>
+              <strong>{{ getField(clinic, 'futureAppointments') }}</strong>
+              appuntamenti futuri programmati in questa sede
+            </span>
+          </div>
+
+        </mat-card-content>
+
+      </mat-card>
+    }
+  </div>
+
+</app-medbook-page>

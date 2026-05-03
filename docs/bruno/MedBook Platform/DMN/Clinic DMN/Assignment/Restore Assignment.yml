@@ -1,0 +1,27 @@
+info:
+  name: Restore Assignment
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{base_url_clinic}}/api/v1/clinics/:clinicId/assignments/:assignmentId/restore"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: clinicId
+      value: CLN-1
+      type: path
+    - name: assignmentId
+      value: ASG-1
+      type: path
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

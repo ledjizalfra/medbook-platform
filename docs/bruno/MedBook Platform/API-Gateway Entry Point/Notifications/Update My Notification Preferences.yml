@@ -1,0 +1,29 @@
+info:
+  name: Update My Notification Preferences
+  type: http
+  seq: 6
+
+http:
+  method: PATCH
+  url: "{{base_url_gateway}}/bff/v1/notification-preferences"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    value: |
+      {
+        "emailEnabled": true,
+        "smsEnabled": false
+      }
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,33 @@
+info:
+  name: Restore Availability
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{base_url_gateway}}/bff/v1/doctors/:doctorId/availabilities/:clinicId/:dayOfWeek/:startTime/restore"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: doctorId
+      value: DOC-1
+      type: path
+    - name: clinicId
+      value: CLN-1
+      type: path
+    - name: dayOfWeek
+      value: LUNEDI
+      type: path
+    - name: startTime
+      value: "09:00"
+      type: path
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

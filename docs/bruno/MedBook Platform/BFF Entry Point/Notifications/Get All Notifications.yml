@@ -1,0 +1,39 @@
+info:
+  name: Get All Notifications
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{base_url_bff}}/bff/v1/notifications"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: size
+      value: "20"
+      type: query
+    - name: patientId
+      value: PAT-1
+      type: query
+      disabled: true
+    - name: type
+      value: EMAIL
+      type: query
+      disabled: true
+    - name: status
+      value: INVIATA
+      type: query
+      disabled: true
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

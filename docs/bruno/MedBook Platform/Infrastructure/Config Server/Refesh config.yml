@@ -1,0 +1,15 @@
+info:
+  name: Refesh config
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{base_url_config_server}}/actuator/refresh"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

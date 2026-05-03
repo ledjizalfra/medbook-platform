@@ -21,7 +21,7 @@ import { KeycloakService } from '../../../core/auth/keycloak.service';
 import { SpecializationService } from '../../../core/services/specialization.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { InfoDialogComponent } from '../../../shared/components/info-dialog/info-dialog.component';
-import { NOTIFICATION_CHANNEL, APPOINTMENT_STATUS, SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
+import { APPOINTMENT_STATUS, SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
 import { formatFullName } from '../../../core/utils/format.utils';
 import { MedBookFormComponent } from '../../../shared/components/medbook-form/medbook-form.component';
 import { MedBookFormSlotDirective } from '../../../shared/components/medbook-form/medbook-form-slot.directive';
@@ -105,10 +105,33 @@ export class AppointmentListComponent implements OnInit {
 
   protected readonly tableActions: TableAction[] = [
     { icon: 'info', tooltip: 'Dettaglio', onClick: (row) => this.viewDetail(row) },
+    // Avvia visita — solo medico, su PRENOTATO
+    {
+      icon: 'play_arrow', tooltip: 'Avvia visita', color: 'primary',
+      onClick: (row) => this.startAppointment(row),
+      visible: (row) => this.kc.hasRole('DOCTOR')
+        && (row as Record<string, unknown>)['status'] === APPOINTMENT_STATUS.PRENOTATO
+    },
+    // Completa visita — solo medico, su IN_CORSO
+    {
+      icon: 'check_circle', tooltip: 'Completa visita', color: 'primary',
+      onClick: (row) => this.completeAppointment(row),
+      visible: (row) => this.kc.hasRole('DOCTOR')
+        && (row as Record<string, unknown>)['status'] === APPOINTMENT_STATUS.IN_CORSO
+    },
+    // Paziente non presentato — solo medico, su PRENOTATO
+    {
+      icon: 'person_off', tooltip: 'Paziente non presentato',
+      onClick: (row) => this.noShowAppointment(row),
+      visible: (row) => this.kc.hasRole('DOCTOR')
+        && (row as Record<string, unknown>)['status'] === APPOINTMENT_STATUS.PRENOTATO
+    },
+    // Cancella — non visibile al medico (le sue azioni sono start/complete/no-show)
     {
       icon: 'cancel', tooltip: 'Cancella', color: 'warn',
       onClick: (row) => this.cancelAppointment(row),
-      visible: (row) => (row as Record<string, unknown>)['status'] === APPOINTMENT_STATUS.PRENOTATO
+      visible: (row) => !this.kc.hasRole('DOCTOR')
+        && (row as Record<string, unknown>)['status'] === APPOINTMENT_STATUS.PRENOTATO
     }
   ];
 
@@ -237,8 +260,7 @@ export class AppointmentListComponent implements OnInit {
       if (confirmed) {
         const id = String((appointment as Record<string, unknown>)['appointmentId']);
         this.appointmentService.cancel(id, {
-          cancellationReason: 'Cancellazione richiesta dall\'utente',
-          notificationChannels: [NOTIFICATION_CHANNEL.EMAIL]
+          cancellationReason: 'Cancellazione richiesta dall\'utente'
         }).subscribe({
           next: () => {
             this.dialog.open(InfoDialogComponent, {
@@ -251,6 +273,60 @@ export class AppointmentListComponent implements OnInit {
           }
         });
       }
+    });
+  }
+
+  // Avvia visita: PRENOTATO -> IN_CORSO. Senza dialog di conferma per non rallentare il flusso clinico
+  private startAppointment(appointment: unknown): void {
+    const id = String((appointment as Record<string, unknown>)['appointmentId']);
+    this.appointmentService.start(id).subscribe({
+      next: () => {
+        this.snackBar.open('Visita avviata', 'Chiudi', { duration: SNACKBAR_DURATION.SHORT });
+        this.loadAppointments();
+      },
+      error: () => {
+        this.snackBar.open('Errore durante l\'avvio della visita', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
+      }
+    });
+  }
+
+  // Completa visita: IN_CORSO -> COMPLETATO. Conferma esplicita perché irreversibile
+  private completeAppointment(appointment: unknown): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: { title: 'Completa visita', message: 'Confermi che la visita è stata effettuata?' }
+    });
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (!confirmed) return;
+      const id = String((appointment as Record<string, unknown>)['appointmentId']);
+      this.appointmentService.complete(id).subscribe({
+        next: () => {
+          this.snackBar.open('Visita completata', 'Chiudi', { duration: SNACKBAR_DURATION.SHORT });
+          this.loadAppointments();
+        },
+        error: () => {
+          this.snackBar.open('Errore durante la chiusura della visita', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
+        }
+      });
+    });
+  }
+
+  // Paziente non presentato: PRENOTATO -> NON_PRESENTATO
+  private noShowAppointment(appointment: unknown): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: { title: 'Paziente non presentato', message: 'Confermi che il paziente non si è presentato?' }
+    });
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (!confirmed) return;
+      const id = String((appointment as Record<string, unknown>)['appointmentId']);
+      this.appointmentService.noShow(id).subscribe({
+        next: () => {
+          this.snackBar.open('Appuntamento segnato come non presentato', 'Chiudi', { duration: SNACKBAR_DURATION.SHORT });
+          this.loadAppointments();
+        },
+        error: () => {
+          this.snackBar.open('Errore durante la segnalazione', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
+        }
+      });
     });
   }
 

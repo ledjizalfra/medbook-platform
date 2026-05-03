@@ -12,17 +12,26 @@ public interface KeycloakAdminService {
      * Crea un nuovo utente nel realm Keycloak.
      * Lo username è l'email — l'utente effettuerà il login con email + password.
      *
-     * @param fiscalCode  codice fiscale — salvato come dato anagrafico, non come username
-     * @param email       indirizzo email — diventa lo username Keycloak
-     * @param firstName   nome
-     * @param lastName    cognome
-     * @param password    password in chiaro — non loggare mai questo parametro
-     * @param role        ruolo realm da assegnare (es. ROLE_PATIENT)
-     * @param patientId   ID paziente in patient-dmn da salvare come attributo custom
-     * @return            UUID Keycloak dell'utente appena creato
+     * @param fiscalCode             codice fiscale — salvato come dato anagrafico, non come username
+     * @param email                  indirizzo email — diventa lo username Keycloak
+     * @param firstName              nome
+     * @param lastName               cognome
+     * @param password               password in chiaro — non loggare mai questo parametro
+     * @param role                   ruolo realm da assegnare (es. ROLE_PATIENT)
+     * @param patientId              ID paziente in patient-dmn da salvare come attributo custom
+     * @param requirePasswordUpdate  se true, marca la password come temporanea e aggiunge
+     *                               required action UPDATE_PASSWORD. Keycloak forzerà
+     *                               l'utente a impostare una nuova password al primo login,
+     *                               prima di emettere il JWT. Usato per utenti creati
+     *                               dall'admin (medico, receptionist) che ricevono una
+     *                               password iniziale via mail. Per la registrazione
+     *                               pubblica del paziente passare false (la password è
+     *                               già stata scelta dall'utente).
+     * @return                       UUID Keycloak dell'utente appena creato
      */
     String createUser(String fiscalCode, String email, String firstName, String lastName,
-                      String password, String role, String patientId);
+                      String password, String role, String patientId,
+                      boolean requirePasswordUpdate);
 
     /**
      * Elimina un utente Keycloak tramite il suo UUID.

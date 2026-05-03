@@ -1,0 +1,19 @@
+info:
+  name: DMN
+  type: folder
+  seq: 1
+
+request:
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+  scripts:
+    - type: before-request
+      code: |-
+        // Verifica se il token è scaduto e lo rinnova automaticamente
+        const token = bru.getEnvVar("access_token");
+        if (!token) {
+            // Token non presente — esegui il login
+            const response = await bru.runRequest("Auth/Login");
+            bru.setEnvVar("access_token", response.body.access_token);
+        }

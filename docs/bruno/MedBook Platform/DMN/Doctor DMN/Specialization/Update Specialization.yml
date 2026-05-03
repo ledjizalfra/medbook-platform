@@ -1,0 +1,40 @@
+info:
+  name: Update Specialization
+  type: http
+  seq: 8
+
+http:
+  method: PATCH
+  url: "{{base_url_doctor}}/api/v1/doctors/:doctorId/specializations/:specializationId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: doctorId
+      value: DOC-1
+      type: path
+    - name: specializationId
+      value: SPC-1
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "isPrimary": true
+      }
+      /*
+      {
+        "isPrimary": false
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

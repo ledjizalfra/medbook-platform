@@ -35,9 +35,11 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
 
     @Override
     public String createUser(String fiscalCode, String email, String firstName, String lastName,
-                             String password, String role, String patientId) {
+                             String password, String role, String patientId,
+                             boolean requirePasswordUpdate) {
 
-        log.debug("Creazione utente Keycloak — username (email)={}", email);
+        log.debug("Creazione utente Keycloak — username (email)={}, forzaCambioPassword={}",
+                email, requirePasswordUpdate);
 
         Keycloak keycloak = buildKeycloakClient();
         RealmResource realmResource = keycloak.realm(bffProperties.getKeycloakAdmin().getRealm());
@@ -55,12 +57,19 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
         // Attributo custom patientId: collegamento tra utente Keycloak e profilo patient-dmn.
         user.setAttributes(Map.of("patientId", List.of(patientId)));
 
-        // Imposta la password come permanente (non temporanea).
+        // Quando l'admin assegna la password (medico, receptionist), la marchiamo
+        // come temporanea e aggiungiamo required action UPDATE_PASSWORD: Keycloak
+        // forzerà l'utente a impostare una nuova password al primo login prima di
+        // emettere il JWT. Per il paziente la password è già stata scelta dall'utente
+        // in fase di registrazione, quindi resta permanente.
         CredentialRepresentation credential = new CredentialRepresentation();
         credential.setType(CredentialRepresentation.PASSWORD);
         credential.setValue(password);
-        credential.setTemporary(false);
+        credential.setTemporary(requirePasswordUpdate);
         user.setCredentials(List.of(credential));
+        if (requirePasswordUpdate) {
+            user.setRequiredActions(List.of("UPDATE_PASSWORD"));
+        }
 
         // Crea l'utente e recupera il suo UUID dall'header Location della risposta 201.
         Response response = realmResource.users().create(user);
@@ -129,11 +138,14 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
         user.setLastName(lastName);
         user.setEnabled(enabled);
         user.setEmailVerified(true);
+        // Il receptionist viene sempre creato dall'admin: la password iniziale inviata
+        // via mail è temporanea. Keycloak forzerà il cambio al primo login.
+        user.setRequiredActions(List.of("UPDATE_PASSWORD"));
 
         CredentialRepresentation cred = new CredentialRepresentation();
         cred.setType(CredentialRepresentation.PASSWORD);
         cred.setValue(password);
-        cred.setTemporary(false);
+        cred.setTemporary(true);
         user.setCredentials(List.of(cred));
 
         Response response = realm.users().create(user);

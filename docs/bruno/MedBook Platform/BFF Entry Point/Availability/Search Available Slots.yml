@@ -1,0 +1,38 @@
+info:
+  name: Search Available Slots
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{base_url_bff}}/bff/v1/availability"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: clinicId
+      value: CLN-1
+      type: query
+    - name: doctorId
+      value: DOC-1
+      type: query
+      disabled: true
+    - name: specialization
+      value: CARDIOLOGIA
+      type: query
+      disabled: true
+    - name: dateFrom
+      value: "2026-04-14"
+      type: query
+    - name: dateTo
+      value: "2026-04-30"
+      type: query
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

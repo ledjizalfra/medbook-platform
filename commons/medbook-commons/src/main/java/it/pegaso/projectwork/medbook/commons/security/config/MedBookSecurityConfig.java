@@ -57,6 +57,19 @@ public class MedBookSecurityConfig {
                     // Actuator sempre accessibile
                     auth.requestMatchers("/actuator/health", "/actuator/info").permitAll();
 
+                    // Springdoc OpenAPI / Swagger UI sempre accessibili — la documentazione
+                    // delle API è uno strumento di sviluppo che deve restare consultabile
+                    // senza JWT su tutti i microservizi. Le chiamate "Try it out" da Swagger
+                    // verso endpoint protetti continuano a richiedere il Bearer token.
+                    auth.requestMatchers(
+                            "/swagger-ui.html",
+                            "/swagger-ui/**",
+                            "/v3/api-docs",
+                            "/v3/api-docs/**",
+                            "/v3/api-docs.yaml",
+                            "/webjars/**"
+                    ).permitAll();
+
                     // Endpoint GET pubblici configurati per modulo
                     for (String pattern : securityProperties.getPublicGetEndpoints()) {
                         auth.requestMatchers(HttpMethod.GET, pattern).permitAll();

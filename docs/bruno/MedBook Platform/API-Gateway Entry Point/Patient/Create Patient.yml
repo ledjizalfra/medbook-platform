@@ -1,0 +1,78 @@
+info:
+  name: Create Patient
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_gateway}}/bff/v1/patients"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "firstName": "Mario",
+        "lastName": "Rossi",
+        "dateOfBirth": "1990-05-20",
+        "gender": "MASCHILE",
+        "email": "mario.rossi@email.it",
+        "phone": "+393331234501",
+        "fiscalCode": "RSSMRA90E20H501K"
+      }
+      /*
+      {
+        "firstName": "Anna",
+        "lastName": "Verdi",
+        "dateOfBirth": "1985-08-15",
+        "gender": "FEMMINILE",
+        "email": "anna.verdi@email.it",
+        "phone": "+393337654321",
+        "fiscalCode": "VRDANN85M55H501J"
+      }
+      */
+      /*
+      {
+        "firstName": "Paolo",
+        "lastName": "Neri",
+        "dateOfBirth": "1975-12-10",
+        "gender": "MASCHILE",
+        "email": "paolo.neri@email.it",
+        "phone": "+393339876543",
+        "fiscalCode": "NRIPLA75T10H501L"
+      }
+      */
+      /*
+      {
+        "firstName": "Elena",
+        "lastName": "Russo",
+        "dateOfBirth": "1992-03-22",
+        "gender": "FEMMINILE",
+        "email": "elena.russo@email.it",
+        "phone": "+393335551122",
+        "fiscalCode": "RSSELN92C62H501M"
+      }
+      */
+      /*
+      {
+        "firstName": "Giulia",
+        "lastName": "Martini",
+        "dateOfBirth": "1988-07-18",
+        "gender": "FEMMINILE",
+        "email": "giulia.martini@email.it",
+        "phone": "+393332244556",
+        "fiscalCode": "MRTGLI88L58H501N"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

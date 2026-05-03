@@ -79,7 +79,17 @@
       "Bash([ -d \"$base/src/test\" ])",
       "Bash([ -d \"$base/src/test/resources\" ])",
       "Bash(ls *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(mvn -f edge/medbook-bff/pom.xml compile -DskipTests)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(mvn -pl dmn/notification-dmn-client,dmn/notification-dmn,edge/medbook-bff -am clean compile -DskipTests -q)",
+      "Bash(mvn -pl commons/medbook-commons,edge/medbook-bff -am clean compile -DskipTests -q)",
+      "Bash(pdftotext --version)",
+      "Bash(pdftotext -layout \"docs/raporto-finale/DJIALA_ZANGUIM_Albert_Franck_0312401596.pdf\" /tmp/rapporto.txt)",
+      "PowerShell(Write-Output \"Conteggio:\"; \\(Get-ChildItem 'docs\\\\raporto-finale' -Force\\).Count; Write-Output \"---File:\"; Get-ChildItem 'docs\\\\raporto-finale' -Force | Select-Object -ExpandProperty Name | Out-Host)"
     ]
   }
 }

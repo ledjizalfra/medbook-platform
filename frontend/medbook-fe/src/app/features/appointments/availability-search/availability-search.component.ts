@@ -385,7 +385,8 @@ export class AvailabilitySearchComponent {
     });
     dialogRef.afterClosed().subscribe((confirmed: boolean) => {
       if (confirmed) {
-        const bookingPayload = { ...slotData, notificationChannels: ['EMAIL'] };
+        // Canali notifica determinati dal BFF dalle preferenze del paziente — non passare nulla qui
+        const bookingPayload = { ...slotData };
         this.appointmentService.book(bookingPayload).subscribe({
           next: () => {
             this.dialog.open(InfoDialogComponent, {

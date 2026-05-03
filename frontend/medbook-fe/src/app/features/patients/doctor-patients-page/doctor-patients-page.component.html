@@ -1,0 +1,18 @@
+<app-medbook-page title="I miei pazienti" subtitle="Pazienti con appuntamenti attivi" [loading]="loading()">
+
+  @if (!loading() && patients().length === 0) {
+    <mat-card class="empty-state">
+      <mat-icon>group</mat-icon>
+      <p>Nessun paziente con appuntamenti attivi al momento.</p>
+    </mat-card>
+  }
+
+  @if (patients().length > 0) {
+    <app-medbook-table
+      [data]="patients()"
+      [columns]="columns"
+      [actions]="tableActions">
+    </app-medbook-table>
+  }
+
+</app-medbook-page>

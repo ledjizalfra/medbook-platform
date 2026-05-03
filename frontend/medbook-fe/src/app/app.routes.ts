@@ -117,6 +117,8 @@ export const routes: Routes = [
           { path: APP_ROUTES.DASHBOARD, loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
           { path: APP_ROUTES.APPOINTMENTS, loadComponent: () => import('./features/appointments/appointment-list/appointment-list.component').then(m => m.AppointmentListComponent) },
           { path: `${APP_ROUTES.APPOINTMENTS}/:id`, loadComponent: () => import('./features/appointments/appointment-detail/appointment-detail.component').then(m => m.AppointmentDetailComponent) },
+          { path: APP_ROUTES.PATIENTS, loadComponent: () => import('./features/patients/doctor-patients-page/doctor-patients-page.component').then(m => m.DoctorPatientsPageComponent) },
+          { path: APP_ROUTES.CLINICS, loadComponent: () => import('./features/clinics/doctor-clinics-page/doctor-clinics-page.component').then(m => m.DoctorClinicsPageComponent) },
           { path: APP_ROUTES.PROFILE, loadComponent: () => import('./features/doctors/doctor-profile/doctor-profile.component').then(m => m.DoctorProfileComponent) },
           { path: APP_ROUTES.NOTIFICATIONS, loadComponent: () => import('./features/notifications/notification-list/notification-list.component').then(m => m.NotificationListComponent) },
           { path: '', redirectTo: APP_ROUTES.DASHBOARD, pathMatch: 'full' }
@@ -168,7 +170,6 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard([APP_ROUTES.ADMIN.toUpperCase()])],
     children: [
       { path: APP_ROUTES.DASHBOARD, loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
-      { path: APP_ROUTES.AVAILABILITY, loadComponent: () => import('./features/appointments/availability-search/availability-search.component').then(m => m.AvailabilitySearchComponent) },
       { path: APP_ROUTES.APPOINTMENTS, loadComponent: () => import('./features/appointments/appointment-list/appointment-list.component').then(m => m.AppointmentListComponent) },
       { path: `${APP_ROUTES.APPOINTMENTS}/:id`, loadComponent: () => import('./features/appointments/appointment-detail/appointment-detail.component').then(m => m.AppointmentDetailComponent) },
       { path: APP_ROUTES.PATIENTS, loadComponent: () => import('./features/patients/patient-list/patient-list.component').then(m => m.PatientListComponent) },

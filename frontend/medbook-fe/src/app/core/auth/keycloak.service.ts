@@ -148,18 +148,20 @@ export class KeycloakService {
 
   /**
    * Restituisce il percorso della disponibilità/prenotazione in base al ruolo.
+   * ADMIN non prenota visite — il fallback resta sulla home.
    */
   getAvailabilityRoute(): string {
     if (this.hasRole('PATIENT'))      return '/patient/availability';
     if (this.hasRole('RECEPTIONIST')) return '/receptionist/availability';
-    if (this.hasRole('ADMIN'))        return '/admin/availability';
     return '/';
   }
 
   /**
    * Restituisce il percorso di gestione pazienti in base al ruolo.
+   * DOCTOR vede la lista dei propri pazienti (solo lettura).
    */
   getPatientsRoute(): string {
+    if (this.hasRole('DOCTOR'))       return '/doctor/patients';
     if (this.hasRole('RECEPTIONIST')) return '/receptionist/patients';
     if (this.hasRole('ADMIN'))        return '/admin/patients';
     return '/';
@@ -173,10 +175,13 @@ export class KeycloakService {
   }
 
   /**
-   * Restituisce il percorso di gestione sedi (solo ADMIN).
+   * Restituisce il percorso di gestione sedi in base al ruolo.
+   * DOCTOR vede le cliniche presso cui ha disponibilità (solo lettura).
    */
   getClinicsRoute(): string {
-    return this.hasRole('ADMIN') ? '/admin/clinics' : '/';
+    if (this.hasRole('DOCTOR')) return '/doctor/clinics';
+    if (this.hasRole('ADMIN'))  return '/admin/clinics';
+    return '/';
   }
 
   /**

@@ -1,0 +1,47 @@
+info:
+  name: Update Appointment
+  type: http
+  seq: 4
+
+http:
+  method: PATCH
+  url: "{{base_url_appointment}}/appointment/v1/appointments/:appointmentId/cancel"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: appointmentId
+      value: APT-1
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "cancelledBy": "PAZIENTE",
+        "cancellationReason": "Il paziente non puo presentarsi",
+        "patientEmail": "mario.rossi@email.it",
+        "patientFirstName": "Mario",
+        "patientLastName": "Rossi",
+        "notificationChannels": ["EMAIL"]
+      }
+      /*
+      {
+        "cancelledBy": "AMMINISTRATORE",
+        "cancellationReason": "Il medico non e disponibile in questa data",
+        "patientEmail": "anna.verdi@email.it",
+        "patientFirstName": "Anna",
+        "patientLastName": "Verdi",
+        "notificationChannels": ["EMAIL", "SMS"]
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

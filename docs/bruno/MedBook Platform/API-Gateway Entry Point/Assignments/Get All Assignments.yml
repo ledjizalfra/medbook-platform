@@ -1,0 +1,28 @@
+info:
+  name: Get All Assignments
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{base_url_gateway}}/bff/v1/clinics/:clinicId/assignments"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: clinicId
+      value: CLN-1
+      type: path
+    - name: doctorId
+      value: DOC-1
+      type: query
+      disabled: true
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

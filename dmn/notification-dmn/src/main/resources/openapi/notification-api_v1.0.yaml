@@ -166,58 +166,13 @@ paths:
                 $ref: '#/components/schemas/MedBookApiErrorResponse'
 
   # ===========================================================================
-  # WELCOME NOTIFICATIONS — endpoint manuali fire-and-forget
+  # WELCOME NOTIFICATIONS
+  # Gli endpoint /doctor-welcome, /clinic-welcome, /receptionist-welcome sono
+  # implementati manualmente in WelcomeNotificationController (fire-and-forget,
+  # body application/json libero) e non sono inclusi in questa spec per evitare
+  # di generare metodi default (501) che entrano in conflitto con il controller
+  # manuale. Il client BFF è definito a mano in WelcomeNotificationFeignClient.
   # ===========================================================================
-
-  /notification/v1/notifications/doctor-welcome:
-    post:
-      tags:
-        - notifications
-      operationId: sendDoctorWelcome
-      summary: Invia notifica di benvenuto al medico
-      description: |
-        Invia email e SMS di benvenuto al medico appena registrato.
-        Fire-and-forget: restituisce sempre 200 anche se l'invio fallisce.
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DoctorWelcomeRequest'
-      responses:
-        '200':
-          description: Richiesta accettata (invio best-effort)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiVoidResponse'
-
-  /notification/v1/notifications/clinic-welcome:
-    post:
-      tags:
-        - notifications
-      operationId: sendClinicWelcome
-      summary: Invia notifica di benvenuto alla clinica
-      description: |
-        Invia email di benvenuto alla clinica appena registrata.
-        Fire-and-forget: restituisce sempre 200 anche se l'invio fallisce.
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ClinicWelcomeRequest'
-      responses:
-        '200':
-          description: Richiesta accettata (invio best-effort)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiVoidResponse'
 
   /notification/v1/preferences:
 
@@ -753,47 +708,7 @@ components:
         - FALLITA: fallita definitivamente dopo maxAttempts tentativi
 
     # -------------------------------------------------------------------------
-    # REQUEST — notifiche di benvenuto
+    # NOTE: gli schemi DoctorWelcomeRequest e ClinicWelcomeRequest sono stati
+    # rimossi insieme agli endpoint manuali corrispondenti. Vedi
+    # WelcomeNotificationController per il body accettato (Map<String,String>).
     # -------------------------------------------------------------------------
-
-    DoctorWelcomeRequest:
-      type: object
-      description: Dati per l'invio della notifica di benvenuto al medico
-      required:
-        - doctorEmail
-      properties:
-        doctorId:
-          type: string
-          description: Business key del medico (es. DOC-1)
-          example: DOC-42
-        doctorFirstName:
-          type: string
-          example: Mario
-        doctorLastName:
-          type: string
-          example: Rossi
-        doctorEmail:
-          type: string
-          format: email
-          example: mario.rossi@email.it
-        doctorPhone:
-          type: string
-          example: "+39 333 1234567"
-
-    ClinicWelcomeRequest:
-      type: object
-      description: Dati per l'invio della notifica di benvenuto alla clinica
-      required:
-        - clinicEmail
-      properties:
-        clinicId:
-          type: string
-          description: Business key della sede (es. CLI-1)
-          example: CLI-12
-        clinicName:
-          type: string
-          example: Clinica Centrale
-        clinicEmail:
-          type: string
-          format: email
-          example: clinica@email.it

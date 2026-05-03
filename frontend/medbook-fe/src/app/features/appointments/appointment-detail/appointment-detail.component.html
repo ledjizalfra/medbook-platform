@@ -15,29 +15,51 @@
       <mat-card-content>
         <div class="detail-grid">
           <div class="detail-item">
+            <span class="label">Codice</span>
+            <span class="value">{{ getField('appointmentId') }}</span>
+          </div>
+          <div class="detail-item">
             <span class="label">Data</span>
-            <span class="value">{{ $any(getField('appointmentDate')) | date:'EEEE d MMMM yyyy' }}</span>
+            <span class="value">{{ $any(getField('slotDate')) | date:'EEEE d MMMM yyyy' }}</span>
           </div>
           <div class="detail-item">
             <span class="label">Orario</span>
-            <span class="value">{{ getField('startTime') }}</span>
+            <span class="value">{{ getField('startTime') }} - {{ getField('endTime') }}</span>
           </div>
           <div class="detail-item">
             <span class="label">Medico</span>
-            <span class="value">{{ getField('doctorName') }}</span>
+            <span class="value">{{ getField('doctorFullName') }}</span>
           </div>
           <div class="detail-item">
             <span class="label">Specializzazione</span>
             <span class="value">{{ getField('specialization') }}</span>
           </div>
           <div class="detail-item">
-            <span class="label">Clinica</span>
+            <span class="label">Sede</span>
             <span class="value">{{ getField('clinicName') }}</span>
           </div>
+          @if (getField('clinicAddress')) {
+            <div class="detail-item full-span">
+              <span class="label">Indirizzo</span>
+              <span class="value">{{ getField('clinicAddress') }}</span>
+            </div>
+          }
           <div class="detail-item">
             <span class="label">Paziente</span>
-            <span class="value">{{ getField('patientName') }}</span>
+            <span class="value">{{ getField('patientFullName') }}</span>
           </div>
+          @if (getField('bookingDate')) {
+            <div class="detail-item">
+              <span class="label">Prenotato il</span>
+              <span class="value">{{ $any(getField('bookingDate')) | date:'d MMMM yyyy, HH:mm' }}</span>
+            </div>
+          }
+          @if (getField('cancelledBy')) {
+            <div class="detail-item">
+              <span class="label">Annullato da</span>
+              <span class="value">{{ getField('cancelledBy') }}</span>
+            </div>
+          }
           @if (getField('cancellationReason')) {
             <div class="detail-item full-span">
               <span class="label">Motivo cancellazione</span>
@@ -54,7 +76,23 @@
       </mat-card-content>
 
       <mat-card-actions align="end">
-        @if (isPrenotato()) {
+        @if (isDoctor() && isPrenotato()) {
+          <button mat-flat-button color="primary" (click)="startAppointment()">
+            <mat-icon>play_arrow</mat-icon>
+            Avvia visita
+          </button>
+          <button mat-stroked-button (click)="noShowAppointment()">
+            <mat-icon>person_off</mat-icon>
+            Paziente non presentato
+          </button>
+        }
+        @if (isDoctor() && isInCorso()) {
+          <button mat-flat-button color="primary" (click)="completeAppointment()">
+            <mat-icon>check_circle</mat-icon>
+            Completa visita
+          </button>
+        }
+        @if (!isDoctor() && isPrenotato()) {
           <button mat-flat-button color="warn" (click)="cancelAppointment()">
             <mat-icon>cancel</mat-icon>
             Cancella appuntamento

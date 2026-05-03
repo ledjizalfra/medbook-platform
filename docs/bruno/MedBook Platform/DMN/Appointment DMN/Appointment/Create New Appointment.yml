@@ -1,0 +1,123 @@
+info:
+  name: Create New Appointment
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_appointment}}/appointment/v1/appointments"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "patientId": "PAT-1",
+        "doctorId": "DOC-1",
+        "clinicId": "CLN-1",
+        "slotDate": "2026-04-14",
+        "startTime": "09:00",
+        "endTime": "09:30",
+        "patientEmail": "mario.rossi@email.it",
+        "patientFirstName": "Mario",
+        "patientLastName": "Rossi",
+        "patientPhone": "+393331234501",
+        "doctorFirstName": "Marco",
+        "doctorLastName": "Bianchi",
+        "clinicName": "MedBook Milano Centro",
+        "clinicAddress": "Via Roma 1, Milano",
+        "notificationChannels": ["EMAIL"],
+        "notes": "Portare referti cardiologici precedenti"
+      }
+      /*
+      {
+        "patientId": "PAT-2",
+        "doctorId": "DOC-2",
+        "clinicId": "CLN-1",
+        "slotDate": "2026-04-15",
+        "startTime": "10:00",
+        "endTime": "10:30",
+        "patientEmail": "anna.verdi@email.it",
+        "patientFirstName": "Anna",
+        "patientLastName": "Verdi",
+        "patientPhone": "+393334455667",
+        "doctorFirstName": "Laura",
+        "doctorLastName": "Esposito",
+        "clinicName": "MedBook Milano Centro",
+        "clinicAddress": "Via Roma 1, Milano",
+        "notificationChannels": ["EMAIL", "SMS"],
+        "notes": "Prima visita dermatologica"
+      }
+      */
+      /*
+      {
+        "patientId": "PAT-3",
+        "doctorId": "DOC-3",
+        "clinicId": "CLN-2",
+        "slotDate": "2026-04-17",
+        "startTime": "11:00",
+        "endTime": "11:30",
+        "patientEmail": "luca.verdi@email.it",
+        "patientFirstName": "Luca",
+        "patientLastName": "Verdi",
+        "patientPhone": "+393337788990",
+        "doctorFirstName": "Giovanni",
+        "doctorLastName": "Ferrara",
+        "clinicName": "MedBook Roma Prati",
+        "clinicAddress": "Via Cola di Rienzo 45, Roma",
+        "notificationChannels": ["EMAIL"],
+        "notes": "Controllo post-operatorio"
+      }
+      */
+      /*
+      {
+        "patientId": "PAT-4",
+        "doctorId": "DOC-4",
+        "clinicId": "CLN-2",
+        "slotDate": "2026-04-22",
+        "startTime": "14:00",
+        "endTime": "14:30",
+        "patientEmail": "anna.russo@email.it",
+        "patientFirstName": "Anna",
+        "patientLastName": "Russo",
+        "patientPhone": "+393339988776",
+        "doctorFirstName": "Sofia",
+        "doctorLastName": "Ricci",
+        "clinicName": "MedBook Roma Prati",
+        "clinicAddress": "Via Cola di Rienzo 45, Roma",
+        "notificationChannels": ["EMAIL"],
+        "notes": "Visita pediatrica di routine"
+      }
+      */
+      /*
+      {
+        "patientId": "PAT-5",
+        "doctorId": "DOC-5",
+        "clinicId": "CLN-1",
+        "slotDate": "2026-04-28",
+        "startTime": "15:30",
+        "endTime": "16:00",
+        "patientEmail": "sofia.esposito@email.it",
+        "patientFirstName": "Sofia",
+        "patientLastName": "Esposito",
+        "patientPhone": "+393336655443",
+        "doctorFirstName": "Antonio",
+        "doctorLastName": "Moretti",
+        "clinicName": "MedBook Milano Centro",
+        "clinicAddress": "Via Roma 1, Milano",
+        "notificationChannels": ["EMAIL", "SMS"],
+        "notes": "Visita di medicina interna - esami ematici richiesti"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

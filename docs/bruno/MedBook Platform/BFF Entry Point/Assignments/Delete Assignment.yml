@@ -1,0 +1,27 @@
+info:
+  name: Delete Assignment
+  type: http
+  seq: 4
+
+http:
+  method: DELETE
+  url: "{{base_url_bff}}/bff/v1/clinics/:clinicId/assignments/:assignmentId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: clinicId
+      value: CLN-1
+      type: path
+    - name: assignmentId
+      value: ASG-1
+      type: path
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

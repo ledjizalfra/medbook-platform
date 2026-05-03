@@ -45,6 +45,16 @@ export class AppointmentService {
     return this.http.patch(`${this.base}/${id}/start`, {});
   }
 
+  // Completa un appuntamento: IN_CORSO -> COMPLETATO
+  complete(id: string): Observable<unknown> {
+    return this.http.patch(`${this.base}/${id}/complete`, {});
+  }
+
+  // Paziente non presentato: PRENOTATO -> NON_PRESENTATO
+  noShow(id: string): Observable<unknown> {
+    return this.http.patch(`${this.base}/${id}/no-show`, {});
+  }
+
   // Trigger manuale — chiusura giornata (ADMIN)
   triggerCloseDay(): Observable<unknown> {
     return this.http.post(`${this.base}/jobs/close-day`, {});

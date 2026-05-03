@@ -14,6 +14,9 @@ import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookContext;
 import it.pegaso.projectwork.medbook.commons.formatter.MedBookFormatter;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorsFeignClient;
+import it.pegaso.projectwork.medbook.notification.client.api.NotificationPreferencesFeignClient;
+import it.pegaso.projectwork.medbook.notification.client.model.NotificationActorTypeApiEnum;
+import it.pegaso.projectwork.medbook.patient.client.api.PatientFeignClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +25,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,6 +53,8 @@ public class AppointmentBffServiceImpl implements AppointmentBffService {
     private final ActorLookupHelper actorLookupHelper;
     private final DoctorsFeignClient doctorsClient;
     private final ClinicsFeignClient clinicsClient;
+    private final PatientFeignClient patientsClient;
+    private final NotificationPreferencesFeignClient preferencesClient;
     private final MedBookFormatter formatter;
 
     @Override
@@ -69,11 +76,16 @@ public class AppointmentBffServiceImpl implements AppointmentBffService {
             patientFirstName = actor.firstName();
             patientLastName  = actor.lastName();
             patientEmail     = actor.email();
-            // phone non è in MedBookActorData (dato mutabile): recuperato dalla risposta raw.
-            // Il campo è opzionale per la notifica — il fallimento non blocca la prenotazione.
             log.debug("Prenotazione per patientId={}", patientId);
         } catch (Exception e) {
             log.warn("Impossibile recuperare dati paziente: {}", e.getMessage());
+        }
+
+        // patientPhone non è in MedBookActorData (dato mutabile): recuperato dalla risposta raw
+        // di patient-dmn — necessario per inviare l'SMS quando il canale è abilitato.
+        // Best-effort: il fallimento non blocca la prenotazione.
+        if (patientId != null) {
+            patientPhone = lookupPatientPhone(context, patientId);
         }
 
         // 2. Recupera nome, cognome e sesso del medico da doctor-dmn.
@@ -108,7 +120,12 @@ public class AppointmentBffServiceImpl implements AppointmentBffService {
             log.warn("Impossibile recuperare dati sede {}: {}", bffReq.getClinicId(), e.getMessage());
         }
 
-        // 4. Costruisce la request arricchita per appointment-dmn.
+        // 4. Determina i canali di notifica dalle preferenze del paziente
+        // (single source of truth — le preferenze sono salvate dal paziente nell'area
+        // "Preferenze notifica" e prevalgono su qualsiasi valore inviato dal FE).
+        List<String> channels = resolveNotificationChannels(context, patientId);
+
+        // 5. Costruisce la request arricchita per appointment-dmn.
         BookAppointmentRequest req = new BookAppointmentRequest();
         req.setPatientId(patientId);
         req.setDoctorId(bffReq.getDoctorId());
@@ -126,7 +143,7 @@ public class AppointmentBffServiceImpl implements AppointmentBffService {
         req.setSpecialization(bffReq.getSpecialization());
         req.setClinicName(clinicName);
         req.setClinicAddress(clinicAddress);
-        req.setNotificationChannels(bffReq.getNotificationChannels());
+        req.setNotificationChannels(channels);
         req.setNotes(bffReq.getNotes());
 
         return appointmentsClient.postBookAppointment(context, req);
@@ -152,7 +169,76 @@ public class AppointmentBffServiceImpl implements AppointmentBffService {
     @Override
     public ResponseEntity<MedBookApiResponse> getAppointmentById(MedBookContext context,
             String appointmentId) {
-        return appointmentsClient.getAppointmentById(context, appointmentId);
+        ResponseEntity<MedBookApiResponse> response =
+                appointmentsClient.getAppointmentById(context, appointmentId);
+        enrichAppointmentDetail(context, response);
+        return response;
+    }
+
+    /**
+     * Arricchisce la response del dettaglio appuntamento con i nomi risolti
+     * (medico, clinica, paziente) — il dominio appointment-dmn memorizza solo
+     * gli ID logici cross-service, quindi senza enrichment il FE mostrerebbe
+     * campi vuoti. Best-effort: ogni risoluzione fallita lascia il rispettivo
+     * campo a null senza bloccare la response.
+     */
+    @SuppressWarnings("unchecked")
+    private void enrichAppointmentDetail(MedBookContext context,
+            ResponseEntity<MedBookApiResponse> response) {
+        if (response.getBody() == null || !(response.getBody().getData() instanceof Map)) return;
+        Map<String, Object> appointment = (Map<String, Object>) response.getBody().getData();
+
+        String doctorId = (String) appointment.get("doctorId");
+        if (doctorId != null) {
+            try {
+                ResponseEntity<MedBookApiResponse> doctorResp =
+                        doctorsClient.getDoctorById(context, doctorId);
+                if (doctorResp.getBody() != null && doctorResp.getBody().getData() instanceof Map) {
+                    Map<String, Object> d = (Map<String, Object>) doctorResp.getBody().getData();
+                    String firstName = (String) d.get("firstName");
+                    String lastName = (String) d.get("lastName");
+                    String gender = d.get("gender") != null ? d.get("gender").toString() : null;
+                    appointment.put("doctorFullName",
+                            formatter.formatDoctorCompleteName(firstName, lastName, gender));
+                }
+            } catch (Exception e) {
+                log.warn("Impossibile risolvere nome medico {}: {}", doctorId, e.getMessage());
+            }
+        }
+
+        String clinicId = (String) appointment.get("clinicId");
+        if (clinicId != null) {
+            try {
+                ResponseEntity<MedBookApiResponse> clinicResp =
+                        clinicsClient.getClinicById(context, clinicId);
+                if (clinicResp.getBody() != null && clinicResp.getBody().getData() instanceof Map) {
+                    Map<String, Object> c = (Map<String, Object>) clinicResp.getBody().getData();
+                    appointment.put("clinicName", c.get("name"));
+                    appointment.put("clinicAddress", c.get("address"));
+                }
+            } catch (Exception e) {
+                log.warn("Impossibile risolvere nome sede {}: {}", clinicId, e.getMessage());
+            }
+        }
+
+        String patientId = (String) appointment.get("patientId");
+        if (patientId != null) {
+            try {
+                ResponseEntity<MedBookApiResponse> patientResp =
+                        patientsClient.getPatientById(context, patientId);
+                if (patientResp.getBody() != null && patientResp.getBody().getData() instanceof Map) {
+                    Map<String, Object> p = (Map<String, Object>) patientResp.getBody().getData();
+                    String firstName = formatter.formatFirstName((String) p.get("firstName"));
+                    String lastName = formatter.formatLastName((String) p.get("lastName"));
+                    String full = (firstName != null ? firstName : "")
+                            + (firstName != null && lastName != null ? " " : "")
+                            + (lastName != null ? lastName : "");
+                    appointment.put("patientFullName", full.isBlank() ? null : full);
+                }
+            } catch (Exception e) {
+                log.warn("Impossibile risolvere nome paziente {}: {}", patientId, e.getMessage());
+            }
+        }
     }
 
     @Override
@@ -170,9 +256,11 @@ public class AppointmentBffServiceImpl implements AppointmentBffService {
         String patientLastName = null;
         String patientEmail = null;
         String patientPhone = null;
+        String actorId = null;
 
         try {
             MedBookActorData actor = actorLookupHelper.requireActorData(context);
+            actorId          = actor.actorId();
             patientFirstName = actor.firstName();
             patientLastName  = actor.lastName();
             patientEmail     = actor.email();
@@ -180,19 +268,78 @@ public class AppointmentBffServiceImpl implements AppointmentBffService {
             log.warn("Impossibile recuperare dati attore per cancellazione: {}", e.getMessage());
         }
 
-        // 3. Costruisce la request di cancellazione per appointment-dmn.
+        // 3. Telefono e canali di notifica risolti lato BFF dalle preferenze del paziente
+        // (le preferenze sono la single source of truth — il FE non decide i canali).
+        if (cancelledBy == CancelledByApiEnum.PAZIENTE && actorId != null) {
+            patientPhone = lookupPatientPhone(context, actorId);
+        }
+        List<String> channels = cancelledBy == CancelledByApiEnum.PAZIENTE
+                ? resolveNotificationChannels(context, actorId)
+                : null;
+
+        // 4. Costruisce la request di cancellazione per appointment-dmn.
         CancelAppointmentRequest req = new CancelAppointmentRequest();
         req.setCancelledBy(cancelledBy);
         req.setPatientEmail(patientEmail);
         req.setPatientFirstName(patientFirstName);
         req.setPatientLastName(patientLastName);
         req.setPatientPhone(patientPhone);
-        req.setNotificationChannels(bffReq != null ? bffReq.getNotificationChannels() : null);
+        req.setNotificationChannels(channels);
         if (bffReq != null) {
             req.setCancellationReason(bffReq.getCancellationReason());
         }
 
         return appointmentsClient.patchCancelAppointment(context, appointmentId, req);
+    }
+
+    /**
+     * Recupera il telefono del paziente da patient-dmn — il dato non è incluso
+     * in MedBookActorData perché mutabile nel tempo. Best-effort: in caso di
+     * errore restituisce null e l'eventuale notifica SMS verrà fatta fallire
+     * dal sender (recipientPhone null).
+     */
+    @SuppressWarnings("unchecked")
+    private String lookupPatientPhone(MedBookContext context, String patientId) {
+        try {
+            ResponseEntity<MedBookApiResponse> resp = patientsClient.getPatientById(context, patientId);
+            if (resp.getBody() != null && resp.getBody().getData() instanceof Map) {
+                return (String) ((Map<String, Object>) resp.getBody().getData()).get("phone");
+            }
+        } catch (Exception e) {
+            log.warn("Impossibile recuperare telefono paziente {}: {}", patientId, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Costruisce la lista canali notifica dalle preferenze del paziente.
+     * Se le preferenze non sono ancora salvate o la lettura fallisce, ritorna
+     * EMAIL come default sicuro (l'email è il canale primario per la conferma
+     * di prenotazione). Se entrambi i canali sono disabilitati esplicitamente
+     * dal paziente, ritorna lista vuota — l'evento Kafka verrà ignorato dal
+     * consumer e nessuna notifica sarà generata.
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> resolveNotificationChannels(MedBookContext context, String patientId) {
+        if (patientId == null) {
+            return List.of("EMAIL");
+        }
+        try {
+            ResponseEntity<MedBookApiResponse> resp = preferencesClient.getNotificationPreferencesByActorId(
+                    context, patientId, NotificationActorTypeApiEnum.PAZIENTE);
+            if (resp.getBody() == null || !(resp.getBody().getData() instanceof Map)) {
+                return List.of("EMAIL");
+            }
+            Map<String, Object> prefs = (Map<String, Object>) resp.getBody().getData();
+            List<String> channels = new ArrayList<>();
+            if (Boolean.TRUE.equals(prefs.get("emailEnabled"))) channels.add("EMAIL");
+            if (Boolean.TRUE.equals(prefs.get("smsEnabled")))   channels.add("SMS");
+            return channels;
+        } catch (Exception e) {
+            log.warn("Impossibile leggere preferenze notifica per {}, fallback EMAIL: {}",
+                    patientId, e.getMessage());
+            return List.of("EMAIL");
+        }
     }
 
     /** Determina il valore CancelledBy in base al ruolo dell'utente autenticato.
@@ -214,6 +361,18 @@ public class AppointmentBffServiceImpl implements AppointmentBffService {
     @Override
     public ResponseEntity<MedBookApiResponse> startAppointment(MedBookContext context, String appointmentId) {
         return appointmentsClient.patchStartAppointment(context, appointmentId);
+    }
+
+    /** Completa un appuntamento: IN_CORSO -> COMPLETATO. Proxy al DMN. */
+    @Override
+    public ResponseEntity<MedBookApiResponse> completeAppointment(MedBookContext context, String appointmentId) {
+        return appointmentsClient.patchCompleteAppointment(context, appointmentId);
+    }
+
+    /** Paziente non presentato: PRENOTATO -> NON_PRESENTATO. Proxy al DMN. */
+    @Override
+    public ResponseEntity<MedBookApiResponse> noShowAppointment(MedBookContext context, String appointmentId) {
+        return appointmentsClient.patchNoShowAppointment(context, appointmentId);
     }
 
     /** Dashboard giornaliera.

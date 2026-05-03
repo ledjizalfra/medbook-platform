@@ -29,6 +29,12 @@ public interface AppointmentBffService {
     /** Avvia un appuntamento: PRENOTATO -> IN_CORSO. */
     ResponseEntity<MedBookApiResponse> startAppointment(MedBookContext context, String appointmentId);
 
+    /** Completa un appuntamento: IN_CORSO -> COMPLETATO. */
+    ResponseEntity<MedBookApiResponse> completeAppointment(MedBookContext context, String appointmentId);
+
+    /** Marca un appuntamento come paziente non presentato: PRENOTATO -> NON_PRESENTATO. */
+    ResponseEntity<MedBookApiResponse> noShowAppointment(MedBookContext context, String appointmentId);
+
     /** Dashboard giornaliera — lista appuntamenti per una data specifica. */
     ResponseEntity<MedBookApiResponse> getDailyAppointments(MedBookContext context,
             LocalDate date, String doctorId, String clinicId);

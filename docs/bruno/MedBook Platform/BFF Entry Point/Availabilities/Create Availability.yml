@@ -1,0 +1,66 @@
+info:
+  name: Create Availability
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_bff}}/bff/v1/doctors/:doctorId/availabilities"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: doctorId
+      value: DOC-1
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "availabilities": [
+          { "clinicId": "CLN-1", "dayOfWeek": "LUNEDI", "startTime": "09:00", "endTime": "13:00" },
+          { "clinicId": "CLN-1", "dayOfWeek": "MERCOLEDI", "startTime": "09:00", "endTime": "13:00" }
+        ]
+      }
+      /*
+      {
+        "availabilities": [
+          { "clinicId": "CLN-1", "dayOfWeek": "MARTEDI", "startTime": "14:00", "endTime": "18:00" },
+          { "clinicId": "CLN-2", "dayOfWeek": "GIOVEDI", "startTime": "09:00", "endTime": "13:00" }
+        ]
+      }
+      */
+      /*
+      {
+        "availabilities": [
+          { "clinicId": "CLN-2", "dayOfWeek": "GIOVEDI", "startTime": "09:00", "endTime": "12:00" },
+          { "clinicId": "CLN-2", "dayOfWeek": "VENERDI", "startTime": "14:00", "endTime": "17:00" }
+        ]
+      }
+      */
+      /*
+      {
+        "availabilities": [
+          { "clinicId": "CLN-2", "dayOfWeek": "VENERDI", "startTime": "09:00", "endTime": "13:00" }
+        ]
+      }
+      */
+      /*
+      {
+        "availabilities": [
+          { "clinicId": "CLN-1", "dayOfWeek": "LUNEDI", "startTime": "14:00", "endTime": "18:00" },
+          { "clinicId": "CLN-3", "dayOfWeek": "GIOVEDI", "startTime": "09:00", "endTime": "13:00" }
+        ]
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

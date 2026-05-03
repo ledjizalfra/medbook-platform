@@ -1,0 +1,24 @@
+info:
+  name: Get Patient By Id
+  type: http
+  seq: 9
+
+http:
+  method: GET
+  url: "{{base_url_bff}}/bff/v1/patients/:patientId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: patientId
+      value: PAT-1
+      type: path
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

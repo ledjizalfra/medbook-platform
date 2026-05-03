@@ -1,0 +1,7 @@
+info:
+  name: API-Gateway Entry Point
+  type: folder
+  seq: 6
+
+request:
+  auth: inherit

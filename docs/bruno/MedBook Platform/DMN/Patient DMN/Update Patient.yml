@@ -1,0 +1,45 @@
+info:
+  name: Update Patient
+  type: http
+  seq: 9
+
+http:
+  method: PATCH
+  url: "{{base_url_patient}}/api/v1/patients/:patientId"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: patientId
+      value: PAT-1
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "email": "mario.rossi.updated@medbook.it"
+      }
+      /*
+      {
+        "firstName": "Giulia",
+        "lastName": "Bianchi",
+        "dateOfBirth": "1985-06-20",
+        "email": "giulia.bianchi.updated@medbook.it",
+        "phone": "+393349990002",
+        "address": "Via Torino 10",
+        "city": "Torino",
+        "postalCode": "10145",
+        "province": "TO"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

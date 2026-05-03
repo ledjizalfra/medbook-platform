@@ -29,6 +29,16 @@ export class DoctorService {
     return this.http.get(this.meUrl);
   }
 
+  // Lista pazienti con almeno un appuntamento attivo presso il medico autenticato
+  getMyPatients(): Observable<unknown> {
+    return this.http.get(`${this.meUrl}/patients`);
+  }
+
+  // Lista cliniche presso cui il medico autenticato ha disponibilità configurate
+  getMyClinics(): Observable<unknown> {
+    return this.http.get(`${this.meUrl}/clinics`);
+  }
+
   // Recupera la lista dei medici; supporta filtri opzionali (es. specializzazione)
   getAll(params?: Record<string, unknown>): Observable<unknown> {
     return this.http.get(this.base, { params: params as Record<string, string> });

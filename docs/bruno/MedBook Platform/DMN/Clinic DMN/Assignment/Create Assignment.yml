@@ -1,0 +1,61 @@
+info:
+  name: Create Assignment
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_clinic}}/api/v1/clinics/:clinicId/assignments"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: clinicId
+      value: CLN-5
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "doctorId": "DOC-2",
+        "validFrom": "2025-01-01",
+        "validTo": "2025-12-31"
+      }
+      /*
+      {
+        "doctorId": "DOC-4",
+        "validFrom": "2025-01-01",
+        "validTo": "2025-12-31"
+      }
+      */
+      /*
+      {
+        "doctorId": "DOC-5",
+        "validFrom": "2025-03-01",
+        "validTo": "2026-02-28"
+      }
+      */
+      /*
+      {
+        "doctorId": "DOC-1",
+        "validFrom": "2025-06-01"
+      }
+      */
+      /*
+      {
+        "doctorId": "DOC-3",
+        "validFrom": "2025-01-15",
+        "validTo": "2025-12-31"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

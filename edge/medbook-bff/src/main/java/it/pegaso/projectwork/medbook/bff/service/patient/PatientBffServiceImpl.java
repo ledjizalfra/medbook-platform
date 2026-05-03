@@ -98,7 +98,8 @@ public class PatientBffServiceImpl implements PatientBffService {
                     bffReq.getLastName(),
                     bffReq.getPassword(),
                     "ROLE_PATIENT",
-                    patientId
+                    patientId,
+                    false // password scelta dal paziente in fase di registrazione: niente cambio forzato
             );
         } catch (Exception e) {
             log.error("Errore durante la creazione utente Keycloak per patientId={}. Avvio rollback.", patientId, e);

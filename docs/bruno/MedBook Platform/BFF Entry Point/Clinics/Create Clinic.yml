@@ -1,0 +1,78 @@
+info:
+  name: Create Clinic
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url_bff}}/bff/v1/clinics"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "name": "MedBook Milano Centro",
+        "email": "milano.centro@medbook.it",
+        "phone": "+390212345601",
+        "address": "Via Roma 1",
+        "city": "Milano",
+        "postalCode": "20121",
+        "province": "MI"
+      }
+      /*
+      {
+        "name": "MedBook Roma Prati",
+        "email": "roma.prati@medbook.it",
+        "phone": "+390612345602",
+        "address": "Via Cola di Rienzo 45",
+        "city": "Roma",
+        "postalCode": "00192",
+        "province": "RM"
+      }
+      */
+      /*
+      {
+        "name": "MedBook Napoli Posillipo",
+        "email": "napoli.posillipo@medbook.it",
+        "phone": "+390812345603",
+        "address": "Via Posillipo 12",
+        "city": "Napoli",
+        "postalCode": "80123",
+        "province": "NA"
+      }
+      */
+      /*
+      {
+        "name": "MedBook Torino Crocetta",
+        "email": "torino.crocetta@medbook.it",
+        "phone": "+390112345604",
+        "address": "Corso Vittorio Emanuele II 78",
+        "city": "Torino",
+        "postalCode": "10128",
+        "province": "TO"
+      }
+      */
+      /*
+      {
+        "name": "MedBook Firenze Santa Croce",
+        "email": "firenze.santacroce@medbook.it",
+        "phone": "+390552345605",
+        "address": "Piazza Santa Croce 9",
+        "city": "Firenze",
+        "postalCode": "50122",
+        "province": "FI"
+      }
+      */
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

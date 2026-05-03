@@ -1,0 +1,20 @@
+info:
+  name: Send Reminders Job
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{base_url_appointment}}/appointment/v1/jobs/reminders"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

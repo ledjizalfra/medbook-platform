@@ -66,6 +66,22 @@ public class AppointmentBffController implements AppointmentsApi {
         return appointmentBffService.startAppointment(context, appointmentId);
     }
 
+    /** Completa un appuntamento: IN_CORSO -> COMPLETATO (ROLE_DOCTOR, ROLE_ADMIN). */
+    @PatchMapping(value = "/bff/v1/appointments/{appointmentId}/complete", produces = "application/json")
+    public ResponseEntity<MedBookApiResponse> patchCompleteAppointment(
+            @RequestHeader(value = "X-MedBook-Context", required = false) MedBookContext context,
+            @PathVariable String appointmentId) {
+        return appointmentBffService.completeAppointment(context, appointmentId);
+    }
+
+    /** Paziente non presentato: PRENOTATO -> NON_PRESENTATO (ROLE_DOCTOR, ROLE_ADMIN). */
+    @PatchMapping(value = "/bff/v1/appointments/{appointmentId}/no-show", produces = "application/json")
+    public ResponseEntity<MedBookApiResponse> patchNoShowAppointment(
+            @RequestHeader(value = "X-MedBook-Context", required = false) MedBookContext context,
+            @PathVariable String appointmentId) {
+        return appointmentBffService.noShowAppointment(context, appointmentId);
+    }
+
     /** Dashboard giornaliera — lista appuntamenti di una data, ordinati per orario.
      * ROLE_DOCTOR: vede solo i propri. ROLE_RECEPTIONIST/ADMIN: vede tutti. */
     @GetMapping(value = "/bff/v1/appointments/daily", produces = "application/json")

@@ -1,0 +1,43 @@
+info:
+  name: Get All Doctors with Filters
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{base_url_doctor}}/api/v1/doctors?page=0&size=20&sort=doctorId,asc&status=ATTIVO"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+    - name: Content-Type
+      value: application/json
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: size
+      value: "20"
+      type: query
+    - name: sort
+      value: doctorId,asc
+      type: query
+    - name: status
+      value: ATTIVO
+      type: query
+    - name: lastName
+      value: Bianchi
+      type: query
+      disabled: true
+    - name: specialization
+      value: CARDIOLOGIA
+      type: query
+      disabled: true
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

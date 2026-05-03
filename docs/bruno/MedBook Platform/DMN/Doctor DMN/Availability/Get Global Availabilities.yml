@@ -1,0 +1,37 @@
+info:
+  name: Get Global Availabilities
+  type: http
+  seq: 12
+
+http:
+  method: GET
+  url: "{{base_url_doctor}}/api/v1/doctor/availabilities"
+  headers:
+    - name: Authorization
+      value: Bearer {{access_token}}
+  params:
+    - name: doctorId
+      value: DOC-1
+      type: query
+      disabled: true
+    - name: clinicId
+      value: CLN-1
+      type: query
+      disabled: true
+    - name: specialization
+      value: CARDIOLOGIA
+      type: query
+      disabled: true
+    - name: dayOfWeek
+      value: LUNEDI
+      type: query
+      disabled: true
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
