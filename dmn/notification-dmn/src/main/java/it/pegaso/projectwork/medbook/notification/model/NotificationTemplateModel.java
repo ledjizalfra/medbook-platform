@@ -38,4 +38,8 @@ public class NotificationTemplateModel {
     // Dati di cancellazione - presenti solo per PRENOTAZIONE_CANCELLATA
     private String cancellationReason; // null se non specificato
     private String cancelledBy;        // null per conferma prenotazione
+
+    // Credenziali di accesso — presenti solo nei welcome (medico/receptionist)
+    private String loginEmail;
+    private String temporaryPassword;
 }

@@ -65,4 +65,14 @@ public interface KeycloakAdminService {
 
     /** Elimina definitivamente un receptionist da Keycloak. */
     void deleteReceptionist(String keycloakId);
+
+    // =========================================================================
+    // RESET PASSWORD
+    // =========================================================================
+
+    /**
+     * Invia all'utente (identificato per email) un'email Keycloak con il link
+     * per reimpostare la password. Usa executeActionsEmail con azione UPDATE_PASSWORD.
+     */
+    void sendResetPasswordEmail(String email);
 }

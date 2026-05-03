@@ -37,11 +37,19 @@ describe('AvailabilityService', () => {
     }).subscribe();
 
     const req = httpMock.expectOne(r => r.url === BASE);
+    expect(req.request.method).toBe('GET');
     expect(req.request.params.get('clinicId')).toBe('CLN-001');
     expect(req.request.params.get('specialization')).toBe('CARDIOLOGIA');
     expect(req.request.params.get('doctorId')).toBe('DOC-001');
     expect(req.request.params.get('dateFrom')).toBe('2026-04-01');
     expect(req.request.params.get('dateTo')).toBe('2026-04-30');
     req.flush([]);
+  });
+
+  it('getFilters() dovrebbe fare GET su /availability/filters', () => {
+    service.getFilters().subscribe();
+    const req = httpMock.expectOne(`${BASE}/filters`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ specializations: [], doctors: [] });
   });
 });

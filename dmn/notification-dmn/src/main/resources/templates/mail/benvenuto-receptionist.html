@@ -7,13 +7,11 @@
     <style>
         body { font-family: Arial, sans-serif; color: #333333; margin: 0; padding: 0; background-color: #f4f4f4; }
         .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .header { background-color: #1a73e8; color: #ffffff; padding: 24px 32px; }
+        .header { background-color: #e65100; color: #ffffff; padding: 24px 32px; }
         .header h1 { margin: 0; font-size: 22px; }
         .body { padding: 32px; }
         .body p { margin: 0 0 12px; line-height: 1.6; }
-        .cta-box { text-align: center; margin: 28px 0; }
-        .cta-box a { background-color: #1a73e8; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold; padding: 14px 32px; border-radius: 6px; display: inline-block; }
-        .info-box { background-color: #f0f4ff; border-left: 4px solid #1a73e8; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
+        .info-box { background-color: #fff3e0; border-left: 4px solid #e65100; border-radius: 4px; padding: 16px 20px; margin: 20px 0; }
         .footer { background-color: #f8f8f8; padding: 16px 32px; font-size: 12px; color: #888888; text-align: center; border-top: 1px solid #eeeeee; }
     </style>
 </head>
@@ -25,8 +23,8 @@
     </div>
 
     <div class="body">
-        <p>Gentile <strong th:text="'Dott. ' + ${doctorFirstName} + ' ' + ${doctorLastName}">Dott. Nome Cognome</strong>,</p>
-        <p>il suo profilo professionale e stato creato sulla piattaforma <strong>MedBook</strong>.</p>
+        <p>Gentile <strong th:text="${doctorFirstName} + ' ' + ${doctorLastName}">Nome Cognome</strong>,</p>
+        <p>il suo account receptionist e stato creato sulla piattaforma <strong>MedBook</strong>.</p>
 
         <div class="info-box">
             <p><strong>Le sue credenziali di accesso:</strong></p>
@@ -35,13 +33,11 @@
             <p style="margin-top:12px; font-size:13px; color:#666;">Si consiglia di cambiare la password dopo il primo accesso.</p>
         </div>
 
-        <p>Per completare la registrazione, deve effettuare il primo accesso e accettare l'informativa sulla privacy.</p>
-
-        <p>Dopo l'accettazione dei consensi, potra:</p>
+        <p>Con il suo account potra:</p>
         <ul>
-            <li>Consultare la propria agenda appuntamenti</li>
-            <li>Visualizzare i dati dei pazienti prenotati</li>
-            <li>Gestire il proprio profilo professionale</li>
+            <li>Gestire le prenotazioni dei pazienti</li>
+            <li>Effettuare check-in e registrazioni</li>
+            <li>Consultare l'agenda degli appuntamenti</li>
         </ul>
     </div>
 

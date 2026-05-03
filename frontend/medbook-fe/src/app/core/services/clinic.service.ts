@@ -44,27 +44,4 @@ export class ClinicService {
     return this.http.patch(`${this.base}/${id}/restore`, {});
   }
 
-  // --- Gestione assegnazioni medici ---
-
-  // Recupera tutte le assegnazioni attive per la clinica indicata
-  getAssignments(clinicId: string, params?: Record<string, unknown>): Observable<unknown> {
-    return this.http.get(`${this.base}/${clinicId}/assignments`, {
-      params: params as Record<string, string>
-    });
-  }
-
-  // Crea una nuova assegnazione (medico + specializzazione) per la clinica
-  createAssignment(clinicId: string, body: unknown): Observable<unknown> {
-    return this.http.post(`${this.base}/${clinicId}/assignments`, body);
-  }
-
-  // Aggiorna una assegnazione esistente (es. cambia specializzazione)
-  updateAssignment(clinicId: string, assignmentId: string, body: unknown): Observable<unknown> {
-    return this.http.patch(`${this.base}/${clinicId}/assignments/${assignmentId}`, body);
-  }
-
-  // Rimuove l'assegnazione di un medico dalla clinica
-  deleteAssignment(clinicId: string, assignmentId: string): Observable<unknown> {
-    return this.http.delete(`${this.base}/${clinicId}/assignments/${assignmentId}`);
-  }
 }

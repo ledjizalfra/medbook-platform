@@ -12,6 +12,7 @@ import it.pegaso.projectwork.medbook.commons.cache.MedBookCacheNames;
 import it.pegaso.projectwork.medbook.doctor.client.api.DoctorAvailabilitiesFeignClient;
 import it.pegaso.projectwork.medbook.doctor.client.model.MedicalSpecializationApiEnum;
 import it.pegaso.projectwork.medbook.clinic.client.api.ClinicsFeignClient;
+import it.pegaso.projectwork.medbook.clinic.client.model.ClinicStatusApiEnum;
 import it.pegaso.projectwork.medbook.commons.formatter.MedBookFormatter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -115,9 +116,13 @@ public class AvailabilitySearchServiceImpl implements AvailabilitySearchService 
      */
     @Override
     public Map<String, Object> getAvailabilityFilters(MedBookContext context) {
+        // 1. Cliniche — tutte le cliniche ATTIVE da clinic-dmn, sempre disponibili
+        List<Map<String, Object>> clinics = loadAllActiveClinics(context);
+
+        // 2. Template disponibilita attive (dipendono da PRIVACY_CONSENT_ACCEPTED del medico)
         List<Map<String, Object>> templates = loadTemplates(context, null, null, null);
 
-        // Specializzazioni distinte ordinate
+        // 3. Specializzazioni — solo quelle presenti nei template attivi (non il catalogo completo)
         List<String> specializations = templates.stream()
                 .map(t -> (String) t.get("specialization"))
                 .filter(s -> s != null && !s.isBlank())
@@ -125,7 +130,6 @@ public class AvailabilitySearchServiceImpl implements AvailabilitySearchService 
                 .sorted()
                 .toList();
 
-        // Medici distinti con specializzazioni e clinicIds (per filtrare le sedi lato FE)
         Map<String, Map<String, Object>> doctorMap = new java.util.LinkedHashMap<>();
         for (Map<String, Object> tmpl : templates) {
             String docId = (String) tmpl.get("doctorId");
@@ -164,19 +168,47 @@ public class AvailabilitySearchServiceImpl implements AvailabilitySearchService 
                 })
                 .toList();
 
-        // Cliniche: recupera i dettagli da clinic-dmn per i clinicId presenti nei template
-        Set<String> clinicIds = templates.stream()
-                .map(t -> (String) t.get("clinicId"))
-                .filter(id -> id != null && !id.isBlank())
-                .collect(Collectors.toSet());
-
-        List<Map<String, Object>> clinics = loadClinicDetails(context, clinicIds);
-
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("specializations", specializations);
         result.put("doctors", doctors);
         result.put("clinics", clinics);
         return result;
+    }
+
+    /** Carica tutte le cliniche ATTIVE da clinic-dmn con nome, citta, provincia. */
+    private List<Map<String, Object>> loadAllActiveClinics(MedBookContext context) {
+        try {
+            ResponseEntity<MedBookApiResponse> resp = clinicsClient.getAllClinics(
+                    context, 0, 100, null, ClinicStatusApiEnum.ATTIVO,
+                    null, null, null, null, null, null, null,
+                    null, null, null, null);
+            if (resp.getBody() == null || resp.getBody().getData() == null) return List.of();
+            Object data = resp.getBody().getData();
+            List<?> items = null;
+            if (data instanceof List) {
+                items = (List<?>) data;
+            } else if (data instanceof Map) {
+                Object content = ((Map<?, ?>) data).get("content");
+                if (content instanceof List) items = (List<?>) content;
+            }
+            if (items == null) return List.of();
+            return items.stream()
+                    .filter(c -> c instanceof Map)
+                    .map(c -> {
+                        Map<?, ?> clinic = (Map<?, ?>) c;
+                        Map<String, Object> entry = new java.util.LinkedHashMap<>();
+                        entry.put("clinicId", clinic.get("clinicId"));
+                        entry.put("name", clinic.get("name"));
+                        entry.put("city", clinic.get("city"));
+                        entry.put("province", clinic.get("province"));
+                        return entry;
+                    })
+                    .sorted((a, b) -> String.valueOf(a.get("name")).compareTo(String.valueOf(b.get("name"))))
+                    .toList();
+        } catch (Exception e) {
+            log.warn("Errore caricamento cliniche attive: {}", e.getMessage());
+        }
+        return List.of();
     }
 
     /** Recupera i dettagli delle cliniche da clinic-dmn per gli ID specificati. */

@@ -14,7 +14,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { InfoDialogComponent } from '../../../shared/components/info-dialog/info-dialog.component';
 import { ManageAvailabilityDialogComponent } from '../manage-availability-dialog/manage-availability-dialog.component';
-import { ManageAssignmentDialogComponent } from '../manage-assignment-dialog/manage-assignment-dialog.component';
 import { PageEvent } from '@angular/material/paginator';
 import { DoctorService } from '../../../core/services/doctor.service';
 import { ClinicService } from '../../../core/services/clinic.service';
@@ -23,6 +22,7 @@ import { SpecializationStore } from '../../../core/store/specialization.store';
 import { ClinicStore } from '../../../core/store/clinic.store';
 import { DoctorStore } from '../../../core/store/doctor.store';
 import { KeycloakService } from '../../../core/auth/keycloak.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MedBookFormComponent } from '../../../shared/components/medbook-form/medbook-form.component';
@@ -71,6 +71,7 @@ export class DoctorListComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private kc = inject(KeycloakService);
+  private authService = inject(AuthService);
   private fb = inject(FormBuilder);
 
   /** Stato workflow: tasti abilitati/disabilitati in base ai dati esistenti */
@@ -142,6 +143,12 @@ export class DoctorListComponent implements OnInit {
       color: 'primary',
       onClick: (row) => this.restoreDoctor(row),
       visible: (row) => (row as Record<string, unknown>)['status'] === 'INATTIVO'
+    },
+    {
+      icon: 'lock_reset',
+      tooltip: 'Reset password',
+      onClick: (row) => this.resetPassword(row),
+      visible: (row) => (row as Record<string, unknown>)['status'] !== 'INATTIVO'
     }
   ];
 
@@ -195,10 +202,6 @@ export class DoctorListComponent implements OnInit {
 
   protected manageAvailabilities(): void {
     this.router.navigate([this.kc.getDoctorsRoute(), 'availabilities']);
-  }
-
-  protected manageAssignments(): void {
-    this.router.navigate([this.kc.getDoctorsRoute(), 'assignments']);
   }
 
   protected isAdmin(): boolean {
@@ -318,6 +321,33 @@ export class DoctorListComponent implements OnInit {
           },
           error: () => {
             this.snackBar.open('Errore durante il ripristino', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
+          }
+        });
+      }
+    });
+  }
+
+  /** Invia email di reset password al medico dopo conferma */
+  private resetPassword(doctor: unknown): void {
+    const d = doctor as Record<string, unknown>;
+    const email = String(d['email'] ?? '');
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Reset password',
+        message: `Inviare email di reset password a ${email}?`
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (confirmed) {
+        this.authService.sendResetPasswordEmail(email).subscribe({
+          next: () => {
+            this.dialog.open(InfoDialogComponent, {
+              data: { title: 'Email inviata', message: `Email di reset password inviata a ${email}` }
+            });
+          },
+          error: () => {
+            this.snackBar.open('Errore durante l\'invio dell\'email di reset', 'Chiudi', { duration: SNACKBAR_DURATION.LONG });
           }
         });
       }

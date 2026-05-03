@@ -1,8 +1,6 @@
 package it.pegaso.projectwork.medbook.bff.service.clinic;
 
-import it.pegaso.projectwork.medbook.bff.server.model.CreateAssignmentBffRequest;
 import it.pegaso.projectwork.medbook.bff.server.model.CreateClinicBffRequest;
-import it.pegaso.projectwork.medbook.bff.server.model.UpdateAssignmentBffRequest;
 import it.pegaso.projectwork.medbook.bff.server.model.UpdateClinicBffRequest;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiVoidResponse;
@@ -11,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
 
-/** Proxy verso clinic-dmn per operazioni CRUD su sedi e assegnazioni. */
+/** Proxy verso clinic-dmn per operazioni CRUD sulle sedi. */
 public interface ClinicBffService {
 
     ResponseEntity<MedBookApiResponse> createClinic(MedBookContext context, CreateClinicBffRequest request);
@@ -28,20 +26,5 @@ public interface ClinicBffService {
 
     ResponseEntity<MedBookApiVoidResponse> deleteClinic(MedBookContext context, String clinicId);
 
-    ResponseEntity<MedBookApiResponse> createAssignment(MedBookContext context, String clinicId,
-            CreateAssignmentBffRequest request);
-
-    ResponseEntity<MedBookApiResponse> getAllAssignments(MedBookContext context, String clinicId,
-            Integer page, Integer size, String sort, String doctorId);
-
-    ResponseEntity<MedBookApiVoidResponse> updateAssignment(MedBookContext context, String clinicId,
-            String assignmentId, UpdateAssignmentBffRequest request);
-
-    ResponseEntity<MedBookApiVoidResponse> deleteAssignment(MedBookContext context, String clinicId,
-            String assignmentId);
-
     ResponseEntity<MedBookApiVoidResponse> restoreClinic(MedBookContext context, String clinicId);
-
-    ResponseEntity<MedBookApiVoidResponse> restoreAssignment(MedBookContext context, String clinicId,
-            String assignmentId);
 }

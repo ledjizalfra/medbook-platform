@@ -18,4 +18,6 @@ export const API_ENDPOINTS = {
   NOTIFICATIONS:            '/bff/v1/notifications',
   NOTIFICATION_PREFERENCES: '/bff/v1/notification-preferences',
   AVAILABILITY:             '/bff/v1/availability',
+  RECEPTIONISTS:            '/bff/v1/receptionists',
+  AUTH_RESET_PASSWORD:      '/bff/v1/auth/reset-password',
 } as const;

@@ -208,34 +208,45 @@ export class AvailabilitySearchComponent {
 
   // --- EVENTI CASCATA ---
 
-  /** Specializzazione cambiata → resetta medico e clinica */
+  /** Specializzazione cambiata → resetta medico, clinica e risultati */
   protected onSpecializationChange(): void {
     this.specSelected.set(this.filterForm.get('specialization')?.value ?? '');
     this.filterForm.patchValue({ doctorId: '', province: '', city: '', clinicId: '' });
     this.doctorSelected.set('');
     this.provinceSelected.set('');
     this.citySelected.set('');
+    this.clearResults();
   }
 
-  /** Medico cambiato → resetta clinica */
+  /** Medico cambiato → resetta clinica e risultati */
   protected onDoctorChange(): void {
     this.doctorSelected.set(this.filterForm.get('doctorId')?.value ?? '');
     this.filterForm.patchValue({ province: '', city: '', clinicId: '' });
     this.provinceSelected.set('');
     this.citySelected.set('');
+    this.clearResults();
   }
 
-  /** Provincia cambiata → resetta citta e clinica */
+  /** Provincia cambiata → resetta citta, clinica e risultati */
   protected onProvinceChange(): void {
     this.provinceSelected.set(this.filterForm.get('province')?.value ?? '');
     this.filterForm.patchValue({ city: '', clinicId: '' });
     this.citySelected.set('');
+    this.clearResults();
   }
 
-  /** Citta cambiata → resetta clinica */
+  /** Citta cambiata → resetta clinica e risultati */
   protected onCityChange(): void {
     this.citySelected.set(this.filterForm.get('city')?.value ?? '');
     this.filterForm.patchValue({ clinicId: '' });
+    this.clearResults();
+  }
+
+  /** Svuota i risultati della ricerca precedente */
+  private clearResults(): void {
+    this.results.set([]);
+    this.totalElements.set(0);
+    this.pageIndex.set(0);
   }
 
   // --- CARICAMENTO DATI ---
@@ -374,7 +385,8 @@ export class AvailabilitySearchComponent {
     });
     dialogRef.afterClosed().subscribe((confirmed: boolean) => {
       if (confirmed) {
-        this.appointmentService.book(slot).subscribe({
+        const bookingPayload = { ...slotData, notificationChannels: ['EMAIL'] };
+        this.appointmentService.book(bookingPayload).subscribe({
           next: () => {
             this.dialog.open(InfoDialogComponent, {
               data: { title: 'Prenotazione completata', message: 'Appuntamento prenotato con successo!' }

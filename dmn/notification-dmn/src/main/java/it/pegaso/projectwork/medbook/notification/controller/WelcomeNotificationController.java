@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +22,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/notification/v1/notifications")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
 public class WelcomeNotificationController {
 
     private final WelcomeNotificationService welcomeService;
@@ -35,7 +33,22 @@ public class WelcomeNotificationController {
                 body.get("doctorFirstName"),
                 body.get("doctorLastName"),
                 body.get("doctorEmail"),
-                body.get("doctorPhone"));
+                body.get("doctorPhone"),
+                body.get("password"));
+
+        MedBookApiVoidResponse response = new MedBookApiVoidResponse();
+        response.setHttpStatus(HttpStatus.OK.value());
+        response.setSuccess(true);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/receptionist-welcome")
+    public ResponseEntity<MedBookApiVoidResponse> sendReceptionistWelcome(@RequestBody Map<String, String> body) {
+        welcomeService.sendReceptionistWelcome(
+                body.get("firstName"),
+                body.get("lastName"),
+                body.get("email"),
+                body.get("password"));
 
         MedBookApiVoidResponse response = new MedBookApiVoidResponse();
         response.setHttpStatus(HttpStatus.OK.value());

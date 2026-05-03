@@ -9,6 +9,7 @@ describe('NotificationService', () => {
   let service: NotificationService;
   let httpMock: HttpTestingController;
   const BASE = environment.apiBaseUrl + API_ENDPOINTS.NOTIFICATIONS;
+  const PREFS_BASE = environment.apiBaseUrl + API_ENDPOINTS.NOTIFICATION_PREFERENCES;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -20,7 +21,11 @@ describe('NotificationService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('getAll() dovrebbe fare GET all\'URL base', () => {
+  // ---------------------------------------------------------------------------
+  // Notifiche
+  // ---------------------------------------------------------------------------
+
+  it('getAll() dovrebbe fare GET all\'URL base senza parametri', () => {
     service.getAll().subscribe();
     const req = httpMock.expectOne(BASE);
     expect(req.request.method).toBe('GET');
@@ -30,6 +35,7 @@ describe('NotificationService', () => {
   it('getAll() dovrebbe passare i filtri opzionali come query params', () => {
     service.getAll({ status: 'INVIATA', channel: 'EMAIL' }).subscribe();
     const req = httpMock.expectOne(r => r.url === BASE);
+    expect(req.request.method).toBe('GET');
     expect(req.request.params.get('status')).toBe('INVIATA');
     expect(req.request.params.get('channel')).toBe('EMAIL');
     req.flush([]);
@@ -40,5 +46,32 @@ describe('NotificationService', () => {
     const req = httpMock.expectOne(`${BASE}/NOT-001`);
     expect(req.request.method).toBe('GET');
     req.flush({});
+  });
+
+  it('retry() dovrebbe fare POST su /notifications/{id}/retry', () => {
+    service.retry('NOT-001').subscribe();
+    const req = httpMock.expectOne(`${BASE}/NOT-001/retry`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    req.flush(null);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Preferenze di notifica
+  // ---------------------------------------------------------------------------
+
+  it('getMyPreferences() dovrebbe fare GET su /notification-preferences', () => {
+    service.getMyPreferences().subscribe();
+    const req = httpMock.expectOne(PREFS_BASE);
+    expect(req.request.method).toBe('GET');
+    req.flush({ emailEnabled: true, smsEnabled: false });
+  });
+
+  it('updateMyPreferences() dovrebbe fare PATCH su /notification-preferences con il body', () => {
+    service.updateMyPreferences(true, false).subscribe();
+    const req = httpMock.expectOne(PREFS_BASE);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ emailEnabled: true, smsEnabled: false });
+    req.flush(null);
   });
 });

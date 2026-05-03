@@ -11,9 +11,10 @@ medbook:
     public-get-endpoints:
       - /bff/v1/clinics
       - /bff/v1/specializations
-    # Registrazione pubblica paziente: non richiede token JWT
+    # Registrazione pubblica paziente e reset password: non richiedono token JWT
     public-post-endpoints:
       - /bff/v1/patients
+      - /bff/v1/auth/reset-password
 
 bff:
   slot-duration-minutes: 30

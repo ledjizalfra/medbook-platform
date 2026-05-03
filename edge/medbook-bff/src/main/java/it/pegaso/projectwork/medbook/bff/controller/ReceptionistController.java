@@ -1,9 +1,11 @@
 package it.pegaso.projectwork.medbook.bff.controller;
 
+import it.pegaso.projectwork.medbook.bff.client.WelcomeNotificationFeignClient;
 import it.pegaso.projectwork.medbook.bff.service.keycloak.KeycloakAdminService;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiVoidResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,12 +23,14 @@ import java.util.Map;
  * I dati vivono esclusivamente su Keycloak — nessun record in MedBook DB.
  * Solo ROLE_ADMIN (gestito dal SecurityFilterChain).
  */
+@Slf4j
 @RestController
 @RequestMapping("/bff/v1/receptionists")
 @RequiredArgsConstructor
 public class ReceptionistController {
 
     private final KeycloakAdminService keycloakAdminService;
+    private final WelcomeNotificationFeignClient welcomeNotificationClient;
 
     /** Crea un nuovo receptionist su Keycloak. */
     @PostMapping
@@ -38,6 +42,19 @@ public class ReceptionistController {
         Boolean enabled = body.get("enabled") != null ? (Boolean) body.get("enabled") : true;
 
         String keycloakId = keycloakAdminService.createReceptionist(email, firstName, lastName, password, enabled);
+
+        // Invia email con credenziali — best-effort
+        try {
+            Map<String, String> notifBody = new java.util.HashMap<>();
+            notifBody.put("firstName", firstName);
+            notifBody.put("lastName", lastName);
+            notifBody.put("email", email);
+            notifBody.put("password", password);
+            welcomeNotificationClient.sendReceptionistWelcome(notifBody);
+            log.info("Notifica benvenuto inviata per receptionist (email={})", email);
+        } catch (Exception e) {
+            log.error("Errore invio notifica benvenuto receptionist: {}", e.getMessage(), e);
+        }
 
         MedBookApiResponse resp = new MedBookApiResponse();
         resp.setHttpStatus(HttpStatus.CREATED.value());

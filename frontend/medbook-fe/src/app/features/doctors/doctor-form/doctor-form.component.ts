@@ -77,6 +77,9 @@ export class DoctorFormComponent implements OnInit {
   protected loading = signal(false);
   protected stepErrors = signal<string[]>([]);
   protected currentStepLabel = signal('Anagrafica');
+  protected showPassword = signal(false);
+  protected showConfirmPassword = signal(false);
+  protected readonly PASSWORD_SPECIAL_CHARS = '@#$%^&*!?._-';
 
   // Opzioni specializzazioni caricate dal backend
   protected specializationOptions = signal<{ value: string; label: string }[]>([]);
@@ -177,9 +180,11 @@ export class DoctorFormComponent implements OnInit {
     licenseNumber:        ['', Validators.required],
     email:                ['', [Validators.required, MedBookValidators.email()]],
     phone:                ['', MedBookValidators.telefono()],
+    password:             ['', [Validators.required, MedBookValidators.password()]],
+    confirmPassword:      ['', Validators.required],
     primarySpecialization:   ['', Validators.required],
     secondarySpecializations: [[] as string[]]
-  });
+  }, { validators: [MedBookValidators.passwordCoincidenti('password', 'confirmPassword')] });
 
   /** Max 2 specializzazioni secondarie (3 totali inclusa la primaria) */
   protected readonly MAX_SECONDARY = 2;
@@ -250,6 +255,12 @@ export class DoctorFormComponent implements OnInit {
     if (id) {
       this.doctorId.set(id);
       this.loadDoctor(id);
+      // In modalita modifica, disabilita i campi password (non servono)
+      this.step2.get('password')?.disable();
+      this.step2.get('password')?.clearValidators();
+      this.step2.get('confirmPassword')?.disable();
+      this.step2.get('confirmPassword')?.clearValidators();
+      this.step2.updateValueAndValidity();
     }
   }
 
@@ -354,7 +365,8 @@ export class DoctorFormComponent implements OnInit {
     const labels: Record<string, string> = {
       firstName: 'Nome', lastName: 'Cognome', email: 'Email',
       phone: 'Telefono', dateOfBirth: 'Data di nascita', gender: 'Sesso',
-      licenseNumber: 'Numero di licenza', primarySpecialization: 'Specializzazione principale'
+      licenseNumber: 'Numero di licenza', password: 'Password', confirmPassword: 'Conferma password',
+      primarySpecialization: 'Specializzazione principale'
     };
 
     for (const [key, ctrl] of Object.entries(stepForm.controls)) {
@@ -371,6 +383,7 @@ export class DoctorFormComponent implements OnInit {
     // Errori cross-field dello step
     if (stepForm.errors?.['nessunCanaleAttivo'])   errors.push('Seleziona almeno un canale di notifica');
     if (stepForm.errors?.['smsRichiedeTelefono'])  errors.push('Per attivare SMS inserisci il numero di telefono');
+    if (stepForm.errors?.['passwordNonCoincidono']) errors.push('Le password non coincidono');
 
     return errors;
   }
@@ -473,8 +486,8 @@ export class DoctorFormComponent implements OnInit {
     const id = this.doctorId();
 
     if (id) {
-      // Modalita modifica: PATCH
-      const { primarySpecialization: _p, secondarySpecializations: _s, ...restS2 } = s2;
+      // Modalita modifica: PATCH (escludi campi password)
+      const { primarySpecialization: _p, secondarySpecializations: _s, password: _pw, confirmPassword: _cpw, ...restS2 } = s2;
       const payload = { ...s1, ...restS2, specializations };
       this.doctorService.update(id, payload).subscribe({
         next: () => this.onSuccess('Aggiornamento completato', 'Medico aggiornato con successo!'),
@@ -483,7 +496,7 @@ export class DoctorFormComponent implements OnInit {
     } else {
       // Modalita creazione: POST
       const channels = this.step3.getRawValue().notificationChannels;
-      const { primarySpecialization: _p2, secondarySpecializations: _s2, ...restS2Create } = s2;
+      const { primarySpecialization: _p2, secondarySpecializations: _s2, confirmPassword: _cp, ...restS2Create } = s2;
       const payload = {
         ...s1, ...restS2Create,
         specializations,

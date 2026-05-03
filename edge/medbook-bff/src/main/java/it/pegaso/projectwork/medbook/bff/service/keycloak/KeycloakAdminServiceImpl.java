@@ -194,6 +194,21 @@ public class KeycloakAdminServiceImpl implements KeycloakAdminService {
         log.info("Receptionist eliminato: keycloakId={}", keycloakId);
     }
 
+    @Override
+    public void sendResetPasswordEmail(String email) {
+        Keycloak keycloak = buildKeycloakClient();
+        RealmResource realm = keycloak.realm(bffProperties.getKeycloakAdmin().getRealm());
+
+        List<UserRepresentation> users = realm.users().searchByEmail(email, true);
+        if (users.isEmpty()) {
+            throw new it.pegaso.projectwork.medbook.commons.errors.exceptions.MedBookNotFoundException(
+                    "Nessun utente Keycloak trovato con email: " + email);
+        }
+        String userId = users.get(0).getId();
+        realm.users().get(userId).executeActionsEmail(List.of("UPDATE_PASSWORD"));
+        log.info("Email di reset password inviata a {}", email);
+    }
+
     /** Costruisce il client Keycloak Admin con le credenziali configurate nel BffProperties. */
     private Keycloak buildKeycloakClient() {
         BffProperties.KeycloakAdmin cfg = bffProperties.getKeycloakAdmin();

@@ -15,7 +15,6 @@ info:
 
     ### Risorse esposte
     - **Clinics** - sedi fisiche della rete (`CLN-{seq}`)
-    - **Assignments** - assegnazioni medico-sede con validita temporale (`ASG-{seq}`)
 
     ### Convenzioni
     - Tutti gli endpoint richiedono autenticazione JWT
@@ -42,8 +41,6 @@ servers:
 tags:
   - name: Clinics
     description: Operazioni CRUD sulle sedi fisiche della rete di poliambulatori
-  - name: Assignments
-    description: Gestione delle assegnazioni medico-sede con validita temporale
 
 # =============================================================================
 # ENDPOINTS
@@ -279,200 +276,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/MedBookApiErrorResponse'
 
-  # ===========================================================================
-  # ASSIGNMENTS
-  # ===========================================================================
-
-  /api/v1/clinics/{clinicId}/assignments:
-
-    # -------------------------------------------------------------------------
-    # Creazione nuova assegnazione medico-sede
-    # -------------------------------------------------------------------------
-    post:
-      tags:
-        - Assignments
-      operationId: postCreateAssignment
-      summary: Assegna un medico a una sede
-      description: |
-        Crea una nuova assegnazione medico-sede con validita temporale.
-        Genera automaticamente la business key nel formato ASG-{seq}.
-        La tabella e storicizzata - piu assegnazioni per la stessa coppia
-        DOCTOR_ID/CLINIC_ID sono ammesse in periodi diversi.
-        DOCTOR_ID e una FK cross-service verso doctor-dmn.
-        Solo ROLE_ADMIN puo eseguire questa operazione.
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-        - $ref: '#/components/parameters/ClinicIdParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAssignmentRequest'
-      responses:
-        '201':
-          description: Assegnazione creata con successo - data contiene CreateAssignmentOutput
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiResponse'
-        '400':
-          description: Dati della richiesta non validi (es. validTo precedente a validFrom)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiErrorResponse'
-        '404':
-          description: Sede non trovata
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiErrorResponse'
-
-    # -------------------------------------------------------------------------
-    # Lista assegnazioni della sede
-    # -------------------------------------------------------------------------
-    get:
-      tags:
-        - Assignments
-      operationId: getAllAssignments
-      summary: Recupera tutte le assegnazioni di una sede
-      description: |
-        Restituisce la lista di tutte le assegnazioni medico-sede.
-        Supporta filtro per medico e stato.
-        Accessibile a ROLE_ADMIN, ROLE_RECEPTIONIST (propria sede) e BFF.
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-        - $ref: '#/components/parameters/ClinicIdParam'
-        - $ref: '#/components/parameters/DoctorIdFilterParam'
-        - $ref: '#/components/parameters/AssignmentStatusFilterParam'
-      responses:
-        '200':
-          description: Lista assegnazioni recuperata con successo - data contiene AssignmentListOutput
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiResponse'
-        '404':
-          description: Sede non trovata
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiErrorResponse'
-
-  /api/v1/clinics/{clinicId}/assignments/{assignmentId}:
-
-    # -------------------------------------------------------------------------
-    # Aggiornamento assegnazione
-    # -------------------------------------------------------------------------
-    patch:
-      tags:
-        - Assignments
-      operationId: patchUpdateAssignment
-      summary: Aggiorna un'assegnazione medico-sede
-      description: |
-        Aggiorna i dati di un'assegnazione medico-sede.
-        Tipicamente usato per impostare la data di fine (validTo)
-        quando il medico lascia la sede.
-        Solo ROLE_ADMIN puo eseguire questa operazione.
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-        - $ref: '#/components/parameters/ClinicIdParam'
-        - $ref: '#/components/parameters/AssignmentIdParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateAssignmentRequest'
-      responses:
-        '200':
-          description: Assegnazione aggiornata con successo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiVoidResponse'
-        '400':
-          description: Dati della richiesta non validi
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiErrorResponse'
-        '404':
-          description: Sede o assegnazione non trovati
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiErrorResponse'
-
-    # -------------------------------------------------------------------------
-    # Eliminazione logica assegnazione
-    # -------------------------------------------------------------------------
-    delete:
-      tags:
-        - Assignments
-      operationId: deleteAssignment
-      summary: Termina un'assegnazione medico-sede
-      description: |
-        Esegue un soft delete dell'assegnazione - il record non viene eliminato
-        fisicamente ma viene marcato come cancellato (DELETED = true).
-        Solo ROLE_ADMIN puo eseguire questa operazione.
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-        - $ref: '#/components/parameters/ClinicIdParam'
-        - $ref: '#/components/parameters/AssignmentIdParam'
-      responses:
-        '200':
-          description: Assegnazione terminata con successo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiVoidResponse'
-        '404':
-          description: Sede o assegnazione non trovati
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiErrorResponse'
-
-  /api/v1/clinics/{clinicId}/assignments/{assignmentId}/restore:
-
-    # -------------------------------------------------------------------------
-    # Ripristino assegnazione cancellata
-    # -------------------------------------------------------------------------
-    patch:
-      tags:
-        - Assignments
-      operationId: patchRestoreAssignment
-      summary: Ripristina un'assegnazione eliminata logicamente
-      description: |
-        Ripristina un'assegnazione precedentemente eliminata logicamente.
-        Il record viene riattivato impostando DELETED = false e STATUS = ATTIVO.
-        Solo ROLE_ADMIN puo eseguire questa operazione.
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-        - $ref: '#/components/parameters/ClinicIdParam'
-        - $ref: '#/components/parameters/AssignmentIdParam'
-      responses:
-        '200':
-          description: Assegnazione ripristinata con successo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiVoidResponse'
-        '404':
-          description: Sede o assegnazione non trovati
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiErrorResponse'
-        '409':
-          description: L'assegnazione non e cancellata - impossibile ripristinare
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiErrorResponse'
-
 # =============================================================================
 # COMPONENTS
 # =============================================================================
@@ -508,18 +311,6 @@ components:
       schema:
         type: string
         example: CLN-1
-
-    # -------------------------------------------------------------------------
-    # Business key assegnazione
-    # -------------------------------------------------------------------------
-    AssignmentIdParam:
-      name: assignmentId
-      in: path
-      required: true
-      description: Business key dell'assegnazione nel formato ASG-{seq} (es. ASG-1)
-      schema:
-        type: string
-        example: ASG-1
 
     # -------------------------------------------------------------------------
     # Paginazione - parametri standard Spring Pageable
@@ -680,14 +471,6 @@ components:
         type: string
         example: DOC-1
 
-    AssignmentStatusFilterParam:
-      name: status
-      in: query
-      required: false
-      description: Filtra per stato dell'assegnazione
-      schema:
-        $ref: '#/components/schemas/AssignmentStatusApiEnum'
-
   # ---------------------------------------------------------------------------
   # SCHEMAS
   # ---------------------------------------------------------------------------
@@ -803,55 +586,6 @@ components:
           $ref: '#/components/schemas/ClinicStatusApiEnum'
 
     # =========================================================================
-    # REQUESTS - Assignments
-    # =========================================================================
-
-    # -------------------------------------------------------------------------
-    # REQUEST - Creazione assegnazione medico-sede
-    # -------------------------------------------------------------------------
-    CreateAssignmentRequest:
-      type: object
-      description: |
-        Dati richiesti per assegnare un medico a una sede.
-        La tabella e storicizzata - un medico puo essere riassegnato
-        alla stessa sede in periodi diversi.
-      required:
-        - doctorId
-        - validFrom
-      properties:
-        doctorId:
-          type: string
-          description: Business key del medico nel formato DOC-{seq} - FK cross-service verso doctor-dmn
-          example: DOC-1
-        validFrom:
-          type: string
-          format: date
-          description: Data di inizio validita dell'assegnazione (YYYY-MM-DD)
-          example: "2025-01-01"
-        validTo:
-          type: string
-          format: date
-          description: Data di fine validita dell'assegnazione (YYYY-MM-DD) - null indica assegnazione ancora attiva
-          example: "2025-12-31"
-
-    # -------------------------------------------------------------------------
-    # REQUEST - Aggiornamento assegnazione
-    # -------------------------------------------------------------------------
-    UpdateAssignmentRequest:
-      type: object
-      description: |
-        Dati per l'aggiornamento dell'assegnazione.
-        Tipicamente usato per impostare la data di fine quando il medico lascia la sede.
-      properties:
-        validTo:
-          type: string
-          format: date
-          description: Data di fine validita dell'assegnazione - deve essere successiva a validFrom
-          example: "2025-12-31"
-        status:
-          $ref: '#/components/schemas/AssignmentStatusApiEnum'
-
-    # =========================================================================
     # OUTPUTS - Clinics
     # =========================================================================
 
@@ -953,73 +687,6 @@ components:
           description: Lista delle sedi nella pagina corrente
         page:
           $ref: '#/components/schemas/MedBookPageResponse'
-
-    # =========================================================================
-    # OUTPUTS - Assignments
-    # =========================================================================
-
-    # -------------------------------------------------------------------------
-    # OUTPUT - Creazione assegnazione
-    # -------------------------------------------------------------------------
-    CreateAssignmentOutput:
-      type: object
-      description: Output della creazione dell'assegnazione - contiene solo la business key generata
-      properties:
-        assignmentId:
-          type: string
-          description: Business key generata nel formato ASG-{seq}
-          example: ASG-1
-
-    # -------------------------------------------------------------------------
-    # OUTPUT - Dettaglio assegnazione
-    # -------------------------------------------------------------------------
-    AssignmentDetailOutput:
-      type: object
-      description: Dati completi di un'assegnazione medico-sede
-      properties:
-        assignmentId:
-          type: string
-          description: Business key nel formato ASG-{seq}
-          example: ASG-1
-        clinicId:
-          type: string
-          description: Business key della sede nel formato CLN-{seq}
-          example: CLN-1
-        doctorId:
-          type: string
-          description: Business key del medico nel formato DOC-{seq} - FK cross-service verso doctor-dmn
-          example: DOC-1
-        validFrom:
-          type: string
-          format: date
-          description: Data di inizio validita dell'assegnazione
-          example: "2025-01-01"
-        validTo:
-          type: string
-          format: date
-          description: Data di fine validita dell'assegnazione - null indica assegnazione ancora attiva
-          example: "2025-12-31"
-        status:
-          $ref: '#/components/schemas/AssignmentStatusApiEnum'
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    # -------------------------------------------------------------------------
-    # OUTPUT - Lista assegnazioni della sede
-    # -------------------------------------------------------------------------
-    AssignmentListOutput:
-      type: object
-      description: Lista di tutte le assegnazioni medico-sede
-      properties:
-        assignments:
-          type: array
-          items:
-            $ref: '#/components/schemas/AssignmentDetailOutput'
-          description: Lista delle assegnazioni della sede
 
     # =========================================================================
     # TIPI CONDIVISI - Definiti in medbook-commons e importati via importMappings.
@@ -1162,12 +829,3 @@ components:
         - ATTIVO: sede operativa
         - DISATTIVO: sede sospesa
 
-    AssignmentStatusApiEnum:
-      type: string
-      enum:
-        - ATTIVO
-        - DISATTIVO
-      description: |
-        Stato dell'assegnazione medico-sede:
-        - ATTIVO: assegnazione attiva
-        - DISATTIVO: assegnazione terminata

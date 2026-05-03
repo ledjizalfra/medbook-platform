@@ -322,18 +322,17 @@ public class DoctorBffServiceImpl implements DoctorBffService {
      * Best-effort: il fallimento viene loggato ma non blocca la creazione del medico. */
     /**
      * Crea l'utenza Keycloak per il medico con password temporanea.
-     * Username = email. Ruolo = ROLE_DOCTOR. Password temporanea generata.
+     * Username = email. Ruolo = ROLE_DOCTOR. Password impostata dall'admin.
      * Best-effort: il fallimento viene loggato ma non blocca la creazione.
      */
     private void registerDoctorKeycloakUser(CreateDoctorBffRequest bffReq, String doctorId) {
         try {
-            String tempPassword = java.util.UUID.randomUUID().toString().substring(0, 8);
             keycloakAdminService.createUser(
                     null,
                     bffReq.getEmail(),
                     bffReq.getFirstName(),
                     bffReq.getLastName(),
-                    tempPassword,
+                    bffReq.getPassword(),
                     "ROLE_DOCTOR",
                     doctorId);
             log.info("Utenza Keycloak creata per medico {} (email={})", doctorId, bffReq.getEmail());
@@ -479,12 +478,13 @@ public class DoctorBffServiceImpl implements DoctorBffService {
 
     private void sendDoctorWelcomeNotification(String doctorId, CreateDoctorBffRequest bffReq) {
         try {
-            Map<String, String> body = Map.of(
-                    "doctorId", doctorId,
-                    "doctorFirstName", bffReq.getFirstName(),
-                    "doctorLastName", bffReq.getLastName(),
-                    "doctorEmail", bffReq.getEmail(),
-                    "doctorPhone", bffReq.getPhone() != null ? bffReq.getPhone() : "");
+            Map<String, String> body = new java.util.HashMap<>();
+            body.put("doctorId", doctorId);
+            body.put("doctorFirstName", bffReq.getFirstName());
+            body.put("doctorLastName", bffReq.getLastName());
+            body.put("doctorEmail", bffReq.getEmail());
+            body.put("doctorPhone", bffReq.getPhone() != null ? bffReq.getPhone() : "");
+            body.put("password", bffReq.getPassword());
             welcomeNotificationClient.sendDoctorWelcome(body);
             log.info("Notifica benvenuto inviata per doctorId={}", doctorId);
         } catch (Exception e) {

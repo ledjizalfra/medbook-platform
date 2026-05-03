@@ -31,10 +31,12 @@ public class WelcomeNotificationService {
      */
     public void sendDoctorWelcome(String doctorId, String doctorFirstName,
                                    String doctorLastName, String doctorEmail,
-                                   String doctorPhone) {
+                                   String doctorPhone, String password) {
         NotificationTemplateModel model = NotificationTemplateModel.builder()
                 .doctorFirstName(doctorFirstName)
                 .doctorLastName(doctorLastName)
+                .loginEmail(doctorEmail)
+                .temporaryPassword(password)
                 .build();
 
         // Email
@@ -46,6 +48,23 @@ public class WelcomeNotificationService {
             sendWelcome(NotificationTypeEnum.BENVENUTO_MEDICO, NotificationChannelEnum.SMS,
                     null, doctorPhone, doctorId, model);
         }
+    }
+
+    /**
+     * Invia email di benvenuto al receptionist con credenziali di accesso.
+     * Fire-and-forget: non lancia eccezioni al chiamante.
+     */
+    public void sendReceptionistWelcome(String firstName, String lastName,
+                                         String email, String password) {
+        NotificationTemplateModel model = NotificationTemplateModel.builder()
+                .doctorFirstName(firstName)
+                .doctorLastName(lastName)
+                .loginEmail(email)
+                .temporaryPassword(password)
+                .build();
+
+        sendWelcome(NotificationTypeEnum.BENVENUTO_RECEPTIONIST, NotificationChannelEnum.EMAIL,
+                email, null, "receptionist-" + email, model);
     }
 
     /**

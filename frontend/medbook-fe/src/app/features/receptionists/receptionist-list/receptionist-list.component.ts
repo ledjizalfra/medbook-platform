@@ -8,6 +8,7 @@ import { PageEvent } from '@angular/material/paginator';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { InfoDialogComponent } from '../../../shared/components/info-dialog/info-dialog.component';
 import { ReceptionistService } from '../../../core/services/receptionist.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { MedBookTableComponent } from '../../../shared/components/medbook-table/medbook-table.component';
 import { MedBookPageComponent } from '../../../shared/components/medbook-page/medbook-page.component';
 import { TableColumn, TableAction } from '../../../shared/components/medbook-table/medbook-table.models';
@@ -22,6 +23,7 @@ import { SNACKBAR_DURATION } from '../../../core/constants/ui.constants';
 })
 export class ReceptionistListComponent implements OnInit {
   private service = inject(ReceptionistService);
+  private authService = inject(AuthService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -42,6 +44,7 @@ export class ReceptionistListComponent implements OnInit {
 
   protected readonly tableActions: TableAction[] = [
     { icon: 'edit', tooltip: 'Modifica', onClick: (row) => this.edit(row) },
+    { icon: 'lock_reset', tooltip: 'Reset password', onClick: (row) => this.resetPassword(row) },
     { icon: 'delete', tooltip: 'Elimina', color: 'warn', onClick: (row) => this.confirmDelete(row) }
   ];
 
@@ -79,6 +82,22 @@ export class ReceptionistListComponent implements OnInit {
   private edit(row: unknown): void {
     const id = (row as Record<string, unknown>)['keycloakId'];
     this.router.navigate(['/admin/receptionists', id, 'edit']);
+  }
+
+  private resetPassword(row: unknown): void {
+    const r = row as Record<string, unknown>;
+    const email = String(r['email'] ?? '');
+    this.dialog.open(ConfirmDialogComponent, {
+      data: { title: 'Reset password', message: `Inviare email di reset password a ${email}?` }
+    }).afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      this.authService.sendResetPasswordEmail(email).subscribe({
+        next: () => this.dialog.open(InfoDialogComponent, {
+          data: { title: 'Email inviata', message: `Email di reset password inviata a ${email}` }
+        }),
+        error: () => this.snackBar.open('Errore durante l\'invio', 'Chiudi', { duration: SNACKBAR_DURATION.LONG })
+      });
+    });
   }
 
   private confirmDelete(row: unknown): void {

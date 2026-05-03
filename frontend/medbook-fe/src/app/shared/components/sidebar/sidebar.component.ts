@@ -3,8 +3,6 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { KeycloakService } from '../../../core/auth/keycloak.service';
-import { ClinicService } from '../../../core/services/clinic.service';
-import { DoctorService } from '../../../core/services/doctor.service';
 import { ClinicStore } from '../../../core/store/clinic.store';
 import { DoctorStore } from '../../../core/store/doctor.store';
 
@@ -12,14 +10,14 @@ interface MenuItem {
   icon: string;
   label: string;
   route: string;
-  roles: string[];
 }
 
 /**
  * Sidebar con visibilita per ruolo.
  *
- * Per ADMIN espone anche lo stato del workflow (hasClinics/hasDoctors)
- * usato dai componenti figli per abilitare/disabilitare i tasti d'azione.
+ * Le route vengono calcolate dinamicamente in base al ruolo dell'utente
+ * tramite KeycloakService (es. /patient/dashboard, /admin/doctors).
+ * Questo garantisce che routerLinkActive evidenzi correttamente la voce attiva.
  */
 @Component({
   selector: 'app-sidebar',
@@ -29,8 +27,6 @@ interface MenuItem {
 })
 export class SidebarComponent implements OnInit {
   protected kc = inject(KeycloakService);
-  private clinicService = inject(ClinicService);
-  private doctorService = inject(DoctorService);
   private clinicStore = inject(ClinicStore);
   private doctorStore = inject(DoctorStore);
 
@@ -38,32 +34,72 @@ export class SidebarComponent implements OnInit {
   hasClinics = signal(false);
   hasDoctors = signal(false);
 
-  readonly menuItems: MenuItem[] = [
-    { icon: 'dashboard',        label: 'Dashboard',             route: '/dashboard',    roles: ['PATIENT', 'DOCTOR', 'RECEPTIONIST', 'ADMIN'] },
-    { icon: 'event_available',  label: 'Prenota',               route: '/availability', roles: ['PATIENT', 'RECEPTIONIST'] },
-    { icon: 'calendar_today',   label: 'I miei appuntamenti',   route: '/appointments', roles: ['PATIENT', 'DOCTOR'] },
-    { icon: 'list_alt',         label: 'Appuntamenti',          route: '/appointments', roles: ['RECEPTIONIST', 'ADMIN'] },
-    { icon: 'person',           label: 'Il mio profilo',        route: '/profile',      roles: ['PATIENT', 'DOCTOR'] },
-    { icon: 'business',         label: 'Cliniche',              route: '/clinics',      roles: ['ADMIN'] },
-    { icon: 'medical_services', label: 'Medici',                route: '/doctors',      roles: ['ADMIN'] },
-    { icon: 'group',            label: 'Pazienti',              route: '/patients',     roles: ['RECEPTIONIST', 'ADMIN'] },
-    { icon: 'badge',            label: 'Receptionist',          route: '/admin/receptionists', roles: ['ADMIN'] },
-    { icon: 'notifications',    label: 'Notifiche',             route: '/notifications',roles: ['PATIENT', 'ADMIN'] }
-  ];
-
-  get visibleItems(): MenuItem[] {
-    return this.menuItems.filter(item =>
-      item.roles.some(role => this.kc.hasRole(role))
-    );
-  }
+  /** Voci di menu visibili per il ruolo corrente — calcolate una volta al login */
+  visibleItems: MenuItem[] = [];
 
   ngOnInit(): void {
-    if (!this.kc.hasRole('ADMIN')) return;
-    this.checkWorkflowState();
+    this.visibleItems = this.buildMenuForRole();
+
+    if (this.kc.hasRole('ADMIN')) {
+      this.checkWorkflowState();
+    }
+  }
+
+  /** Costruisce il menu in base al ruolo dell'utente autenticato */
+  private buildMenuForRole(): MenuItem[] {
+    const items: MenuItem[] = [];
+
+    // Dashboard — tutti i ruoli
+    items.push({ icon: 'dashboard', label: 'Dashboard', route: this.kc.getRoleDashboardRoute() });
+
+    // Prenota — PATIENT, RECEPTIONIST, ADMIN
+    if (this.kc.hasRole('PATIENT') || this.kc.hasRole('RECEPTIONIST') || this.kc.hasRole('ADMIN')) {
+      items.push({ icon: 'event_available', label: 'Prenota', route: this.kc.getAvailabilityRoute() });
+    }
+
+    // Appuntamenti — tutti i ruoli
+    if (this.kc.hasRole('PATIENT') || this.kc.hasRole('DOCTOR')) {
+      items.push({ icon: 'calendar_today', label: 'I miei appuntamenti', route: this.kc.getAppointmentsRoute() });
+    } else {
+      items.push({ icon: 'list_alt', label: 'Appuntamenti', route: this.kc.getAppointmentsRoute() });
+    }
+
+    // Profilo — PATIENT, DOCTOR
+    const profileRoute = this.kc.getProfileRoute();
+    if (profileRoute) {
+      items.push({ icon: 'person', label: 'Il mio profilo', route: profileRoute });
+    }
+
+    // Cliniche — ADMIN
+    if (this.kc.hasRole('ADMIN')) {
+      items.push({ icon: 'business', label: 'Cliniche', route: this.kc.getClinicsRoute() });
+    }
+
+    // Medici — ADMIN
+    if (this.kc.hasRole('ADMIN')) {
+      items.push({ icon: 'medical_services', label: 'Medici', route: this.kc.getDoctorsRoute() });
+    }
+
+    // Pazienti — RECEPTIONIST, ADMIN
+    if (this.kc.hasRole('RECEPTIONIST') || this.kc.hasRole('ADMIN')) {
+      items.push({ icon: 'group', label: 'Pazienti', route: this.kc.getPatientsRoute() });
+    }
+
+    // Receptionist — ADMIN
+    if (this.kc.hasRole('ADMIN')) {
+      items.push({ icon: 'badge', label: 'Receptionist', route: '/admin/receptionists' });
+    }
+
+    // Notifiche — PATIENT, ADMIN
+    if (this.kc.hasRole('PATIENT') || this.kc.hasRole('ADMIN')) {
+      items.push({ icon: 'notifications', label: 'Notifiche', route: this.kc.getNotificationsRoute() });
+    }
+
+    return items;
   }
 
   /** Verifica se esistono cliniche e medici — usa gli store con cache TTL */
-  checkWorkflowState(): void {
+  private checkWorkflowState(): void {
     this.clinicStore.loadAll().subscribe({
       next: (list) => this.hasClinics.set(list.length > 0)
     });

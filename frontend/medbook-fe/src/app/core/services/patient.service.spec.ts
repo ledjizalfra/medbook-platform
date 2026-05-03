@@ -9,6 +9,7 @@ describe('PatientService', () => {
   let service: PatientService;
   let httpMock: HttpTestingController;
   const BASE = environment.apiBaseUrl + API_ENDPOINTS.PATIENTS;
+  const ME_URL = environment.apiBaseUrl + API_ENDPOINTS.PATIENTS_ME;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -20,7 +21,22 @@ describe('PatientService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('getAll() dovrebbe fare GET all\'URL base', () => {
+  // ---------------------------------------------------------------------------
+  // Profilo paziente autenticato
+  // ---------------------------------------------------------------------------
+
+  it('getMe() dovrebbe fare GET su /patients/me', () => {
+    service.getMe().subscribe();
+    const req = httpMock.expectOne(ME_URL);
+    expect(req.request.method).toBe('GET');
+    req.flush({ id: 'PAT-001', firstName: 'Mario' });
+  });
+
+  // ---------------------------------------------------------------------------
+  // CRUD pazienti
+  // ---------------------------------------------------------------------------
+
+  it('getAll() dovrebbe fare GET all\'URL base senza parametri', () => {
     service.getAll().subscribe();
     const req = httpMock.expectOne(BASE);
     expect(req.request.method).toBe('GET');
@@ -30,6 +46,7 @@ describe('PatientService', () => {
   it('getAll() dovrebbe passare i parametri come query string', () => {
     service.getAll({ search: 'rossi', page: 0 }).subscribe();
     const req = httpMock.expectOne(r => r.url === BASE);
+    expect(req.request.method).toBe('GET');
     expect(req.request.params.get('search')).toBe('rossi');
     expect(req.request.params.get('page')).toBe('0');
     req.flush([]);
@@ -55,6 +72,15 @@ describe('PatientService', () => {
     const body = { phone: '3331234567' };
     service.update('PAT-001', body).subscribe();
     const req = httpMock.expectOne(`${BASE}/PAT-001`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual(body);
+    req.flush(null);
+  });
+
+  it('updateMe() dovrebbe fare PATCH su /patients/me con il body', () => {
+    const body = { phone: '3339876543' };
+    service.updateMe(body).subscribe();
+    const req = httpMock.expectOne(ME_URL);
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual(body);
     req.flush(null);

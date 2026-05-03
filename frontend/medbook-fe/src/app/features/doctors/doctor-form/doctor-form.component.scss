@@ -161,6 +161,27 @@ button[disabled] {
   }
 }
 
+// --- Password ---
+.password-requirements {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  font-size: 0.82rem;
+  color: #616161;
+
+  p { margin: 0 0 6px; font-weight: 600; }
+  ul { margin: 0; padding-left: 18px; }
+  li { margin-bottom: 2px; transition: color 0.2s; }
+  li.valid { color: #2e7d32; }
+}
+
+.field-error-hint {
+  color: #c62828;
+  font-size: 0.8rem;
+  margin: -4px 0 8px;
+}
+
 // --- Canali notifica ---
 .notification-channels {
   display: flex;

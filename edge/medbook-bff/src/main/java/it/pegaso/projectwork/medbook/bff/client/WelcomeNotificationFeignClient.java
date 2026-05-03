@@ -19,4 +19,7 @@ public interface WelcomeNotificationFeignClient {
 
     @PostMapping("/notification/v1/notifications/clinic-welcome")
     void sendClinicWelcome(@RequestBody Map<String, String> body);
+
+    @PostMapping("/notification/v1/notifications/receptionist-welcome")
+    void sendReceptionistWelcome(@RequestBody Map<String, String> body);
 }

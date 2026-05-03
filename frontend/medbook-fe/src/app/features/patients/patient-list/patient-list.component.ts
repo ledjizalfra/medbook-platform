@@ -15,6 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { PageEvent } from '@angular/material/paginator';
 import { PatientService } from '../../../core/services/patient.service';
 import { KeycloakService } from '../../../core/auth/keycloak.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { InfoDialogComponent } from '../../../shared/components/info-dialog/info-dialog.component';
 import { MedBookFormComponent } from '../../../shared/components/medbook-form/medbook-form.component';
@@ -58,6 +59,7 @@ export class PatientListComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private kc = inject(KeycloakService);
+  private authService = inject(AuthService);
   private fb = inject(FormBuilder);
 
   protected loading = signal(false);
@@ -128,6 +130,12 @@ export class PatientListComponent implements OnInit {
       color: 'primary',
       onClick: (row) => this.restorePatient(row),
       visible: (row) => this.kc.hasRole('ADMIN') && (row as Record<string, unknown>)['status'] === 'INATTIVO'
+    },
+    {
+      icon: 'lock_reset',
+      tooltip: 'Reset password',
+      onClick: (row) => this.resetPassword(row),
+      visible: (row) => this.kc.hasRole('ADMIN') && (row as Record<string, unknown>)['status'] !== 'INATTIVO'
     }
   ];
 
@@ -271,6 +279,22 @@ export class PatientListComponent implements OnInit {
           }
         });
       }
+    });
+  }
+
+  private resetPassword(patient: unknown): void {
+    const p = patient as Record<string, unknown>;
+    const email = String(p['email'] ?? '');
+    this.dialog.open(ConfirmDialogComponent, {
+      data: { title: 'Reset password', message: `Inviare email di reset password a ${email}?` }
+    }).afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      this.authService.sendResetPasswordEmail(email).subscribe({
+        next: () => this.dialog.open(InfoDialogComponent, {
+          data: { title: 'Email inviata', message: `Email di reset password inviata a ${email}` }
+        }),
+        error: () => this.snackBar.open('Errore durante l\'invio', 'Chiudi', { duration: SNACKBAR_DURATION.LONG })
+      });
     });
   }
 }

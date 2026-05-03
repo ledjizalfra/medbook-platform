@@ -717,10 +717,16 @@ components:
       enum:
         - PRENOTAZIONE_CONFERMATA
         - PRENOTAZIONE_CANCELLATA
+        - BENVENUTO_MEDICO
+        - BENVENUTO_CLINICA
+        - BENVENUTO_RECEPTIONIST
       description: |
-        Tipo di notifica inviata al paziente:
+        Tipo di notifica:
         - PRENOTAZIONE_CONFERMATA: conferma della prenotazione di un appuntamento
         - PRENOTAZIONE_CANCELLATA: avviso di cancellazione di un appuntamento
+        - BENVENUTO_MEDICO: email + SMS di benvenuto al medico con credenziali
+        - BENVENUTO_CLINICA: email di benvenuto alla clinica
+        - BENVENUTO_RECEPTIONIST: email di benvenuto al receptionist con credenziali
 
     NotificationChannelApiEnum:
       type: string

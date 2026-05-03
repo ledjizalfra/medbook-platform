@@ -40,8 +40,6 @@ tags:
     description: Proxy verso doctor-dmn - template disponibilita settimanale
   - name: Clinics
     description: Proxy verso clinic-dmn - gestione sedi
-  - name: Assignments
-    description: Proxy verso clinic-dmn - assegnazioni medici a sedi
   - name: Availability
     description: Ricerca slot disponibili - logica interna BFF
   - name: Appointments
@@ -926,143 +924,6 @@ paths:
                 $ref: '#/components/schemas/MedBookApiErrorResponse'
 
   # ===========================================================================
-  # ASSIGNMENTS
-  # ===========================================================================
-
-  /bff/v1/clinics/{clinicId}/assignments:
-
-    post:
-      tags:
-        - Assignments
-      operationId: postCreateAssignment
-      summary: Assegna un medico a una sede
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-        - $ref: '#/components/parameters/ClinicIdPathParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAssignmentBffRequest'
-      responses:
-        '201':
-          description: Assegnazione creata con successo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiResponse'
-
-    get:
-      tags:
-        - Assignments
-      operationId: getAllAssignments
-      summary: Lista assegnazioni medici di una sede
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-        - $ref: '#/components/parameters/ClinicIdPathParam'
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/SizeParam'
-        - $ref: '#/components/parameters/SortParam'
-        - name: doctorId
-          in: query
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Lista assegnazioni recuperata con successo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiResponse'
-
-  /bff/v1/clinics/{clinicId}/assignments/{assignmentId}:
-
-    patch:
-      tags:
-        - Assignments
-      operationId: patchUpdateAssignment
-      summary: Aggiorna un'assegnazione
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-        - $ref: '#/components/parameters/ClinicIdPathParam'
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateAssignmentBffRequest'
-      responses:
-        '200':
-          description: Assegnazione aggiornata con successo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiVoidResponse'
-
-    delete:
-      tags:
-        - Assignments
-      operationId: deleteAssignment
-      summary: Rimuove un'assegnazione
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-        - $ref: '#/components/parameters/ClinicIdPathParam'
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Assegnazione rimossa con successo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiVoidResponse'
-
-  /bff/v1/clinics/{clinicId}/assignments/{assignmentId}/restore:
-
-    patch:
-      tags:
-        - Assignments
-      operationId: patchRestoreAssignment
-      summary: Ripristina un'assegnazione eliminata logicamente
-      parameters:
-        - $ref: '#/components/parameters/MedBookContextParam'
-        - $ref: '#/components/parameters/ClinicIdPathParam'
-        - name: assignmentId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Assegnazione ripristinata con successo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiVoidResponse'
-        '404':
-          description: Sede o assegnazione non trovati
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiErrorResponse'
-        '409':
-          description: L'assegnazione non e cancellata - impossibile ripristinare
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MedBookApiErrorResponse'
-
-  # ===========================================================================
   # AVAILABILITY SEARCH (logica BFF)
   # ===========================================================================
 
@@ -1849,6 +1710,7 @@ components:
         - email
         - phone
         - licenseNumber
+        - password
       properties:
         firstName:
           type: string
@@ -1872,6 +1734,11 @@ components:
         licenseNumber:
           type: string
           example: RM-12345
+        password:
+          type: string
+          format: password
+          description: Password iniziale dell'account Keycloak del medico — impostata dall'admin
+          minLength: 8
         emailEnabled:
           type: boolean
           description: true se il canale EMAIL è abilitato
@@ -2037,29 +1904,6 @@ components:
           maxLength: 100
           description: Sigla provincia (2 caratteri, es. TO, MI, NA)
           example: TO
-        status:
-          type: string
-
-    # =========================================================================
-    # ASSIGNMENT REQUEST
-    # =========================================================================
-
-    CreateAssignmentBffRequest:
-      type: object
-      description: Dati per l'assegnazione di un medico a una clinica
-      required:
-        - doctorId
-      properties:
-        doctorId:
-          type: string
-          example: DOC-1
-
-    UpdateAssignmentBffRequest:
-      type: object
-      description: Dati per l'aggiornamento di un'assegnazione
-      properties:
-        specialization:
-          type: string
         status:
           type: string
 

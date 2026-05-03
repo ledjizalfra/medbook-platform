@@ -16,5 +16,8 @@ public enum NotificationTypeEnum {
     BENVENUTO_MEDICO,
 
     /** Email di benvenuto alla clinica registrata dall'admin */
-    BENVENUTO_CLINICA
+    BENVENUTO_CLINICA,
+
+    /** Email di benvenuto al receptionist registrato dall'admin */
+    BENVENUTO_RECEPTIONIST
 }

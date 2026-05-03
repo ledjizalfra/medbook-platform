@@ -71,6 +71,8 @@ public class MailNotificationSender implements NotificationSender {
         ctx.setVariable("appointmentId", model.getAppointmentId());
         ctx.setVariable("cancellationReason", model.getCancellationReason());
         ctx.setVariable("cancelledBy", model.getCancelledBy());
+        ctx.setVariable("loginEmail", model.getLoginEmail());
+        ctx.setVariable("temporaryPassword", model.getTemporaryPassword());
 
         String htmlContent = templateEngine.process(templateName, ctx);
         String subject = buildSubject(notification.getType(), model);
@@ -94,6 +96,7 @@ public class MailNotificationSender implements NotificationSender {
             case PRENOTAZIONE_CANCELLATA -> "prenotazione-cancellata";
             case BENVENUTO_MEDICO -> "benvenuto-medico";
             case BENVENUTO_CLINICA -> "benvenuto-clinica";
+            case BENVENUTO_RECEPTIONIST -> "benvenuto-receptionist";
         };
     }
 
@@ -108,6 +111,8 @@ public class MailNotificationSender implements NotificationSender {
                     "Benvenuto in MedBook - Completa la tua registrazione";
             case BENVENUTO_CLINICA ->
                     "Benvenuto in MedBook - " + model.getClinicName();
+            case BENVENUTO_RECEPTIONIST ->
+                    "Benvenuto in MedBook - Le tue credenziali di accesso";
         };
     }
 }

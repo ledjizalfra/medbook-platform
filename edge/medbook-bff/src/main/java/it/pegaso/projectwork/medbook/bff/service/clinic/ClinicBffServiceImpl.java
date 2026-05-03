@@ -1,21 +1,15 @@
 package it.pegaso.projectwork.medbook.bff.service.clinic;
 
-import it.pegaso.projectwork.medbook.bff.server.model.CreateAssignmentBffRequest;
 import it.pegaso.projectwork.medbook.bff.server.model.CreateClinicBffRequest;
-import it.pegaso.projectwork.medbook.bff.server.model.UpdateAssignmentBffRequest;
 import it.pegaso.projectwork.medbook.bff.server.model.UpdateClinicBffRequest;
 import it.pegaso.projectwork.medbook.appointment.client.api.AppointmentsFeignClient;
 import it.pegaso.projectwork.medbook.appointment.client.model.AppointmentStatusApiEnum;
 import it.pegaso.projectwork.medbook.appointment.client.model.CancelAppointmentRequest;
 import it.pegaso.projectwork.medbook.appointment.client.model.CancelledByApiEnum;
 import it.pegaso.projectwork.medbook.bff.client.WelcomeNotificationFeignClient;
-import it.pegaso.projectwork.medbook.clinic.client.api.AssignmentsFeignClient;
 import it.pegaso.projectwork.medbook.clinic.client.api.ClinicsFeignClient;
-import it.pegaso.projectwork.medbook.clinic.client.model.AssignmentStatusApiEnum;
 import it.pegaso.projectwork.medbook.clinic.client.model.ClinicStatusApiEnum;
-import it.pegaso.projectwork.medbook.clinic.client.model.CreateAssignmentRequest;
 import it.pegaso.projectwork.medbook.clinic.client.model.CreateClinicRequest;
-import it.pegaso.projectwork.medbook.clinic.client.model.UpdateAssignmentRequest;
 import it.pegaso.projectwork.medbook.clinic.client.model.UpdateClinicRequest;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiResponse;
 import it.pegaso.projectwork.medbook.commons.api.model.MedBookApiVoidResponse;
@@ -40,7 +34,6 @@ public class ClinicBffServiceImpl implements ClinicBffService {
 
     private final AppointmentsFeignClient appointmentsClient;
     private final ClinicsFeignClient clinicsClient;
-    private final AssignmentsFeignClient assignmentsClient;
     private final WelcomeNotificationFeignClient welcomeNotificationClient;
 
     @Override
@@ -171,50 +164,7 @@ public class ClinicBffServiceImpl implements ClinicBffService {
     }
 
     @Override
-    public ResponseEntity<MedBookApiResponse> createAssignment(MedBookContext context, String clinicId,
-            CreateAssignmentBffRequest bffReq) {
-        CreateAssignmentRequest req = new CreateAssignmentRequest();
-        req.setDoctorId(bffReq.getDoctorId());
-        req.setValidFrom(java.time.LocalDate.now());
-        return assignmentsClient.postCreateAssignment(context, clinicId, req);
-    }
-
-    @Override
-    public ResponseEntity<MedBookApiResponse> getAllAssignments(MedBookContext context, String clinicId,
-            Integer page, Integer size, String sort, String doctorId) {
-        // clinic-dmn non supporta paginazione nelle assegnazioni - passa solo i filtri disponibili.
-        return assignmentsClient.getAllAssignments(context, clinicId, doctorId, null);
-    }
-
-    @Override
-    public ResponseEntity<MedBookApiVoidResponse> updateAssignment(MedBookContext context, String clinicId,
-            String assignmentId, UpdateAssignmentBffRequest bffReq) {
-        UpdateAssignmentRequest req = new UpdateAssignmentRequest();
-        // UpdateAssignmentRequest supporta solo validTo e status - non specialization.
-        if (StringUtils.hasText(bffReq.getStatus())) {
-            try {
-                req.setStatus(AssignmentStatusApiEnum.valueOf(bffReq.getStatus()));
-            } catch (IllegalArgumentException e) {
-                log.warn("Stato assegnazione non riconosciuto: {}", bffReq.getStatus());
-            }
-        }
-        return assignmentsClient.patchUpdateAssignment(context, clinicId, assignmentId, req);
-    }
-
-    @Override
-    public ResponseEntity<MedBookApiVoidResponse> deleteAssignment(MedBookContext context, String clinicId,
-            String assignmentId) {
-        return assignmentsClient.deleteAssignment(context, clinicId, assignmentId);
-    }
-
-    @Override
     public ResponseEntity<MedBookApiVoidResponse> restoreClinic(MedBookContext context, String clinicId) {
         return clinicsClient.patchRestoreClinic(context, clinicId);
-    }
-
-    @Override
-    public ResponseEntity<MedBookApiVoidResponse> restoreAssignment(MedBookContext context, String clinicId,
-            String assignmentId) {
-        return assignmentsClient.patchRestoreAssignment(context, clinicId, assignmentId);
     }
 }

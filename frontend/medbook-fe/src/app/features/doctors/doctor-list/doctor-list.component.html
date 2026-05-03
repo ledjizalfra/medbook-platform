@@ -13,12 +13,6 @@
         <mat-icon>schedule</mat-icon>
         Gestisci Disponibilita
       </button>
-      <button mat-stroked-button (click)="manageAssignments()"
-              [disabled]="!hasDoctors()"
-              [matTooltip]="!hasDoctors() ? 'Aggiungi prima almeno un medico' : ''">
-        <mat-icon>assignment_ind</mat-icon>
-        Gestisci Assegnazioni
-      </button>
     </div>
   }
 

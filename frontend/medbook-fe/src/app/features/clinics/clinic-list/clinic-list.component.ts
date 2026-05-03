@@ -15,7 +15,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { InfoDialogComponent } from '../../../shared/components/info-dialog/info-dialog.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { AssignDoctorDialogComponent } from '../assign-doctor-dialog/assign-doctor-dialog.component';
 import { PageEvent } from '@angular/material/paginator';
 import { ClinicService } from '../../../core/services/clinic.service';
 import { DoctorService } from '../../../core/services/doctor.service';
@@ -123,11 +122,6 @@ export class ClinicListComponent implements OnInit {
       onClick: (row) => this.editClinic(row)
     },
     {
-      icon: 'people',
-      tooltip: 'Assegnazioni',
-      onClick: (row) => this.viewAssignments(row)
-    },
-    {
       icon: 'delete',
       tooltip: 'Disattiva',
       color: 'warn',
@@ -183,18 +177,6 @@ export class ClinicListComponent implements OnInit {
     this.router.navigate([this.kc.getClinicsRoute(), 'new']);
   }
 
-  /** Apre il dialog per assegnare un medico a una clinica con form select. */
-  protected openAssignDoctor(): void {
-    this.dialog.open(AssignDoctorDialogComponent, { width: '450px' })
-      .afterClosed().subscribe((success: boolean) => {
-        if (success) {
-          this.dialog.open(InfoDialogComponent, {
-            data: { title: 'Assegnazione completata', message: 'Il medico e stato assegnato alla clinica.' }
-          });
-        }
-      });
-  }
-
   protected isAdmin(): boolean {
     return this.kc.hasRole('ADMIN');
   }
@@ -244,11 +226,7 @@ export class ClinicListComponent implements OnInit {
     this.router.navigate([this.kc.getClinicsRoute(), id, 'edit']);
   }
 
-  // Naviga alla pagina di gestione delle assegnazioni medici per questa clinica
-  private viewAssignments(clinic: unknown): void {
-    const id = (clinic as Record<string, unknown>)['clinicId'];
-    this.router.navigate([this.kc.getClinicsRoute(), id, 'assignments']);
-  }
+
 
   // Disattiva (soft delete) una clinica previa conferma
   private deactivateClinic(clinic: unknown): void {
