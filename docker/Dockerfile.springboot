@@ -1,0 +1,82 @@
+# =============================================================================
+# Dockerfile multi-stage condiviso da tutti i microservizi Spring Boot.
+# Build una sola volta dell'intero monorepo Maven, poi ogni stage di runtime
+# copia il proprio JAR. Compose seleziona il target con `build.target: <nome>`.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage di build — compila e impacchetta TUTTI i moduli Maven in un colpo solo.
+# I generated-sources di OpenAPI vengono creati durante il package.
+# -----------------------------------------------------------------------------
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /workspace
+COPY . .
+RUN mvn -B -DskipTests clean package
+
+# -----------------------------------------------------------------------------
+# Stage runtime — uno per ogni servizio Spring Boot.
+# Tutti condividono la stessa base JRE 21 e lo stesso entrypoint.
+# -----------------------------------------------------------------------------
+
+# Eureka Server (service registry)
+FROM eclipse-temurin:21-jre AS eureka-server
+WORKDIR /app
+COPY --from=build /workspace/infra/eureka-server/target/*.jar app.jar
+EXPOSE 8070
+ENTRYPOINT ["java","-jar","app.jar"]
+
+# Config Server (configurazione centralizzata)
+FROM eclipse-temurin:21-jre AS config-server
+WORKDIR /app
+COPY --from=build /workspace/infra/config-server/target/*.jar app.jar
+EXPOSE 8071
+ENTRYPOINT ["java","-jar","app.jar"]
+
+# Patient DMN
+FROM eclipse-temurin:21-jre AS patient-dmn
+WORKDIR /app
+COPY --from=build /workspace/dmn/patient-dmn/target/*.jar app.jar
+EXPOSE 8090
+ENTRYPOINT ["java","-jar","app.jar"]
+
+# Doctor DMN
+FROM eclipse-temurin:21-jre AS doctor-dmn
+WORKDIR /app
+COPY --from=build /workspace/dmn/doctor-dmn/target/*.jar app.jar
+EXPOSE 8091
+ENTRYPOINT ["java","-jar","app.jar"]
+
+# Clinic DMN
+FROM eclipse-temurin:21-jre AS clinic-dmn
+WORKDIR /app
+COPY --from=build /workspace/dmn/clinic-dmn/target/*.jar app.jar
+EXPOSE 8092
+ENTRYPOINT ["java","-jar","app.jar"]
+
+# Appointment DMN
+FROM eclipse-temurin:21-jre AS appointment-dmn
+WORKDIR /app
+COPY --from=build /workspace/dmn/appointment-dmn/target/*.jar app.jar
+EXPOSE 8093
+ENTRYPOINT ["java","-jar","app.jar"]
+
+# Notification DMN
+FROM eclipse-temurin:21-jre AS notification-dmn
+WORKDIR /app
+COPY --from=build /workspace/dmn/notification-dmn/target/*.jar app.jar
+EXPOSE 8094
+ENTRYPOINT ["java","-jar","app.jar"]
+
+# MedBook BFF
+FROM eclipse-temurin:21-jre AS medbook-bff
+WORKDIR /app
+COPY --from=build /workspace/edge/medbook-bff/target/*.jar app.jar
+EXPOSE 8081
+ENTRYPOINT ["java","-jar","app.jar"]
+
+# API Gateway
+FROM eclipse-temurin:21-jre AS api-gateway
+WORKDIR /app
+COPY --from=build /workspace/edge/api-gateway/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java","-jar","app.jar"]

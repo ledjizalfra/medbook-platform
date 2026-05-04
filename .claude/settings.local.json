@@ -89,7 +89,14 @@
       "Bash(mvn -pl commons/medbook-commons,edge/medbook-bff -am clean compile -DskipTests -q)",
       "Bash(pdftotext --version)",
       "Bash(pdftotext -layout \"docs/raporto-finale/DJIALA_ZANGUIM_Albert_Franck_0312401596.pdf\" /tmp/rapporto.txt)",
-      "PowerShell(Write-Output \"Conteggio:\"; \\(Get-ChildItem 'docs\\\\raporto-finale' -Force\\).Count; Write-Output \"---File:\"; Get-ChildItem 'docs\\\\raporto-finale' -Force | Select-Object -ExpandProperty Name | Out-Host)"
+      "PowerShell(Write-Output \"Conteggio:\"; \\(Get-ChildItem 'docs\\\\raporto-finale' -Force\\).Count; Write-Output \"---File:\"; Get-ChildItem 'docs\\\\raporto-finale' -Force | Select-Object -ExpandProperty Name | Out-Host)",
+      "Bash(docker --version)",
+      "Bash(docker compose *)",
+      "Bash(docker pull *)",
+      "Bash(mvn -pl dmn/appointment-dmn -am compile -DskipTests -q)",
+      "Bash(curl -s \"https://quay.io/api/v1/repository/keycloak/keycloak/tag/?onlyActiveTags=true&limit=20\")",
+      "Bash(curl -sI \"https://quay.io/v2/keycloak/keycloak/manifests/26.5.6\")",
+      "Bash(git fetch *)"
     ]
   }
 }

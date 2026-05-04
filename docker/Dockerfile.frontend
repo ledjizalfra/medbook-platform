@@ -1,0 +1,17 @@
+# =============================================================================
+# Frontend Angular — build statica servita da Nginx.
+# =============================================================================
+
+# Stage di build — compila l'app con configurazione production
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY frontend/medbook-fe/package*.json ./
+RUN npm ci
+COPY frontend/medbook-fe/ ./
+RUN npm run build -- --configuration=production
+
+# Stage runtime — Nginx serve i file statici della SPA
+FROM nginx:alpine AS frontend
+COPY --from=build /app/dist/medbook-fe/browser /usr/share/nginx/html
+COPY docker/nginx-fe.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80

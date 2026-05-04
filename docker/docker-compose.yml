@@ -1,7 +1,28 @@
+# =============================================================================
+# MedBook Platform — stack completo dockerizzato.
+#
+# Lancia con:   docker compose -f docker/docker-compose.yml up -d --build
+# Ferma con:    docker compose -f docker/docker-compose.yml down
+# Reset dati:   docker compose -f docker/docker-compose.yml down -v
+#
+# I microservizi Spring Boot condividono un'unica build Maven (multi-stage
+# Dockerfile.springboot) — ogni servizio seleziona il proprio target.
+# La prima build dura 2-3 minuti; le successive sono incrementali.
+#
+# Endpoint esposti all'host:
+#   - Frontend          http://localhost:4200
+#   - API Gateway       http://localhost:8080
+#   - Eureka Dashboard  http://localhost:8070
+#   - BFF Swagger       http://localhost:8081/swagger-ui.html
+#   - Keycloak          http://localhost:8082 (admin/admin)
+#   - Zipkin            http://localhost:9411
+#   - DMN Swagger       http://localhost:809{0..4}/swagger-ui.html
+# =============================================================================
+
 services:
 
   # ===========================================================================
-  # PostgreSQL — Database condiviso (un'istanza, schema per DMN)
+  # PostgreSQL — Database condiviso (un'istanza, un DB per DMN)
   # ===========================================================================
   postgres:
     image: postgres:16
@@ -14,64 +35,84 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Crea i 5 database per i DMN al primo avvio del container
+      - ./postgres-init.sh:/docker-entrypoint-initdb.d/00-init-databases.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U medbook"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+  # ===========================================================================
+  # Adminer — Web client per ispezionare i database PostgreSQL
+  # ===========================================================================
+  # Single-page PHP, zero configurazione. Apri http://localhost:8085 e usa:
+  #   System: PostgreSQL    Server: postgres    User: medbook    Password: medbook
+  #   Database: med_patient_db (o uno degli altri 4)
+  adminer:
+    image: adminer:latest
+    container_name: medbook-adminer
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # ===========================================================================
   # Keycloak — Identity Provider
   # ===========================================================================
   keycloak:
-    # DEV: usa l'immagine base con il tema montato come volume (nessun rebuild)
-    # PROD: sostituire con l'immagine custom (vedi sezione prod sotto)
-    image: quay.io/keycloak/keycloak:26.0.0
+    image: quay.io/keycloak/keycloak:26.5.6
     container_name: medbook-keycloak
     command: start-dev
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HTTP_PORT: 8082
-      # Cache dei temi disabilitata in dev per vedere le modifiche senza restart
+      # Issuer URL "lato browser" — i token avranno iss=http://localhost:8082/...
+      # I container backend validano via questa stessa URL grazie a host.docker.internal
+      KC_HOSTNAME: http://localhost:8082
+      KC_HOSTNAME_STRICT: "false"
+      # Cache temi disabilitata in dev per vedere subito le modifiche
       KC_SPI_THEME_STATIC_MAX_AGE: -1
       KC_SPI_THEME_CACHE_THEMES: "false"
       KC_SPI_THEME_CACHE_TEMPLATES: "false"
     ports:
       - "8082:8082"
     volumes:
-      # Tema montato come volume — modifiche visibili subito senza rebuild
       - ../infra/keycloak/themes/medbook:/opt/keycloak/themes/medbook
 
   # ===========================================================================
   # Apache Kafka — Message Broker (KRaft mode, single node)
   # ===========================================================================
-  # Configurato in modalità KRaft (no Zookeeper). Ascolta su 9092 verso l'host
-  # e su 9093 per il quorum del controller. Sufficiente per dev.
+  # Immagine ufficiale Apache Kafka. Doppio listener per accettare client sia
+  # interni alla rete Docker (kafka:29092) sia da host (localhost:9092).
   kafka:
-    image: bitnami/kafka:3.8
+    image: apache/kafka:3.8.0
     container_name: medbook-kafka
     ports:
       - "9092:9092"
     environment:
-      # KRaft single-node: stesso processo è broker e controller
-      KAFKA_CFG_NODE_ID: 0
-      KAFKA_CFG_PROCESS_ROLES: controller,broker
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
-      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      # Advertised su localhost: i microservizi Spring Boot girano sull'host e
-      # raggiungono Kafka tramite la porta esposta del container.
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      # Replication factor 1 — setup single-node, niente repliche
-      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Cluster ID stabile per il KRaft single-node (base64 UUID)
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
     volumes:
-      - kafka_data:/bitnami/kafka
+      - kafka_data:/var/lib/kafka/data
 
   # ===========================================================================
   # Zipkin — Tracing distribuito
@@ -81,6 +122,272 @@ services:
     container_name: medbook-zipkin
     ports:
       - "9411:9411"
+
+  # ===========================================================================
+  # Eureka Server — service registry
+  # ===========================================================================
+  eureka-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.springboot
+      target: eureka-server
+    image: medbook/eureka-server:dev
+    container_name: medbook-eureka-server
+    restart: unless-stopped
+    ports:
+      - "8070:8070"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    # Healthcheck via TCP: la porta 8070 va in listening solo dopo che Spring
+    # Boot è completamente avviato. Bash è disponibile nell'immagine Eclipse Temurin.
+    healthcheck:
+      test: ["CMD", "bash", "-c", ":>/dev/tcp/localhost/8070"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 60s
+
+  # ===========================================================================
+  # Config Server — configurazione centralizzata (backend native)
+  # ===========================================================================
+  config-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.springboot
+      target: config-server
+    image: medbook/config-server:dev
+    container_name: medbook-config-server
+    restart: unless-stopped
+    ports:
+      - "8071:8071"
+    environment:
+      SPRING_PROFILES_ACTIVE: native,dev
+      EUREKA_URL: http://eureka-server:8070/eureka/
+      # Override path config-repo: il volume monta la cartella in /config-repo
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/config-repo
+    volumes:
+      - ../infra/config-repo:/config-repo:ro
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", ":>/dev/tcp/localhost/8071"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 60s
+
+  # ===========================================================================
+  # Microservizi di dominio (DMN)
+  # ===========================================================================
+  patient-dmn:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.springboot
+      target: patient-dmn
+    image: medbook/patient-dmn:dev
+    container_name: medbook-patient-dmn
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_URL: http://eureka-server:8070/eureka/
+      CONFIG_SERVER_URL: http://config-server:8071
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      DB_HOST: postgres
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://host.docker.internal:8082/realms/medbook/protocol/openid-connect/certs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  doctor-dmn:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.springboot
+      target: doctor-dmn
+    image: medbook/doctor-dmn:dev
+    container_name: medbook-doctor-dmn
+    restart: unless-stopped
+    ports:
+      - "8091:8091"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_URL: http://eureka-server:8070/eureka/
+      CONFIG_SERVER_URL: http://config-server:8071
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      DB_HOST: postgres
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://host.docker.internal:8082/realms/medbook/protocol/openid-connect/certs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  clinic-dmn:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.springboot
+      target: clinic-dmn
+    image: medbook/clinic-dmn:dev
+    container_name: medbook-clinic-dmn
+    restart: unless-stopped
+    ports:
+      - "8092:8092"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_URL: http://eureka-server:8070/eureka/
+      CONFIG_SERVER_URL: http://config-server:8071
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      DB_HOST: postgres
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://host.docker.internal:8082/realms/medbook/protocol/openid-connect/certs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  appointment-dmn:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.springboot
+      target: appointment-dmn
+    image: medbook/appointment-dmn:dev
+    container_name: medbook-appointment-dmn
+    restart: unless-stopped
+    ports:
+      - "8093:8093"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_URL: http://eureka-server:8070/eureka/
+      CONFIG_SERVER_URL: http://config-server:8071
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      DB_HOST: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://host.docker.internal:8082/realms/medbook/protocol/openid-connect/certs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  notification-dmn:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.springboot
+      target: notification-dmn
+    image: medbook/notification-dmn:dev
+    container_name: medbook-notification-dmn
+    restart: unless-stopped
+    ports:
+      - "8094:8094"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_URL: http://eureka-server:8070/eureka/
+      CONFIG_SERVER_URL: http://config-server:8071
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      DB_HOST: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://host.docker.internal:8082/realms/medbook/protocol/openid-connect/certs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  # ===========================================================================
+  # Servizi edge
+  # ===========================================================================
+  medbook-bff:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.springboot
+      target: medbook-bff
+    image: medbook/medbook-bff:dev
+    container_name: medbook-bff
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_URL: http://eureka-server:8070/eureka/
+      CONFIG_SERVER_URL: http://config-server:8071
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://host.docker.internal:8082/realms/medbook/protocol/openid-connect/certs
+      # BFF chiama Keycloak Admin lato server: il container raggiunge keycloak
+      # tramite l'hostname della rete Docker.
+      KEYCLOAK_ADMIN_URL: http://keycloak:8082
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-FHvwxEQKdcciSAt90fWE7FJUtEuOUObi}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      patient-dmn:
+        condition: service_started
+      doctor-dmn:
+        condition: service_started
+      clinic-dmn:
+        condition: service_started
+      appointment-dmn:
+        condition: service_started
+      notification-dmn:
+        condition: service_started
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.springboot
+      target: api-gateway
+    image: medbook/api-gateway:dev
+    container_name: medbook-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_URL: http://eureka-server:8070/eureka/
+      CONFIG_SERVER_URL: http://config-server:8071
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      medbook-bff:
+        condition: service_started
+
+  # ===========================================================================
+  # Frontend — Angular SPA servita da Nginx
+  # ===========================================================================
+  medbook-fe:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+      target: frontend
+    image: medbook/medbook-fe:dev
+    container_name: medbook-fe
+    ports:
+      - "4200:80"
+    depends_on:
+      api-gateway:
+        condition: service_started
 
 volumes:
   postgres_data:
@@ -104,7 +411,4 @@ volumes:
 #       KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/server.key
 #     ports:
 #       - "8443:8443"
-#
-# E aggiornare theme.properties:
-#   landingPageUrl=https://medbook.it
 # =============================================================================

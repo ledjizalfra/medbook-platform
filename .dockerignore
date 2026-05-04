@@ -1,0 +1,32 @@
+# Esclude file/cartelle dal build context Docker — riduce dimensione e tempo build.
+
+# Build artifacts Maven
+**/target/
+**/*.log
+**/hs_err_pid*.log
+**/replay_pid*.log
+
+# Node modules e build artifacts FE
+**/node_modules/
+**/dist/
+**/.angular/
+
+# Git e IDE
+.git/
+.gitignore
+.idea/
+.vscode/
+**/.DS_Store
+
+# Documentazione e file utente
+docs/raporto-finale/
+**/~$*
+*.md.backup
+
+# Docker stesso
+docker/Dockerfile.*
+
+# File temporanei e di test
+**/.claude/
+*.swp
+*.swo
