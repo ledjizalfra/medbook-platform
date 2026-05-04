@@ -171,23 +171,39 @@ docker exec medbook-kafka /opt/kafka/bin/kafka-topics.sh --list --bootstrap-serv
 
 ---
 
-# Modalità sviluppo (senza Docker, per debug nei microservizi)
+# Modalità sviluppo (senza Docker)
 
-Per attivare hot-reload e debug step nei microservizi, può convenire avviare solo i servizi esterni in Docker e i microservizi sull'host:
+Esiste una modalità di esecuzione **senza Docker**, usata durante lo sviluppo del progetto per avere hot-reload e debug step-by-step nei microservizi direttamente dall'IDE. Si lancia con:
 
-```bash
-# Solo servizi esterni
-docker compose -f docker/docker-compose.yml up -d postgres keycloak kafka zipkin adminer
-
-# Microservizi sull'host (PowerShell, Windows Terminal con scheda per servizio)
+```powershell
 powershell -ExecutionPolicy Bypass -File .\start-medbook-v7.ps1
 ```
 
-Lo script `start-medbook-v7.ps1` rispetta l'ordine di dipendenze: Eureka → Config Server → DMN → BFF → Gateway → Frontend.
+Lo script apre una scheda di Windows Terminal per ogni servizio nell'ordine: Eureka → Config Server → 5 DMN → BFF → Gateway → Frontend.
 
-In questo caso configura le variabili host:
-```bash
-export DB_HOST=localhost
-export KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-export EUREKA_URL=http://localhost:8070/eureka/
-```
+> ⚠️ **Sconsigliata come setup iniziale.** Richiede di installare e configurare manualmente sulla macchina **tutti i prerequisiti**:
+> - **Java 21** (Eclipse Temurin o equivalente)
+> - **Maven 3.9+**
+> - **Node.js 20+** + Angular CLI
+> - **PostgreSQL 16** (con i 5 database `med_*_db` creati a mano)
+> - **Keycloak 26.5.6** (download e avvio in `start-dev`)
+> - **Apache Kafka 3.8** (in modalità KRaft)
+> - **Zipkin** (jar standalone)
+>
+> Ognuno richiede installazione, configurazione di rete, eventuale tuning. Il setup completo richiede ore.
+
+**La modalità Docker (sezioni precedenti) è molto più semplice**: con un solo comando il `docker-compose.yml` scarica tutte le immagini, costruisce i servizi, crea i database, configura la rete e avvia tutto nell'ordine corretto. L'unico requisito è avere Docker Desktop installato.
+
+L'unico svantaggio è il consumo di memoria: lo stack completo carica circa **6 GB di RAM** quando tutti i container sono attivi. Per questo è consigliato configurare Docker Desktop con almeno 8 GB allocati (Settings → Resources).
+
+In sintesi:
+
+| | Docker | Senza Docker |
+|---|---|---|
+| Setup iniziale | 1 comando | Installazione manuale di 7+ tool |
+| Tempo prima dell'avvio | ~3-4 min (build) | Ore (download + configurazione) |
+| Memoria richiesta | ~6 GB RAM | ~3-4 GB RAM |
+| Hot-reload nei microservizi | No (richiede rebuild immagine) | Sì (mvn spring-boot:run) |
+| Riproducibilità | Identica su qualsiasi macchina | Dipende dall'ambiente locale |
+
+**Consiglio**: usa Docker per provare la piattaforma, e passa a senza-Docker solo se devi sviluppare/debuggare un microservizio specifico.
