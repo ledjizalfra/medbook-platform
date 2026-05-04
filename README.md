@@ -80,22 +80,25 @@ In sintesi:
 4. Crea il client `medbook-client` (pubblico, per il frontend)
 5. Crea il client `medbook-admin-client` (confidenziale, per il BFF)
 6. Configura il mapper `realm_access.roles` nei token
-7. Crea almeno **un utente con ruolo `ROLE_ADMIN`** per il primo login alla piattaforma
+
+### Crea l'utenza admin
+
+Una volta completata la configurazione di Keycloak (realm, ruoli, client, mapper), **crea un solo utente con ruolo `ROLE_ADMIN`** dalla console Keycloak. Questa è l'unica utenza da creare manualmente: con essa farai il primo login a MedBook (http://localhost:4200) e da lì gestirai tutti gli altri attori.
+
+> Le altre utenze (medici, receptionist, pazienti) **non vanno create da Keycloak**: vengono create dalle pagine del frontend MedBook quando l'admin registra un medico/receptionist o quando un paziente si auto-registra. La piattaforma si occupa di propagare i dati su Keycloak in automatico.
 
 ⚠️ **Importante**: Il client secret di `medbook-admin-client` deve coincidere con quello in `docker-compose.yml`. Default in dev: `FHvwxEQKdcciSAt90fWE7FJUtEuOUObi`. Se generi un secret diverso aggiornalo via env var:
 ```bash
 KEYCLOAK_ADMIN_CLIENT_SECRET=<tuo-secret> docker compose -f docker/docker-compose.yml up -d
 ```
 
-## 5. Email (Mailtrap — già preconfigurato in dev)
+## 5. Email (Mailtrap)
 
-Le notifiche email (conferma prenotazione, benvenuto medico/receptionist, reset password) sono **già instradate verso Mailtrap** con un account demo definito nel profilo dev di `infra/config-repo/notification-dmn.yaml`. Funziona out-of-the-box per i test.
+Le notifiche email (conferma prenotazione, benvenuto medico/receptionist, reset password Keycloak) passano da [Mailtrap](https://mailtrap.io). Le credenziali SMTP di un account demo sono già preconfigurate nel profilo dev di `infra/config-repo/notification-dmn.yaml`, quindi lato `notification-dmn` funziona out-of-the-box.
 
-Per usare un proprio account Mailtrap, sovrascrivi via env var prima di `up`:
-```bash
-SMTP_USERNAME=<tuo-username> SMTP_PASSWORD=<tua-password> \
-  docker compose -f docker/docker-compose.yml up -d
-```
+**Per il flusso reset password Keycloak** la configurazione SMTP va impostata una volta dalla admin console — vedi guida dedicata:
+
+📖 **[docs/mailtrap-setup.md](docs/mailtrap-setup.md)** — creazione account, recupero credenziali SMTP, configurazione `notification-dmn` e Keycloak
 
 ## 6. Primo accesso
 
