@@ -63,31 +63,21 @@ docker compose -f docker/docker-compose.yml ps
 
 Tutti i 15 container devono essere `Up` (alcuni `healthy`). Se qualcuno è `Restarting` aspetta 30-60 secondi: `restart: unless-stopped` rilancia automaticamente i servizi che hanno fallito al primo tentativo a causa di dipendenze non ancora pronte.
 
-## 4. Configura Keycloak — passaggio obbligatorio
+## 4. Keycloak — configurazione automatica
 
-> 🚨 **Attenzione**: una volta che tutti i container sono `Up`, **la prima cosa da fare è la configurazione di Keycloak**.
->
-> **Senza questa configurazione l'applicazione non è utilizzabile**: tutti i microservizi MedBook validano i token JWT emessi da Keycloak, e il frontend reindirizza al login Keycloak. Finché il realm `medbook`, i ruoli, i client e almeno un utente non sono creati, qualsiasi tentativo di accesso a http://localhost:4200 fallisce.
+Keycloak si autoconfigura al primo avvio importando `infra/keycloak/medbook-realm.json`. Vengono caricati automaticamente:
 
-Keycloak è in esecuzione su http://localhost:8082 ma **realm, ruoli, client e utenti vanno creati manualmente** la prima volta. Segui il documento dedicato:
+- Realm `medbook` con login via email + reset password abilitato
+- I 4 ruoli (`ROLE_PATIENT`, `ROLE_DOCTOR`, `ROLE_RECEPTIONIST`, `ROLE_ADMIN`)
+- Client `medbook-client` (pubblico, per il frontend) con mapper `realm_access.roles`
+- Client `medbook-admin-client` (confidenziale, per il BFF) con secret e service account già configurato
+- L'utenza admin (`admin.test`) con ruolo `ROLE_ADMIN`
 
-📖 **[docs/keycloak-setup.md](docs/keycloak-setup.md)** — guida step-by-step
+Nessuna azione manuale richiesta per usare la piattaforma. Per dettagli e operazioni avanzate (ispezione, re-import, esportazione modifiche): 📖 **[docs/keycloak-setup.md](docs/keycloak-setup.md)**.
 
-In sintesi:
-1. Login admin console (`admin` / `admin`) su http://localhost:8082
-2. Crea il realm `medbook`
-3. Crea i ruoli realm: `ROLE_PATIENT`, `ROLE_DOCTOR`, `ROLE_RECEPTIONIST`, `ROLE_ADMIN`
-4. Crea il client `medbook-client` (pubblico, per il frontend)
-5. Crea il client `medbook-admin-client` (confidenziale, per il BFF)
-6. Configura il mapper `realm_access.roles` nei token
+> Le utenze di medici, receptionist e pazienti **non vanno create da Keycloak**: vengono create dalle pagine del frontend MedBook quando l'admin registra un medico/receptionist o quando un paziente si auto-registra. La piattaforma si occupa di propagare i dati su Keycloak in automatico.
 
-### Crea l'utenza admin
-
-Una volta completata la configurazione di Keycloak (realm, ruoli, client, mapper), **crea un solo utente con ruolo `ROLE_ADMIN`** dalla console Keycloak. Questa è l'unica utenza da creare manualmente: con essa farai il primo login a MedBook (http://localhost:4200) e da lì gestirai tutti gli altri attori.
-
-> Le altre utenze (medici, receptionist, pazienti) **non vanno create da Keycloak**: vengono create dalle pagine del frontend MedBook quando l'admin registra un medico/receptionist o quando un paziente si auto-registra. La piattaforma si occupa di propagare i dati su Keycloak in automatico.
-
-⚠️ **Importante**: Il client secret di `medbook-admin-client` deve coincidere con quello in `docker-compose.yml`. Default in dev: `FHvwxEQKdcciSAt90fWE7FJUtEuOUObi`. Se generi un secret diverso aggiornalo via env var:
+ℹ️ Il client secret di `medbook-admin-client` è allineato al `docker-compose.yml`. Per cambiarlo passare la env var:
 ```bash
 KEYCLOAK_ADMIN_CLIENT_SECRET=<tuo-secret> docker compose -f docker/docker-compose.yml up -d
 ```
@@ -104,7 +94,7 @@ Le notifiche email (conferma prenotazione, benvenuto medico/receptionist, reset 
 
 Apri http://localhost:4200 e:
 1. Click su **"Accedi"**
-2. Login con l'utente admin creato al passo 4
+2. Login con `admin.test` + la password configurata (l'utenza admin è già nel realm importato)
 3. Vai in `/admin/clinics/new` per creare la prima clinica
 4. `/admin/doctors/new` per registrare il primo medico (gli verrà inviata una mail con la password temporanea via Mailtrap)
 5. `/register` (in incognito) per registrare un paziente di test

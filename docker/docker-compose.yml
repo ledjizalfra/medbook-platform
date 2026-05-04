@@ -68,7 +68,9 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.5.6
     container_name: medbook-keycloak
-    command: start-dev
+    # --import-realm carica medbook-realm.json al primo avvio (idempotente:
+    # se il realm esiste gia' viene aggiornato in base ai campi del file).
+    command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
@@ -85,6 +87,10 @@ services:
       - "8082:8082"
     volumes:
       - ../infra/keycloak/themes/medbook:/opt/keycloak/themes/medbook
+      # Realm pre-configurato: viene importato automaticamente al primo avvio.
+      # Contiene realm medbook, ruoli, due client (medbook-client + medbook-admin-client),
+      # mapper realm_access e l'utente admin (admin.test / password configurata in locale).
+      - ../infra/keycloak/medbook-realm.json:/opt/keycloak/data/import/medbook-realm.json:ro
 
   # ===========================================================================
   # Apache Kafka — Message Broker (KRaft mode, single node)

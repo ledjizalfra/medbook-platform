@@ -1,247 +1,94 @@
 # Configurazione Keycloak per MedBook
 
-Guida essenziale per configurare il realm `medbook` su una istanza Keycloak già in esecuzione (avviata via `docker compose -f docker/docker-compose.yml up -d`, disponibile su http://localhost:8082).
+> **La configurazione strutturale è automatica.** Al primo avvio del container, Keycloak importa `infra/keycloak/medbook-realm.json` con realm, ruoli, client, mapper e utenza admin già configurati. Nessuna azione manuale necessaria per usare la piattaforma.
 
-> Senza questa configurazione la piattaforma non funziona: tutti i microservizi MedBook validano i token JWT emessi da Keycloak.
-
----
-
-## Indice
-
-1. [Login admin console](#1-login-admin-console)
-2. [Creazione del realm](#2-creazione-del-realm)
-3. [Configurazione SMTP (per email reset password)](#3-configurazione-smtp-per-email-reset-password)
-4. [Creazione dei ruoli](#4-creazione-dei-ruoli)
-5. [Client pubblico `medbook-client` (frontend)](#5-client-pubblico-medbook-client-frontend)
-6. [Mapper `realm_access` nel token](#6-mapper-realm_access-nel-token)
-7. [Client confidenziale `medbook-admin-client` (BFF)](#7-client-confidenziale-medbook-admin-client-bff)
-8. [Creazione dell'utenza admin](#8-creazione-dellutenza-admin)
-9. [Verifica con Bruno (opzionale)](#9-verifica-con-bruno-opzionale)
+L'unico passaggio manuale (e **opzionale**) è configurare lo SMTP se vuoi che Keycloak invii le email di reset password — vedi [§ 3](#3-opzionale-smtp-per-email-reset-password).
 
 ---
 
-## 1. Login admin console
+## Cosa contiene il realm pre-configurato
 
-Apri http://localhost:8082 e fai login:
-- **Username**: `admin`
-- **Password**: `admin`
+Il file `infra/keycloak/medbook-realm.json` viene importato automaticamente all'avvio (vedi `docker/docker-compose.yml`, `command: start-dev --import-realm`).
 
-(credenziali bootstrap impostate in `docker/docker-compose.yml`)
+Contenuto:
 
----
+| Elemento | Valore |
+|----------|--------|
+| **Realm** | `medbook` |
+| Login con email | abilitato |
+| Reset password | abilitato |
+| **Ruoli realm** | `ROLE_PATIENT`, `ROLE_DOCTOR`, `ROLE_RECEPTIONIST`, `ROLE_ADMIN` |
+| **Client pubblico** | `medbook-client` (per il frontend) — redirect URIs `http://localhost:4200/*`, mapper `realm_access.roles` configurato |
+| **Client confidenziale** | `medbook-admin-client` (per il BFF) — secret allineato col `docker-compose.yml`, service account abilitato con i 3 ruoli `realm-management` (`manage-users`, `view-users`, `view-realm`) |
+| **Utente** | `admin.test` con `ROLE_ADMIN` (la password è quella che usavi nell'installazione locale) |
 
-## 2. Creazione del realm
-
-Un *realm* è uno spazio isolato che contiene utenti, ruoli e client.
-
-1. Click sul dropdown in alto a sinistra (mostra `master`) → **Create realm**
-2. Compila:
-   - **Realm name**: `medbook`
-   - **Enabled**: `On`
-3. Click **Create**
-
-### Abilita "Forgot Password"
-
-Senza questa opzione il link di recupero password non compare nella login page.
-
-1. **Realm settings** → tab **Login**
-2. Attiva **Forgot password**: `On`
-3. **Save**
+> L'unica utenza presente nel realm è l'admin. **Tutte le altre utenze (medici, receptionist, pazienti) si creano dal frontend MedBook** dopo il login con admin.
 
 ---
 
-## 3. Configurazione SMTP (per email reset password)
+## 1. Login admin console (opzionale, per ispezione)
 
-Necessario perché Keycloak possa inviare le email di reset. MedBook usa Mailtrap come SMTP di test.
+Se vuoi vedere la configurazione importata o crearti utenti aggiuntivi:
 
-1. **Realm settings** → tab **Email**
-2. Compila:
+1. Apri http://localhost:8082
+2. Login con le credenziali admin di Keycloak: `admin` / `admin` (impostate in `docker-compose.yml`)
+3. In alto a sinistra seleziona il realm `medbook`
 
-| Campo | Valore |
-|-------|--------|
-| From | `noreply@medbook.it` |
-| From display name | `MedBook Platform` |
-| Host | `sandbox.smtp.mailtrap.io` |
-| Port | `2525` |
-| Encryption | `STARTTLS` |
-| Authentication | `On` |
-| Username | *da Mailtrap → Inboxes → SMTP Settings* |
-| Password | *da Mailtrap → Inboxes → SMTP Settings* |
-
-3. **Save** → **Test connection**
-
-> Senza SMTP, Keycloak rifiuta di salvare un utente senza email verificata e il flusso reset password non parte.
+Da qui puoi navigare tra ruoli, client, utenti come da una qualsiasi installazione Keycloak.
 
 ---
 
-## 4. Creazione dei ruoli
+## 2. Primo accesso a MedBook
 
-Servono quattro ruoli realm corrispondenti ai quattro attori MedBook:
+1. Apri http://localhost:4200
+2. Click su **Accedi**
+3. Login con l'utenza admin (`admin.test` + la password che usavi nell'installazione locale)
 
-1. **Realm roles** → **Create role**
-2. Crea i seguenti ruoli (uno alla volta):
-
-| Role name | Descrizione |
-|-----------|-------------|
-| `ROLE_PATIENT` | Paziente |
-| `ROLE_DOCTOR` | Medico |
-| `ROLE_RECEPTIONIST` | Receptionist di clinica |
-| `ROLE_ADMIN` | Amministratore di sistema |
-
-> Il prefisso `ROLE_` è richiesto: Spring Security lo usa per matchare `@PreAuthorize("hasAuthority('ROLE_X')")`.
+Non c'è bisogno di altro. La piattaforma è pronta.
 
 ---
 
-## 5. Client pubblico `medbook-client` (frontend)
+## 3. (Opzionale) SMTP per email reset password
 
-L'applicazione Angular gira nel browser e non può custodire un secret in modo sicuro: deve usare un client **pubblico**.
+Le password vengono inviate via Mailtrap dal `notification-dmn` — vedi [docs/mailtrap-setup.md](mailtrap-setup.md). Per il flusso "Forgot password" della pagina di login Keycloak (gestito direttamente da Keycloak, non dal `notification-dmn`), serve configurare manualmente lo SMTP nella admin console:
 
-1. **Clients** → **Create client**
+1. Login admin console (passo 1)
+2. **Realm settings** → tab **Email**
+3. Compila con le credenziali Mailtrap (vedi guida Mailtrap)
+4. **Save** → **Test connection**
 
-### Step 1 — General settings
-- **Client type**: `OpenID Connect`
-- **Client ID**: `medbook-client`
-- **Name**: `MedBook Frontend`
-- **Next**
-
-### Step 2 — Capability config
-| Campo | Valore |
-|-------|--------|
-| Client authentication | **`Off`** ⚠️ |
-| Authorization | `Off` |
-| Standard flow | `On` |
-| Direct access grants | `On` (utile per test con Bruno) |
-| Implicit flow | `Off` |
-| Service account roles | `Off` |
-
-> ⚠️ **`Client authentication` deve essere `Off`** — un client confidenziale non funziona per un frontend SPA.
-
-### Step 3 — Login settings
-| Campo | Valore |
-|-------|--------|
-| Root URL | `http://localhost:4200` |
-| Home URL | `http://localhost:4200` |
-| Valid redirect URIs | `http://localhost:4200/*` |
-| Valid post logout redirect URIs | `http://localhost:4200/*` |
-| Web origins | `http://localhost:4200` |
-
-**Save**.
+Senza SMTP configurato, il link "Password dimenticata?" della login Keycloak non funziona, ma tutte le email applicative (benvenuto, conferma prenotazione, reset password lato MedBook) continuano a funzionare normalmente.
 
 ---
 
-## 6. Mapper `realm_access` nel token
+## 4. Reset / ripopolamento del realm
 
-Spring Security cerca i ruoli nel claim `realm_access.roles`. Di default Keycloak non li include nei token quando il client è semplice — va aggiunto un mapper.
+Se vuoi ricaricare il realm da zero (es. dopo aver fatto modifiche in console che vuoi scartare):
 
-1. **Clients** → `medbook-client` → tab **Client scopes**
-2. Click su `medbook-client-dedicated`
-3. Tab **Mappers** → **Add mapper** → **By configuration** → **User Realm Role**
-4. Compila:
-   - **Name**: `realm_access`
-   - **Multivalued**: `On`
-   - **Token Claim Name**: `realm_access.roles`
-   - **Claim JSON Type**: `String`
-   - **Add to ID token**: `On`
-   - **Add to access token**: `On`
-   - **Add to userinfo**: `On`
-5. **Save**
-
-> Senza questo mapper il backend riceve token con ruoli vuoti → `403 Forbidden` su tutti gli endpoint protetti.
-
----
-
-## 7. Client confidenziale `medbook-admin-client` (BFF)
-
-Il BFF chiama l'Admin API di Keycloak (per creare utenti durante la registrazione paziente/medico). Serve un client **confidenziale** con service account.
-
-### Step 1 — General settings
-1. **Clients** → **Create client**
-2. **Client type**: `OpenID Connect`, **Client ID**: `medbook-admin-client`, **Next**
-
-### Step 2 — Capability config
-| Campo | Valore |
-|-------|--------|
-| Client authentication | **`On`** |
-| Authorization | `Off` |
-| Standard flow | `Off` |
-| Direct access grants | `Off` |
-| Service account roles | **`On`** |
-
-**Save**.
-
-### Recupero del Client Secret
-
-1. Tab **Credentials** → copia il valore di **Client Secret**
-2. Imposta la variabile d'ambiente prima di rilanciare i container, oppure aggiornala nel `docker-compose.yml`:
-   ```bash
-   KEYCLOAK_ADMIN_CLIENT_SECRET=<valore-copiato> docker compose -f docker/docker-compose.yml up -d
-   ```
-3. Il default presente nel `docker-compose.yml` è `FHvwxEQKdcciSAt90fWE7FJUtEuOUObi` — sostituiscilo se generi un secret diverso
-
-> Il secret non va mai committato su Git.
-
-### Assegnazione ruoli al Service Account
-
-Il BFF, per creare utenti via Admin API, ha bisogno di tre ruoli del client `realm-management`. Senza tutti e tre la registrazione fallisce con **403 Forbidden**.
-
-1. Tab **Service accounts roles** → **Assign role**
-2. Filtra per `realm-management` e seleziona:
-
-| Ruolo | A cosa serve |
-|-------|--------------|
-| `manage-users` | Crea, elimina, abilita/disabilita utenti |
-| `view-users` | Verifica esistenza utenti (anti-duplicati) |
-| `view-realm` | Legge le definizioni dei ruoli realm |
-
-3. **Assign**
-
----
-
-## 8. Creazione dell'utenza admin
-
-Questa è **l'unica utenza che va creata manualmente** in Keycloak. Tutte le altre (medici, receptionist, pazienti) verranno create automaticamente dal frontend MedBook.
-
-1. **Users** → **Create new user**
-2. Compila:
-   - **Username**: `admin@medbook.it` (l'email è anche lo username — convenzione MedBook)
-   - **Email**: `admin@medbook.it`
-   - **Email verified**: `On`
-   - **First name**: `Admin`
-   - **Last name**: `MedBook`
-   - **Enabled**: `On`
-3. **Create**
-4. Tab **Credentials** → **Set password**
-   - **Password**: scegli una password forte
-   - **Temporary**: `Off` (oppure `On` se vuoi forzare il cambio al primo login)
-   - **Save**
-5. Tab **Role mapping** → **Assign role**
-   - Filtra per `Filter by realm roles`
-   - Seleziona `ROLE_ADMIN`
-   - **Assign**
-
-A questo punto l'utenza è pronta. Apri http://localhost:4200 e fai login con queste credenziali.
-
----
-
-## 9. Verifica con Bruno (opzionale)
-
-Per testare che la configurazione sia corretta senza passare dal frontend:
-
-1. Bruno collection: `docs/bruno/MedBook Platform/KeyCloak/Generate new Token.yml`
-2. Esegui la richiesta con username/password dell'admin appena creato
-3. Copia il token ricevuto e incollalo su https://jwt.io
-
-Il payload decodificato deve contenere:
-```json
-{
-  "preferred_username": "admin@medbook.it",
-  "realm_access": {
-    "roles": ["ROLE_ADMIN", ...]
-  }
-}
+```bash
+# Stop + reset volume Keycloak
+docker compose -f docker/docker-compose.yml stop keycloak
+docker volume rm docker_keycloak_data 2>/dev/null  # se esistesse
+docker compose -f docker/docker-compose.yml up -d keycloak
 ```
 
-Se `realm_access.roles` è vuoto o assente, controlla il mapper del passo 6.
+Al riavvio, `--import-realm` ricarica il file JSON. Se il realm `medbook` esiste già non viene sovrascritto: per forzare l'import dopo modifiche al file, prima elimina il realm dalla console oppure cambia `KC_BOOTSTRAP_REALM_*` per invalidare lo stato.
+
+---
+
+## 5. Esportare il realm per aggiornare il file
+
+Se modifichi la configurazione dalla console Keycloak (aggiungi un client, cambi un mapper, ecc.) e vuoi salvare le modifiche nel file committato:
+
+```bash
+docker exec medbook-keycloak /opt/keycloak/bin/kc.sh export --dir /tmp/exp --realm medbook --users realm_file
+docker cp medbook-keycloak:/tmp/exp/medbook-realm.json infra/keycloak/medbook-realm.json
+```
+
+Prima di committare ricontrolla:
+- ✅ Solo l'utenza admin (no test users)
+- ✅ `smtpServer: {}` vuoto (no credenziali Mailtrap)
+- ✅ Secret di `medbook-admin-client` allineato col `docker-compose.yml`
 
 ---
 
@@ -252,5 +99,5 @@ Se `realm_access.roles` è vuoto o assente, controlla il mapper del passo 6.
 | Admin console | http://localhost:8082 |
 | Realm `medbook` | http://localhost:8082/realms/medbook |
 | OpenID config | http://localhost:8082/realms/medbook/.well-known/openid-configuration |
-| JWKS (chiavi pubbliche) | http://localhost:8082/realms/medbook/protocol/openid-connect/certs |
+| JWKS | http://localhost:8082/realms/medbook/protocol/openid-connect/certs |
 | Token endpoint | http://localhost:8082/realms/medbook/protocol/openid-connect/token |
