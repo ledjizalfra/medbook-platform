@@ -71,6 +71,10 @@ services:
     # --import-realm carica medbook-realm.json al primo avvio (idempotente:
     # se il realm esiste gia' viene aggiornato in base ai campi del file).
     command: start-dev --import-realm
+    # Auto-restart in caso di crash (Keycloak in dev a volte muore al boot
+    # se il quarkus runtime ha glitch con l'H2 embedded). Il flag fa ripartire
+    # il container automaticamente fino a 'docker compose down' esplicito.
+    restart: unless-stopped
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
@@ -91,6 +95,15 @@ services:
       # Contiene realm medbook, ruoli, due client (medbook-client + medbook-admin-client),
       # mapper realm_access e l'utente admin (admin.test / password configurata in locale).
       - ../infra/keycloak/medbook-realm.json:/opt/keycloak/data/import/medbook-realm.json:ro
+    # Healthcheck TCP sulla porta HTTP: Keycloak la apre solo dopo aver
+    # completato l'import del realm e il bootstrap quarkus. start_period 90s
+    # tiene conto della prima esecuzione che importa il realm da JSON.
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8082 && exit 0 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
 
   # ===========================================================================
   # Apache Kafka — Message Broker (KRaft mode, single node)
@@ -346,7 +359,7 @@ services:
       config-server:
         condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
       patient-dmn:
         condition: service_started
       doctor-dmn:
@@ -391,9 +404,14 @@ services:
     container_name: medbook-fe
     ports:
       - "4200:80"
+    # Aspetta che Keycloak sia healthy prima di esporre la porta 4200:
+    # cosi' chi apre il browser non rischia di trovare un FE caricato a meta'
+    # (l'APP_INITIALIZER del FE chiama Keycloak in modo bloccante).
     depends_on:
       api-gateway:
         condition: service_started
+      keycloak:
+        condition: service_healthy
 
 volumes:
   postgres_data:

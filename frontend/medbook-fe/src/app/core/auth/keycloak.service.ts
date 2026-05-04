@@ -28,12 +28,18 @@ export class KeycloakService {
    *   tramite un iframe nascosto che carica /silent-check-sso.html
    * - se non ha sessione, l'app parte in modalità anonima (nessun redirect automatico)
    * - `pkceMethod: 'S256'` abilita PKCE per proteggere il code exchange
+   * - `checkLoginIframe: false` disattiva il monitor periodico di sessione via
+   *   iframe, che fallisce con timeout sui browser moderni a causa dello
+   *   Storage Partitioning dei cookie di terze parti (Chrome 113+, Safari ITP).
+   *   La validità del token resta garantita dalla scadenza esplicita del JWT
+   *   e dal refresh effettuato in jwtInterceptor prima di ogni richiesta.
    */
   async init(): Promise<void> {
     await this.keycloak.init({
       onLoad: 'check-sso',
       silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
-      pkceMethod: 'S256'
+      pkceMethod: 'S256',
+      checkLoginIframe: false
     });
   }
 

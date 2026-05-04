@@ -63,6 +63,18 @@ docker compose -f docker/docker-compose.yml ps
 
 Tutti i 15 container devono essere `Up` (alcuni `healthy`). Se qualcuno è `Restarting` aspetta 30-60 secondi: `restart: unless-stopped` rilancia automaticamente i servizi che hanno fallito al primo tentativo a causa di dipendenze non ancora pronte.
 
+> ⏳ **Aspetta che Keycloak sia completamente avviato** prima di aprire http://localhost:4200. Il frontend Angular all'avvio chiama Keycloak per validare la sessione (APP_INITIALIZER bloccante): se Keycloak non sta ancora rispondendo (sta importando il realm dal JSON o sta ancora bootstrapando l'H2), la pagina resta in "loading" e poi va in errore. Verifica che Keycloak sia pronto con uno dei due check:
+>
+> ```bash
+> # Risposta 200 = pronto
+> curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8082/realms/medbook
+>
+> # Oppure guarda i log: deve comparire "Listening on: http://0.0.0.0:8080"
+> docker compose -f docker/docker-compose.yml logs keycloak | tail -5
+> ```
+>
+> Tipicamente Keycloak richiede ~30-60 secondi per essere pronto al primo avvio (import realm + init H2).
+
 ## 4. Keycloak — configurazione automatica
 
 Keycloak si autoconfigura al primo avvio importando `infra/keycloak/medbook-realm.json`. Vengono caricati automaticamente:
