@@ -39,9 +39,12 @@ docker compose version
 
 ## 2. Clona il repository
 
+Usare il branch `main` (default), che contiene la versione completa e testata:
+
 ```bash
 git clone https://github.com/ledjizalfra/medbook-platform.git
 cd medbook-platform
+git checkout main
 ```
 
 ## 3. Lancia tutto
@@ -50,7 +53,7 @@ cd medbook-platform
 docker compose -f docker/docker-compose.yml up -d --build
 ```
 
-La prima esecuzione richiede **~3-4 minuti**: scarica le immagini di base, compila i 9 microservizi Spring Boot (un'unica build Maven multi-stage condivisa) e costruisce la build Angular di produzione. Le esecuzioni successive sono incrementali.
+La prima esecuzione richiede **~3-4 minuti**: scarica le immagini di base, compila i 9 microservizi Spring Boot (un'unica build Maven multi-stage condivisa) e costruisce la build statica Angular. Le esecuzioni successive sono incrementali.
 
 Verifica lo stato:
 
@@ -60,9 +63,13 @@ docker compose -f docker/docker-compose.yml ps
 
 Tutti i 15 container devono essere `Up` (alcuni `healthy`). Se qualcuno è `Restarting` aspetta 30-60 secondi: `restart: unless-stopped` rilancia automaticamente i servizi che hanno fallito al primo tentativo a causa di dipendenze non ancora pronte.
 
-## 4. Configura Keycloak (al primo avvio)
+## 4. Configura Keycloak — passaggio obbligatorio
 
-Keycloak è già in esecuzione su http://localhost:8082 ma il **realm `medbook`, i ruoli, i client e gli utenti vanno creati manualmente** la prima volta. Segui il documento dedicato:
+> 🚨 **Attenzione**: una volta che tutti i container sono `Up`, **la prima cosa da fare è la configurazione di Keycloak**.
+>
+> **Senza questa configurazione l'applicazione non è utilizzabile**: tutti i microservizi MedBook validano i token JWT emessi da Keycloak, e il frontend reindirizza al login Keycloak. Finché il realm `medbook`, i ruoli, i client e almeno un utente non sono creati, qualsiasi tentativo di accesso a http://localhost:4200 fallisce.
+
+Keycloak è in esecuzione su http://localhost:8082 ma **realm, ruoli, client e utenti vanno creati manualmente** la prima volta. Segui il documento dedicato:
 
 📖 **[docs/keycloak-setup.md](docs/keycloak-setup.md)** — guida step-by-step
 
@@ -181,23 +188,3 @@ export DB_HOST=localhost
 export KAFKA_BOOTSTRAP_SERVERS=localhost:9092
 export EUREKA_URL=http://localhost:8070/eureka/
 ```
-
-# Rilascio in produzione (riferimento rapido)
-
-Variabili d'ambiente richieste oltre ai default:
-
-```
-KEYCLOAK_ADMIN_CLIENT_SECRET   # Secret del client medbook-admin-client
-KC_ADMIN_PASSWORD              # Password admin Keycloak in prod
-DB_USERNAME / DB_PASSWORD      # Credenziali DB Postgres
-SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD   # Server SMTP reale
-TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER   # Twilio SMS
-```
-
-Build dei JAR per deploy bare-metal:
-```bash
-mvn clean package -DskipTests
-cd frontend/medbook-fe && ng build --configuration=production
-```
-
-Profilo `prod` attivo → log JSON strutturato (LogstashEncoder), sampling Zipkin 10%, DDL Flyway = `validate`. Keycloak in modalità `start` (non `start-dev`), con HTTPS dietro reverse proxy.

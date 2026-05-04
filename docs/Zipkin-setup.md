@@ -70,26 +70,18 @@ Il tracing è configurato in `infra/config-repo/application.yaml`:
 management:
   tracing:
     sampling:
-      probability: 1.0   # 100% in produzione
+      probability: 1.0   # 100% sampling
   zipkin:
     tracing:
       endpoint: http://localhost:9411/api/v2/spans
 ```
 
-In sviluppo (`application-dev.yaml`) il tracing è disabilitato di default (`probability: 0.0`).
-Per abilitarlo, avviare Zipkin e aggiornare `application-dev.yaml`:
-
-```yaml
-management:
-  tracing:
-    sampling:
-      probability: 1.0
-```
+Nel profilo `dev` (`application-dev.yaml`) il sampling è già a 1.0 per avere il
+percorso completo di ogni chiamata utile al debug.
 
 ---
 
 ## Note
 
 - Zipkin ascolta sulla porta **9411**
-- I dati sono in memoria — si perdono al riavvio (va bene per sviluppo)
-- Per persistenza in produzione usare Elasticsearch o Cassandra come storage backend
+- I dati sono in memoria — si perdono al riavvio del container

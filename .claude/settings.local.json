@@ -96,7 +96,9 @@
       "Bash(mvn -pl dmn/appointment-dmn -am compile -DskipTests -q)",
       "Bash(curl -s \"https://quay.io/api/v1/repository/keycloak/keycloak/tag/?onlyActiveTags=true&limit=20\")",
       "Bash(curl -sI \"https://quay.io/v2/keycloak/keycloak/manifests/26.5.6\")",
-      "Bash(git fetch *)"
+      "Bash(git fetch *)",
+      "Bash(git checkout *)",
+      "Bash(git stash *)"
     ]
   }
 }

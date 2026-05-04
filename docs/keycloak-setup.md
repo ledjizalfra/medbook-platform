@@ -25,9 +25,8 @@
 11. [Verifica della Configurazione](#11-verifica-della-configurazione)
 12. [Endpoint Utili](#12-endpoint-utili)
 13. [Configurazione Spring Boot](#13-configurazione-spring-boot)
-14. [Sviluppo vs Produzione](#14-sviluppo-vs-produzione)
-15. [Tema Custom Login (medbook)](#15-tema-custom-login-medbook)
-16. [Deploy con Docker](#16-deploy-con-docker)
+14. [Tema Custom Login (medbook)](#14--tema-custom-login-medbook)
+15. [Deploy con Docker](#15--deploy-con-docker)
 
 ---
 
@@ -340,16 +339,16 @@ Senza un server SMTP configurato, Keycloak non puo' inviare le email di reset pa
 1. Navigare su **Realm settings** → tab **Email**
 2. Compilare i campi:
 
-| Campo | Valore (sviluppo con Mailtrap) | Valore (produzione) |
-|-------|--------------------------------|---------------------|
-| **From** | `noreply@medbook.it` | `noreply@medbook.it` |
-| **From display name** | `MedBook Platform` | `MedBook Platform` |
-| **Host** | `sandbox.smtp.mailtrap.io` | server SMTP reale (es. `smtp.gmail.com`) |
-| **Port** | `2525` | `587` |
-| **Encryption** | `STARTTLS` | `STARTTLS` |
-| **Authentication** | `ON` | `ON` |
-| **Username** | *(copiare da Mailtrap → Inboxes → SMTP Settings)* | username SMTP reale |
-| **Password** | *(copiare da Mailtrap → Inboxes → SMTP Settings)* | password SMTP reale |
+| Campo | Valore |
+|-------|--------|
+| **From** | `noreply@medbook.it` |
+| **From display name** | `MedBook Platform` |
+| **Host** | `sandbox.smtp.mailtrap.io` |
+| **Port** | `2525` |
+| **Encryption** | `STARTTLS` |
+| **Authentication** | `ON` |
+| **Username** | *(copiare da Mailtrap → Inboxes → SMTP Settings)* |
+| **Password** | *(copiare da Mailtrap → Inboxes → SMTP Settings)* |
 
 3. Cliccare **Save**
 4. Cliccare **Test connection** per verificare che l'invio funzioni
@@ -416,14 +415,14 @@ Cliccare **Next**.
 | **Client authentication** | `OFF` | Angular gira nel browser - non puo' custodire un secret in modo sicuro. Con `ON` il login dal FE non funziona |
 | Authorization | `OFF` | Non necessario |
 | Standard flow | `ON` | Flusso principale per il login utente |
-| Direct access grants | `ON` | Permette il test con Bruno (solo sviluppo) |
+| Direct access grants | `ON` | Permette il test con Bruno |
 | Implicit flow | `OFF` | Flusso obsoleto e insicuro |
 | Service account roles | `OFF` | Solo per client confidenziali (server-to-server) |
 | Standard Token Exchange | `OFF` | Non necessario |
 | OAuth 2.0 Device Authorization Grant | `OFF` | Per dispositivi senza browser (TV, ecc.) - non applicabile |
 | OIDC CIBA Grant | `OFF` | Non necessario |
-| **PKCE Method** | *(lasciare vuoto - Choose...)* | PKCE non configurato esplicitamente in sviluppo. Da abilitare in produzione con `S256` per maggiore sicurezza |
-| **Require DPoP bound tokens** | `OFF` | Meccanismo avanzato di binding token - non necessario in sviluppo |
+| **PKCE Method** | *(lasciare vuoto - Choose...)* | Non configurato esplicitamente |
+| **Require DPoP bound tokens** | `OFF` | Meccanismo avanzato di binding token - non necessario |
 
 > ⚠️ **Attenzione:** `Client authentication` deve essere `OFF`.
 > Durante lo sviluppo del FE il login non funzionava perche' questo campo
@@ -535,17 +534,18 @@ Cliccare **Next** → lasciare Step 3 vuoto → **Save**.
 4. Il secret viene letto dalla variabile d'ambiente `KEYCLOAK_ADMIN_CLIENT_SECRET`.
    Non va mai scritto nel codice sorgente.
 
-   **Sviluppo locale** — impostare la variabile d'ambiente prima di avviare il BFF:
+   Impostare la variabile d'ambiente prima di avviare il BFF:
    ```powershell
    $env:KEYCLOAK_ADMIN_CLIENT_SECRET = "<valore-copiato-qui>"
    ```
    Oppure aggiungerla direttamente al launcher `.medbook-launchers/medbook-bff.ps1`.
 
-   **Produzione** — impostare la variabile d'ambiente nel sistema di deploy
-   (Docker, Kubernetes, CI/CD). Il servizio non si avvia senza di essa.
+   Con Docker Compose la variabile può essere passata inline:
+   ```bash
+   KEYCLOAK_ADMIN_CLIENT_SECRET=<valore> docker compose -f docker/docker-compose.yml up -d
+   ```
 
    > ⚠️ Non committare mai il secret su Git.
-   > Non usare valori di default per i secret in produzione.
 
 ### Assegnazione dei ruoli al Service Account
 
@@ -650,15 +650,15 @@ ed e' ereditata automaticamente da tutti i DMN e dal BFF.
 
 La configurazione è suddivisa tra i due file del config-server:
 
-**`infra/config-repo/application.yaml`** (default produzione):
+**`infra/config-repo/application.yaml`** (default):
 ```yaml
 spring:
   security:
     oauth2:
       resourceserver:
         jwt:
-          # URL del realm Keycloak in produzione — sovrascrivibile via env var
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://keycloak.medbook.it/realms/medbook}
+          # URL del realm Keycloak — sovrascrivibile via env var
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8082/realms/medbook}
 ```
 
 **`infra/config-repo/application-dev.yaml`** (profilo dev — attivo con `spring.profiles.active=dev`):
@@ -681,71 +681,7 @@ spring:
 
 ---
 
-## 14. 🚀 Sviluppo vs Produzione
-
-### Comando di avvio
-
-| | Sviluppo | Produzione |
-|--|---------|------------|
-| **Comando** | `start-dev` | `start` |
-| **Database** | `--db=dev-file` (embedded, file locale) | PostgreSQL dedicato |
-| **HTTPS** | Non necessario | Obbligatorio (certificato SSL) |
-| **Performance** | Ottimizzato per il debug | Ottimizzato per il carico |
-
-### Database
-
-```
-# Sviluppo - database embedded su file locale
-.\bin\kc.bat start-dev --http-port=8082 --db=dev-file
-
-# Produzione - PostgreSQL dedicato
-.\bin\kc.bat start \
-  --db=postgres \
-  --db-url=jdbc:postgresql://localhost/keycloak \
-  --db-username=keycloak \
-  --db-password=<password> \
-  --hostname=https://auth.medbook.it \
-  --https-certificate-file=/path/to/cert.pem \
-  --https-certificate-key-file=/path/to/key.pem
-```
-
-> ⚠️ Il database `dev-file` non e' affidabile per la produzione.
-> I dati possono corrompersi e non supporta alta disponibilita'.
-
-### Differenze configurazione
-
-| Parametro | Sviluppo | Produzione |
-|-----------|---------|------------|
-| **Direct Access Grants** | `ON` (serve per i test con Bruno) | `OFF` (non sicuro) |
-| **Client authentication** medbook-client | `OFF` | `OFF` (invariato) |
-| **HTTPS** | Non configurato | Obbligatorio |
-| **Password admin** | `admin` | Password forte e unica |
-| **Durata Access Token** | Default (5 min) | Ridurre a 2-3 min |
-| **Password policy** | Nessuna | Lunghezza minima, caratteri speciali, scadenza |
-| **Brute-force protection** | Off | On (Realm settings → Security defenses) |
-| **Client Secret** | In `application.yml` | In un vault (HashiCorp Vault, AWS Secrets Manager) |
-| **Cluster** | Singola istanza | Piu' istanze con shared DB |
-
-### Checklist pre-produzione
-
-- [ ] Sostituire `start-dev` con `start`
-- [ ] Configurare PostgreSQL dedicato per Keycloak
-- [ ] Cambiare la password dell'utente `admin`
-- [ ] Abilitare HTTPS con certificato SSL valido
-- [ ] Disabilitare Direct Access Grants su `medbook-client`
-- [ ] Configurare password policy sul realm
-- [ ] Abilitare brute-force protection
-- [ ] Spostare il Client Secret in un vault
-- [ ] Configurare la durata dei token (Access Token max 5 min)
-- [ ] Configurare il server SMTP per le email di reset password
-- [ ] Verificare che "Forgot password" sia abilitato (Realm settings → Login)
-- [ ] Configurare il cluster Keycloak se necessario
-- [ ] Aggiornare `landingPageUrl` in `theme.properties` con l'URL di produzione
-- [ ] Buildare l'immagine Docker custom (`docker build`) con il tema incluso
-
----
-
-## 15. 🎨 Tema Custom Login (medbook)
+## 14. 🎨 Tema Custom Login (medbook)
 
 Il progetto include un tema custom che sovrascrive la pagina di login di Keycloak
 aggiungendo un link **"Torna alla home"** per tornare alla landing page dell'applicazione.
@@ -789,90 +725,38 @@ cp -r infra/keycloak/themes/medbook <keycloak-home>/themes/medbook
 Il link punta all'URL configurato in `theme.properties`:
 
 ```properties
-# Sviluppo
 landingPageUrl=http://localhost:4200
-
-# Produzione — aggiornare con l'URL reale
-landingPageUrl=https://medbook.it
 ```
 
-> ℹ️ In sviluppo, se si modifica il template `.ftl` o il CSS, il server Keycloak
-> deve essere riavviato per ricaricare i template (oppure usare Docker con la
-> cache disabilitata, vedi sezione 16).
+> ℹ️ Se si modifica il template `.ftl` o il CSS, il server Keycloak deve
+> essere riavviato per ricaricare i template (in Docker la cache è già
+> disabilitata, vedi sezione successiva).
 
 ---
 
-## 16. 🐳 Deploy con Docker
+## 15. 🐳 Deploy con Docker
 
-Il progetto include un `docker-compose.yml` nella root che gestisce Keycloak
-e PostgreSQL. Esistono due strategie per il tema: volume mount in sviluppo
-e immagine custom in produzione.
-
-### Struttura Docker
-
-```
-medbook-platform/
-├── docker-compose.yml                    ← orchestrazione servizi
-└── infra/keycloak/
-    ├── Dockerfile                        ← immagine Keycloak + tema integrato
-    └── themes/medbook/                   ← sorgenti del tema
-```
-
-### Sviluppo — avvio con volume mount
-
-```bash
-docker compose up keycloak
-```
-
-Il tema viene montato come volume: le modifiche ai file sono visibili
-immediatamente senza rebuild. La cache dei template e' disabilitata.
+Il `docker-compose.yml` in `docker/` avvia Keycloak con il tema montato come
+volume: le modifiche ai file del tema sono visibili immediatamente senza
+rebuild. La cache dei template è disabilitata.
 
 ```yaml
-# docker-compose.yml (estratto dev)
+# estratto docker-compose.yml
 volumes:
-  - ./infra/keycloak/themes/medbook:/opt/keycloak/themes/medbook
+  - ../infra/keycloak/themes/medbook:/opt/keycloak/themes/medbook
 environment:
   KC_SPI_THEME_CACHE_THEMES: "false"
   KC_SPI_THEME_CACHE_TEMPLATES: "false"
 ```
 
-### Produzione — immagine custom con tema integrato
+### Avvio
 
 ```bash
-# 1. Build immagine (tema viene copiato al build time)
-docker build -t medbook-keycloak:latest ./infra/keycloak
-
-# 2. Aggiornare docker-compose.yml con la configurazione prod (vedi commenti nel file)
-# 3. Avviare
-docker compose up keycloak
+docker compose -f docker/docker-compose.yml up -d keycloak
 ```
 
-Il `Dockerfile` in `infra/keycloak/`:
-
-```dockerfile
-FROM quay.io/keycloak/keycloak:26.0.0
-COPY themes/medbook /opt/keycloak/themes/medbook
-RUN /opt/keycloak/bin/kc.sh build
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
-```
-
-### Differenza dev vs prod
-
-| | Dev (volume) | Prod (image) |
-|---|---|---|
-| Modifiche tema | Visibili subito | Richiedono `docker build` |
-| Cache temi | Disabilitata | Abilitata |
-| Comando Keycloak | `start-dev` | `start` |
-| Tema nel container | Volume mount | COPY nel Dockerfile |
-
-### Avvio completo (Keycloak + PostgreSQL)
-
-```bash
-docker compose up
-```
-
-Keycloak sara' disponibile su `http://localhost:8082`.
-Dopo il primo avvio configurare il realm seguendo i passi dalla sezione 5.
+Keycloak è disponibile su `http://localhost:8082`. Al primo avvio configura
+il realm seguendo i passi dalla sezione 5.
 
 ---
 

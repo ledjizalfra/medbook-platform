@@ -392,23 +392,3 @@ services:
 volumes:
   postgres_data:
   kafka_data:
-
-# =============================================================================
-# PRODUZIONE — sostituire il servizio keycloak con:
-#
-#   keycloak:
-#     build:
-#       context: ../infra/keycloak
-#       dockerfile: Dockerfile
-#     container_name: medbook-keycloak
-#     command: start
-#     environment:
-#       KC_BOOTSTRAP_ADMIN_USERNAME: admin
-#       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
-#       KC_HOSTNAME: https://auth.medbook.it
-#       KC_HTTP_ENABLED: "false"
-#       KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/server.crt
-#       KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/server.key
-#     ports:
-#       - "8443:8443"
-# =============================================================================
