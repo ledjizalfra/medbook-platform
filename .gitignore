@@ -12,6 +12,7 @@ target/
 # IDE settings (non escludiamo il source code IDE)
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 
