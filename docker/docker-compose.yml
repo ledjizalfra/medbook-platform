@@ -83,6 +83,9 @@ services:
       # I container backend validano via questa stessa URL grazie a host.docker.internal
       KC_HOSTNAME: http://localhost:8082
       KC_HOSTNAME_STRICT: "false"
+      # Abilita il management endpoint /health/ready su porta 9000 (interna)
+      # — usato dal healthcheck sotto per sapere quando Keycloak e' davvero pronto.
+      KC_HEALTH_ENABLED: "true"
       # Cache temi disabilitata in dev per vedere subito le modifiche
       KC_SPI_THEME_STATIC_MAX_AGE: -1
       KC_SPI_THEME_CACHE_THEMES: "false"
@@ -95,15 +98,17 @@ services:
       # Contiene realm medbook, ruoli, due client (medbook-client + medbook-admin-client),
       # mapper realm_access e l'utente admin (admin.test / password configurata in locale).
       - ../infra/keycloak/medbook-realm.json:/opt/keycloak/data/import/medbook-realm.json:ro
-    # Healthcheck TCP sulla porta HTTP: Keycloak la apre solo dopo aver
-    # completato l'import del realm e il bootstrap quarkus. start_period 90s
-    # tiene conto della prima esecuzione che importa il realm da JSON.
+    # Healthcheck via management endpoint /health/ready — approccio ufficiale
+    # raccomandato dalla documentazione Keycloak. Lo chiamiamo via TCP raw
+    # (curl/wget non sono nell'immagine UBI Micro) e verifichiamo lo status UP.
+    # start_period 180s perche' al primo avvio l'import del realm + bootstrap
+    # Quarkus + JIT warmup possono richiedere fino a 2 minuti.
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8082 && exit 0 || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q '\"status\": \"UP\"'"]
+      interval: 15s
       timeout: 5s
-      retries: 30
-      start_period: 90s
+      retries: 20
+      start_period: 180s
 
   # ===========================================================================
   # Apache Kafka — Message Broker (KRaft mode, single node)

@@ -83,7 +83,11 @@ Keycloak si autoconfigura al primo avvio importando `infra/keycloak/medbook-real
 - I 4 ruoli (`ROLE_PATIENT`, `ROLE_DOCTOR`, `ROLE_RECEPTIONIST`, `ROLE_ADMIN`)
 - Client `medbook-client` (pubblico, per il frontend) con mapper `realm_access.roles`
 - Client `medbook-admin-client` (confidenziale, per il BFF) con secret e service account già configurato
-- L'utenza admin (`admin.test`) con ruolo `ROLE_ADMIN`
+- L'utenza admin pre-configurata:
+  - Username: `admin.test`
+  - Email: `admin.test@medbook.it`
+  - Password: `Test1234!`
+  - Ruolo: `ROLE_ADMIN`
 
 Nessuna azione manuale richiesta per usare la piattaforma. Per dettagli e operazioni avanzate (ispezione, re-import, esportazione modifiche): 📖 **[docs/keycloak-setup.md](docs/keycloak-setup.md)**.
 
@@ -93,6 +97,19 @@ Nessuna azione manuale richiesta per usare la piattaforma. Per dettagli e operaz
 ```bash
 KEYCLOAK_ADMIN_CLIENT_SECRET=<tuo-secret> docker compose -f docker/docker-compose.yml up -d
 ```
+
+### Accesso alla console admin Keycloak
+
+Per ispezionare la configurazione (utenti, ruoli, client, ecc.) o modificarla:
+
+1. Apri http://localhost:8082
+2. Login con `admin` / `admin` (credenziali bootstrap definite in `docker-compose.yml`)
+3. **Importante**: dopo il login compari sul realm **`master`** (il realm interno di Keycloak) — qui non vedi gli utenti di MedBook. Per vederli:
+   - Click sul **dropdown del realm in alto a sinistra** (sotto il logo Keycloak, mostra "Keycloak" o "master")
+   - Seleziona **`medbook`**
+   - Ora in **Users** vedi `admin.test` e il service account `service-account-medbook-admin-client`
+
+> ⚠️ **Avviso "You are logged in as a temporary admin user"**: è normale in Keycloak 26+. L'utente `admin/admin` viene creato dalle env var `KC_BOOTSTRAP_ADMIN_*` ed è marcato come "temporaneo" (in produzione andrebbe sostituito con un account permanente). In dev puoi ignorare il warning. Se vuoi crearne uno permanente: realm `master` → **Users** → **Create new user** → assegna ruolo `admin` da **Role mapping**.
 
 ## 5. Email (Mailtrap)
 
@@ -106,12 +123,14 @@ Le notifiche email (conferma prenotazione, benvenuto medico/receptionist, reset 
 
 Apri http://localhost:4200 e:
 1. Click su **"Accedi"**
-2. Login con `admin.test` + la password configurata (l'utenza admin è già nel realm importato)
+2. Login con `admin.test` / `Test1234!` (utenza admin pre-configurata nel realm importato)
 3. Vai in `/admin/clinics/new` per creare la prima clinica
 4. `/admin/doctors/new` per registrare il primo medico (gli verrà inviata una mail con la password temporanea via Mailtrap)
 5. `/register` (in incognito) per registrare un paziente di test
 
 A questo punto la piattaforma è operativa.
+
+> 📊 **Dati di test pronti**: in [`docs/Dati/medbook_test_data FULL.xlsx`](docs/Dati/medbook_test_data%20FULL.xlsx) trovi un foglio Excel con anagrafiche già pronte per **cliniche**, **medici** e **pazienti** da copiare nei form per popolare rapidamente il sistema senza inventare dati a mano. (Il receptionist va creato a mano in `/admin/receptionists/new`.)
 
 ---
 
